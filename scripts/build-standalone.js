@@ -4,6 +4,7 @@
 //   node scripts/build-standalone.js --full [出力先=index.html]     … 完全なHTML文書（GitHub Pages 用）
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -36,13 +37,35 @@ const head = full
 <title>DCG プロトタイプ</title>`
   : `<title>DCG プロトタイプ</title>
 <meta name="claude:viewport-fit-sides" content="cover">`;
+// ビルド識別子（どの版が表示されているか画面で確認するため）
+const css = read('src/ui/style.css');
+const rev = createHash('sha256').update(js + css + body).digest('hex').slice(0, 7);
+const buildId = `v0.1 build ${rev}`;
+
+// 実行時エラーを画面に表示する（真っ白・テキストだけになる問題の切り分け用）
+const errorHandler = `<script>
+window.addEventListener('error', function (e) {
+  var t = document.getElementById('table');
+  if (!t) return;
+  var p = document.createElement('p');
+  p.className = 'fatal';
+  p.textContent = 'エラーが発生しました: ' + (e.message || e) + (e.lineno ? ' (line ' + e.lineno + ')' : '');
+  t.appendChild(p);
+});
+</script>`;
+
 const page = `${head}
 <style>
-${read('src/ui/style.css')}
+${css}
 </style>
 ${full ? '</head>\n<body>\n' : ''}${body.trim()}
-<script type="module">
+${errorHandler}
+<script>
+(function () {
+'use strict';
 ${js}
+document.getElementById('build').textContent = ${JSON.stringify(buildId)};
+})();
 </script>
 ${full ? '</body>\n</html>\n' : ''}`;
 mkdirSync(dirname(out), { recursive: true });

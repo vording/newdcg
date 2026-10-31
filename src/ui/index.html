@@ -8,7 +8,7 @@
 </head>
 <body>
   <header>
-    <strong>DCG プロトタイプ v0.1</strong>
+    <strong>DCG プロトタイプ</strong> <small id="build" class="muted"></small>
     <label>対戦形式
       <select id="mode">
         <option value="cpu">CPU対戦（あなた＝プレイヤー1）</option>
@@ -18,7 +18,7 @@
     <button id="newGame">新しいゲーム</button>
   </header>
   <main>
-    <section id="table"></section>
+    <section id="table"><p id="boot">ゲームを読み込んでいます…（この表示が消えない場合は、ページを再読み込みしてください）</p></section>
     <aside>
       <h3>ログ</h3>
       <ol id="log"></ol>

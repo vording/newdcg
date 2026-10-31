@@ -65,6 +65,9 @@ button:disabled { opacity: .4; cursor: default; }
 .prompt { padding: 8px 12px; border-radius: 8px; background: var(--panel); border: 1px dashed var(--accent); margin-bottom: 8px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .prompt .msg { flex: 1; min-width: 200px; }
 .error { color: var(--danger); }
+.muted { color: var(--muted); }
+#boot, .fatal { padding: 16px; }
+.fatal { color: var(--danger); white-space: pre-wrap; }
 .banner { font-size: 24px; font-weight: bold; text-align: center; padding: 24px; }
 button:focus-visible, .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .card.exhausted { transform: none; } }
@@ -72,7 +75,7 @@ button:focus-visible, .card:focus-visible { outline: 2px solid var(--accent); ou
 
 </style>
 <header>
-    <strong>DCG プロトタイプ v0.1</strong>
+    <strong>DCG プロトタイプ</strong> <small id="build" class="muted"></small>
     <label>対戦形式
       <select id="mode">
         <option value="cpu">CPU対戦（あなた＝プレイヤー1）</option>
@@ -82,13 +85,25 @@ button:focus-visible, .card:focus-visible { outline: 2px solid var(--accent); ou
     <button id="newGame">新しいゲーム</button>
   </header>
   <main>
-    <section id="table"></section>
+    <section id="table"><p id="boot">ゲームを読み込んでいます…（この表示が消えない場合は、ページを再読み込みしてください）</p></section>
     <aside>
       <h3>ログ</h3>
       <ol id="log"></ol>
     </aside>
   </main>
-<script type="module">
+<script>
+window.addEventListener('error', function (e) {
+  var t = document.getElementById('table');
+  if (!t) return;
+  var p = document.createElement('p');
+  p.className = 'fatal';
+  p.textContent = 'エラーが発生しました: ' + (e.message || e) + (e.lineno ? ' (line ' + e.lineno + ')' : '');
+  t.appendChild(p);
+});
+</script>
+<script>
+(function () {
+'use strict';
 // ---- src/engine/config.js ----
 // ゲームルールの調整可能パラメータ。
 // 仕様書 v0.3 で「暫定」とされている値や、仕様上「未確定」の項目はすべてここに集約する。
@@ -888,7 +903,7 @@ function render() {
   const me = viewer();
   const opp = 1 - me;
   const table = $('#table');
-  table.replaceChildren();
+  table.textContent = '';
 
   if (game.winner !== null) {
     const msg = game.winner === 'draw' ? '引き分け' : `${game.players[game.winner].name} の勝利！`;
@@ -1109,7 +1124,7 @@ function describe(e) {
 
 function renderLog() {
   const ol = $('#log');
-  ol.replaceChildren();
+  ol.textContent = '';
   for (const e of game.log) {
     const text = describe(e);
     if (text) ol.append(el('li', '', text));
@@ -1130,4 +1145,6 @@ function scheduleCpu() {
 $('#newGame').addEventListener('click', newGame);
 newGame();
 
+document.getElementById('build').textContent = "v0.1 build bfb65d1";
+})();
 </script>

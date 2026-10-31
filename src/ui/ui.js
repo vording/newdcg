@@ -57,7 +57,7 @@ function render() {
   const me = viewer();
   const opp = 1 - me;
   const table = $('#table');
-  table.replaceChildren();
+  table.textContent = '';
 
   if (game.winner !== null) {
     const msg = game.winner === 'draw' ? '引き分け' : `${game.players[game.winner].name} の勝利！`;
@@ -278,7 +278,7 @@ function describe(e) {
 
 function renderLog() {
   const ol = $('#log');
-  ol.replaceChildren();
+  ol.textContent = '';
   for (const e of game.log) {
     const text = describe(e);
     if (text) ol.append(el('li', '', text));
