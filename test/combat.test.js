@@ -1,10 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { applyAction } from '../src/engine/index.js';
-import { newGame, ok, put } from './helpers.js';
+import { newGame, ok, put, setHand } from './helpers.js';
 
 const attack = (s, ...uids) => applyAction(s, s.activePlayer, { type: 'attack', attackers: uids });
-const block = (s, blocks) => applyAction(s, 1 - s.activePlayer, { type: 'declareBlocks', blocks });
+const block = (s, blocks) => {
+  if (s.awaiting?.step === 'response') ok(applyAction(s, s.awaiting.player, { type: 'pass' }));
+  return applyAction(s, 1 - s.activePlayer, { type: 'declareBlocks', blocks });
+};
 
 test('ブロックなし: 攻撃力分のダメージをプレイヤーへ。攻撃後は行動済み、ターン終了', () => {
   const s = newGame();
@@ -28,8 +31,29 @@ test('ブロック: 互いの攻撃力分を同時に与え、HP以上で破壊�
   assert.equal(s.players[1].life, 20);
 });
 
-test('ダメージは蓄積しターンをまたいで回復しない', () => {
+test('ダメージはターン終了時に全回復する（デフォルト）', () => {
   const s = newGame();
+  const a = put(s, 0, 'c_warrior'); // 3/3
+  const golem = put(s, 1, 'c_golem'); // 3/6
+  ok(attack(s, a.uid));
+  ok(block(s, [{ attacker: a.uid, blocker: golem.uid }]));
+  assert.equal(s.players[0].board.length, 0); // 致死ダメージは即座に破壊
+  assert.equal(golem.damage, 0); // 生き残った側はターン終了で回復
+});
+
+test('ダメージはターン中は残る（同じターン内の火球と組み合わせ）', () => {
+  const s = newGame();
+  const golem = put(s, 1, 'c_golem'); // 3/6
+  s.players[0].mana = 4;
+  setHand(s, 0, ['s_fireball', 's_fireball']);
+  ok(applyAction(s, 0, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: golem.uid } }));
+  assert.equal(golem.damage, 3);
+  ok(applyAction(s, 0, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: golem.uid } }));
+  assert.equal(s.players[1].board.length, 0);
+});
+
+test('damageResetsAtTurnEnd=false: ダメージは蓄積しターンをまたいで回復しない', () => {
+  const s = newGame({ damageResetsAtTurnEnd: false });
   const a = put(s, 0, 'c_warrior'); // 3/3
   const golem = put(s, 1, 'c_golem'); // 3/6
   ok(attack(s, a.uid));

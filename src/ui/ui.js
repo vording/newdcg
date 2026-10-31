@@ -18,7 +18,7 @@ let mode = 'cpu';
 let ui; // 画面上の一時的な選択状態
 
 function resetUi() {
-  ui = { attackers: new Set(), spellHand: null, blocker: null, blocks: new Map(), error: '' };
+  ui = { attackers: new Set(), spellHand: null, blocker: null, blocks: new Map(), mulligan: new Set(), error: '' };
 }
 
 function newGame() {
@@ -82,7 +82,20 @@ function renderPrompt(me) {
     return box;
   }
   const name = game.players[aw.player].name;
-  if (aw.step === 'main') {
+  if (aw.step === 'mulligan') {
+    msg.textContent = `${name} の手札の引き直し（1回だけ）：戻したいカードをクリックで選んでください。`;
+    const n = ui.mulligan.size;
+    box.append(button(n ? `${n}枚引き直す` : 'このまま始める', () => act({ type: 'mulligan', handIndices: [...ui.mulligan] }), 'primary'));
+  } else if (aw.step === 'response') {
+    const attackers = game.combat.attackers.length;
+    if (ui.spellHand !== null) {
+      msg.textContent = `${getCard(game.players[me].hand[ui.spellHand]).name} の対象を選んでください（オレンジ枠）`;
+      box.append(button('キャンセル', () => { ui.spellHand = null; render(); }));
+    } else {
+      msg.textContent = `${game.players[game.activePlayer].name} が ${attackers}体で攻撃してきました。ブロックの前に「対応」カードを1枚使えます（緑枠）。`;
+      box.append(button('対応しない', () => act({ type: 'pass' }), 'primary'));
+    }
+  } else if (aw.step === 'main') {
     if (ui.spellHand !== null) {
       msg.textContent = `${getCard(game.players[me].hand[ui.spellHand]).name} の対象を選んでください（オレンジ枠）`;
       box.append(button('キャンセル', () => { ui.spellHand = null; render(); }));
@@ -171,6 +184,15 @@ function renderHandCard(pi, cardId, handIndex) {
   } else {
     node.append(el('div', 'badges', 'スペル'));
   }
+  if (isHumanTurn() && game.awaiting.step === 'mulligan') {
+    node.classList.add('selectable');
+    if (ui.mulligan.has(handIndex)) { node.classList.add('selected'); node.append(el('div', 'blocklink', '引き直す')); }
+    node.addEventListener('click', () => {
+      ui.mulligan.has(handIndex) ? ui.mulligan.delete(handIndex) : ui.mulligan.add(handIndex);
+      render();
+    });
+    return node;
+  }
   const check = playability(game, pi, handIndex);
   if (isHumanTurn() && check.ok && ui.spellHand === null) {
     node.classList.add('playable');
@@ -198,7 +220,7 @@ function renderCreature(c) {
   fill.style.width = `${(left / c.hp) * 100}%`;
   bar.append(fill);
   node.append(stats, bar);
-  node.append(el('div', 'dmg', c.damage ? `蓄積ダメージ ${c.damage}` : ''));
+  node.append(el('div', 'dmg', c.damage ? `ダメージ ${c.damage}` : ''));
   const badges = [];
   if (c.exhausted) badges.push('行動済み');
   if (c.summoningSick && c.owner === game.activePlayer && !card.keywords?.includes('haste')) badges.push('召喚酔い');
@@ -263,13 +285,17 @@ function describe(e) {
     case 'gameStart': return `ゲーム開始。先攻は ${pn(e.firstPlayer)}`;
     case 'turnStart': return `―― ${pn(e.player)} のターン（${e.turnOfPlayer}ターン目） ――`;
     case 'summon': return `${pn(e.player)} が ${e.name} を召喚`;
-    case 'castSpell': return `${pn(e.player)} が ${e.name} を使用`;
+    case 'castSpell': return `${pn(e.player)} が ${e.name} を使用${e.response ? '（対応）' : ''}`;
     case 'attack': return `${pn(e.player)} が ${e.attackers.length}体で攻撃`;
     case 'blocks': return e.blocks.length ? `${pn(e.player)} が ${e.blocks.length}体でブロック` : `${pn(e.player)} はブロックしない`;
     case 'damage': return `${pn(e.owner)}の ${e.targetName} に ${e.amount} ダメージ`;
     case 'playerDamage': return `${pn(e.player)} に ${e.amount} ダメージ`;
     case 'heal': return `${pn(e.owner)}の ${e.targetName} のダメージを ${e.amount} 回復`;
     case 'destroyed': return `${pn(e.owner)}の ${e.name} は破壊された`;
+    case 'mulligan': return e.count ? `${pn(e.player)} が ${e.count}枚引き直した` : `${pn(e.player)} は手札をそのままにした`;
+    case 'pass': return `${pn(e.player)} は対応しない`;
+    case 'combatCancelled': return '攻撃クリーチャーがいなくなり、戦闘は終了';
+    case 'burn': return `${pn(e.player)} は手札がいっぱいで、引いたカードが墓地へ`;
     case 'deckOut': return `${pn(e.player)} はデッキ切れでドローできない`;
     case 'gameOver': return e.winner === 'draw' ? '引き分け' : `${pn(e.winner)} の勝利`;
     default: return null;

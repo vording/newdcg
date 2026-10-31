@@ -27,6 +27,7 @@ test('速攻は召喚したターンに攻撃できる', () => {
   setHand(s, 0, ['c_wolf']);
   ok(applyAction(s, 0, { type: 'playCard', handIndex: 0 }));
   const uid = s.players[0].board[0].uid;
+  s.players[1].hand = [];
   ok(applyAction(s, 0, { type: 'attack', attackers: [uid] }));
   ok(applyAction(s, 1, { type: 'declareBlocks', blocks: [] }));
   assert.equal(s.players[1].life, 18);

@@ -24,10 +24,12 @@ export const DEFAULT_CONFIG = Object.freeze({
   // Q8【確定】ドローできなくなった時点で敗北: 'lose'（他に 'skip' | 'fatigue' も選択可）
   deckOutRule: 'lose',
 
-  // --- 未確定の項目（仮置き） ---
-
-  // Q9: 手札上限（null = 上限なし）
-  handLimit: null,
+  // クリーチャーのダメージ: true = 毎ターン終了時に全回復（MTG方式） / false = 蓄積する（仕様書v0.3 §8）
+  damageResetsAtTurnEnd: true,
+  // Q9【決定】手札上限10枚。超えて引いたカードは墓地へ（null = 上限なし）
+  handLimit: 10,
+  // Q10【決定】ゲーム開始時に1回、好きな枚数を引き直せる
+  mulligan: true,
 });
 
 export function makeConfig(overrides = {}) {

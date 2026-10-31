@@ -1,7 +1,13 @@
-import { createGame, getCard, testDeck } from '../src/engine/index.js';
+import { applyAction, createGame, getCard, testDeck } from '../src/engine/index.js';
 
+/** 引き直しなし（両者キープ）で開始したゲーム。先攻はプレイヤー0。 */
 export function newGame(config = {}, seed = 42) {
-  return createGame({ decks: [testDeck(), testDeck()], seed, firstPlayer: 0, config });
+  const s = createGame({ decks: [testDeck(), testDeck()], seed, firstPlayer: 0, config });
+  if (s.awaiting?.step === 'mulligan') {
+    ok(applyAction(s, 0, { type: 'mulligan', handIndices: [] }));
+    ok(applyAction(s, 1, { type: 'mulligan', handIndices: [] }));
+  }
+  return s;
 }
 
 /** テスト用: 場にクリーチャーを直接置く（召喚酔いなし） */

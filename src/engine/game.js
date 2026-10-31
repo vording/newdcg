@@ -5,14 +5,17 @@
 //   applyAction(state, { type: 'playCard', handIndex: 0 });
 //
 // state.awaiting は「次に誰が何を決める必要があるか」を表す。
-//   { player, step: 'main' }  : 手番プレイヤーのメインフェイズ
-//   { player, step: 'block' } : 防御側プレイヤーのブロック宣言
-// 将来の「相手ターン中の対応（§9）」は step: 'response' として追加できる構造にしている。
+//   { player, step: 'mulligan' } : ゲーム開始時の手札引き直し（先攻→後攻の順）
+//   { player, step: 'main' }     : 手番プレイヤーのメインフェイズ
+//   { player, step: 'response' } : 攻撃宣言後、防御側が対応カードを使えるタイミング
+//   { player, step: 'block' }    : 防御側プレイヤーのブロック宣言
 //
 // アクション:
-//   { type: 'playCard', handIndex, target? }            メインフェイズ
+//   { type: 'mulligan', handIndices: [i, ...] }         引き直すカード（空配列 = そのまま）
+//   { type: 'playCard', handIndex, target? }            メインフェイズ／対応（対応カードのみ）
 //   { type: 'attack', attackers: [uid, ...] }           メインフェイズ → バトルフェイズへ
 //   { type: 'endTurn' }                                 メインフェイズ（攻撃せず終了）
+//   { type: 'pass' }                                    対応しない
 //   { type: 'declareBlocks', blocks: [{attacker, blocker}] }  ブロック宣言（空配列 = ブロックなし）
 
 import { getCard, hasKeyword, validateDeck } from './cards.js';
@@ -50,6 +53,7 @@ export function createGame({ decks, seed = Date.now(), firstPlayer = null, confi
       turnsTaken: 0,
       deckedOut: false,
       fatigue: 0,
+      mulliganDone: false,
     })),
     awaiting: null,
     combat: null,
@@ -64,8 +68,28 @@ export function createGame({ decks, seed = Date.now(), firstPlayer = null, confi
   drawCards(state, opponentOf(first), cfg.openingHandSecond);
   log(state, 'gameStart', { firstPlayer: first });
 
-  startTurn(state, first);
+  if (cfg.mulligan) state.awaiting = { player: first, step: 'mulligan' };
+  else startTurn(state, first);
   return state;
+}
+
+function mulligan(state, playerIndex, { handIndices = [] }) {
+  const p = state.players[playerIndex];
+  const idx = [...new Set(handIndices)];
+  if (idx.length !== handIndices.length) return fail('同じカードが重複しています');
+  if (idx.some((i) => !Number.isInteger(i) || i < 0 || i >= p.hand.length)) return fail('手札にないカードです');
+  const returned = idx.sort((a, b) => b - a).map((i) => p.hand.splice(i, 1)[0]);
+  p.deck.push(...returned);
+  shuffle(state, p.deck);
+  // 手札上限の影響を受けないよう直接引く
+  p.hand.push(...p.deck.splice(0, returned.length));
+  p.mulliganDone = true;
+  log(state, 'mulligan', { player: playerIndex, count: returned.length });
+
+  const other = opponentOf(playerIndex);
+  if (!state.players[other].mulliganDone) state.awaiting = { player: other, step: 'mulligan' };
+  else startTurn(state, state.firstPlayer);
+  return { ok: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -104,8 +128,11 @@ function endTurn(state) {
   const playerIndex = state.activePlayer;
   // 5. エンドフェイズ
   runTriggers(state, playerIndex, 'turnEnd');
-  log(state, 'turnEnd', { player: playerIndex });
   if (checkStateBased(state)) return;
+  if (state.config.damageResetsAtTurnEnd) {
+    for (const p of state.players) for (const c of p.board) c.damage = 0;
+  }
+  log(state, 'turnEnd', { player: playerIndex });
   startTurn(state, opponentOf(playerIndex));
 }
 
@@ -167,10 +194,13 @@ export function playability(state, playerIndex, handIndex) {
   if (cardId === undefined) return { ok: false, reason: '手札にそのカードがありません' };
   if (state.winner !== null) return { ok: false, reason: 'ゲームは終了しています' };
   const aw = state.awaiting;
-  if (!aw || aw.player !== playerIndex || aw.step !== 'main') {
+  if (!aw || aw.player !== playerIndex || (aw.step !== 'main' && aw.step !== 'response')) {
     return { ok: false, reason: '今はカードを使えません' };
   }
   const card = getCard(cardId);
+  if (aw.step === 'response' && !hasKeyword(card, 'quick')) {
+    return { ok: false, reason: '相手のターン中は「対応」カードしか使えません' };
+  }
   if (card.cost > p.mana) return { ok: false, reason: 'マナが足りません' };
   if (card.type === 'creature' && p.board.length >= state.config.boardLimit) {
     return { ok: false, reason: `場のクリーチャーが上限（${state.config.boardLimit}体）です` };
@@ -202,7 +232,16 @@ export function applyAction(state, playerIndex, action) {
   if (!aw || aw.player !== playerIndex) return fail('あなたの手番ではありません');
 
   switch (action?.type) {
-    case 'playCard': return aw.step === 'main' ? playCard(state, playerIndex, action) : fail('今はカードを使えません');
+    case 'mulligan': return aw.step === 'mulligan' ? mulligan(state, playerIndex, action) : fail('今は引き直しできません');
+    case 'playCard':
+      if (aw.step === 'main') return playCard(state, playerIndex, action);
+      if (aw.step === 'response') return respond(state, playerIndex, action);
+      return fail('今はカードを使えません');
+    case 'pass':
+      if (aw.step !== 'response') return fail('今はパスできません');
+      log(state, 'pass', { player: playerIndex });
+      proceedToBlock(state);
+      return { ok: true };
     case 'attack': return aw.step === 'main' ? declareAttack(state, playerIndex, action) : fail('今は攻撃できません');
     case 'endTurn':
       if (aw.step !== 'main') return fail('今はターンを終了できません');
@@ -250,7 +289,7 @@ function playCard(state, playerIndex, { handIndex, target = null }) {
       if (t.on === 'summon') resolveEffect(state, playerIndex, t.effect, null, creature.uid);
     }
   } else {
-    log(state, 'castSpell', { player: playerIndex, name: card.name, target });
+    log(state, 'castSpell', { player: playerIndex, name: card.name, target, response: state.awaiting.step === 'response' });
     resolveEffect(state, playerIndex, card.effect, target, cardId);
     p.graveyard.push(cardId);
   }
@@ -271,9 +310,41 @@ function declareAttack(state, playerIndex, { attackers }) {
   state.combat = { attackers: [...attackers], blocks: {} };
   log(state, 'attack', { player: playerIndex, attackers: [...attackers] });
 
-  // 4. バトルフェイズ: 防御側がブロッカーを選ぶ
-  state.awaiting = { player: opponentOf(playerIndex), step: 'block' };
+  // 4. バトルフェイズ: 防御側に対応の機会 → ブロック宣言
+  const defender = opponentOf(playerIndex);
+  if (hasResponse(state, defender)) state.awaiting = { player: defender, step: 'response' };
+  else proceedToBlock(state);
   return { ok: true };
+}
+
+/** 防御側が今使える対応カードを持っているか（持っていなければ確認を出さない） */
+export function hasResponse(state, playerIndex) {
+  const saved = state.awaiting;
+  state.awaiting = { player: playerIndex, step: 'response' };
+  const any = state.players[playerIndex].hand.some((_, i) => playability(state, playerIndex, i).ok);
+  state.awaiting = saved;
+  return any;
+}
+
+/** 対応カードを1枚使う。再対応はなく、解決後はブロック宣言へ進む。 */
+function respond(state, playerIndex, action) {
+  const res = playCard(state, playerIndex, action);
+  if (!res.ok) return res;
+  if (state.winner === null) proceedToBlock(state);
+  return res;
+}
+
+function proceedToBlock(state) {
+  // 対応で除去された攻撃クリーチャーは戦闘から外れる
+  const atkBoard = state.players[state.activePlayer].board;
+  state.combat.attackers = state.combat.attackers.filter((uid) => atkBoard.some((c) => c.uid === uid));
+  if (state.combat.attackers.length === 0) {
+    log(state, 'combatCancelled', {});
+    state.combat = null;
+    endTurn(state);
+    return;
+  }
+  state.awaiting = { player: opponentOf(state.activePlayer), step: 'block' };
 }
 
 function declareBlocks(state, playerIndex, { blocks = [] }) {

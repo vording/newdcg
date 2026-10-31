@@ -7,7 +7,10 @@ import {
 /** awaiting.player の次の1アクションを決めて返す（適用はしない） */
 export function chooseAction(state) {
   const me = state.awaiting.player;
-  if (state.awaiting.step === 'block') return { type: 'declareBlocks', blocks: chooseBlocks(state, me) };
+  const stepName = state.awaiting.step;
+  if (stepName === 'mulligan') return { type: 'mulligan', handIndices: chooseMulligan(state, me) };
+  if (stepName === 'response') return chooseResponse(state, me) ?? { type: 'pass' };
+  if (stepName === 'block') return { type: 'declareBlocks', blocks: chooseBlocks(state, me) };
 
   const play = choosePlay(state, me);
   if (play) return play;
@@ -23,6 +26,27 @@ export function step(state) {
   const res = applyAction(state, player, action);
   if (!res.ok) throw new Error(`AI chose illegal action ${JSON.stringify(action)}: ${res.error}`);
   return action;
+}
+
+/** コスト5以上のカードを引き直す */
+function chooseMulligan(state, me) {
+  return state.players[me].hand.map((id, i) => (getCard(id).cost >= 5 ? i : -1)).filter((i) => i >= 0);
+}
+
+/** 対応: 倒せる攻撃クリーチャーがいれば迎撃する（攻撃力の高い順） */
+function chooseResponse(state, me) {
+  const p = state.players[me];
+  for (let i = 0; i < p.hand.length; i++) {
+    const card = getCard(p.hand[i]);
+    if (card.effect?.type !== 'damage' || !playability(state, me, i).ok) continue;
+    const best = targetsForHandCard(state, me, i)
+      .filter((t) => t.kind === 'creature' && state.combat.attackers.includes(t.uid))
+      .map((t) => ({ t, c: state.players[1 - me].board.find((x) => x.uid === t.uid) }))
+      .filter(({ c }) => c && remainingHp(c) <= card.effect.amount)
+      .sort((a, b) => b.c.attack - a.c.attack)[0];
+    if (best) return { type: 'playCard', handIndex: i, target: best.t };
+  }
+  return null;
 }
 
 function choosePlay(state, me) {
@@ -45,7 +69,8 @@ function chooseSpellTarget(state, me, handIndex, card) {
   const opp = 1 - me;
   if (card.effect.type === 'damage') {
     const amount = card.effect.amount;
-    if (state.players[opp].life <= amount) return { kind: 'player', player: opp };
+    const face = targets.find((t) => t.kind === 'player' && t.player === opp);
+    if (face && state.players[opp].life <= amount) return face;
     const kills = targets
       .filter((t) => t.kind === 'creature')
       .map((t) => ({ t, c: creatureOf(t) }))

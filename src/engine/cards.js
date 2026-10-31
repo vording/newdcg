@@ -7,13 +7,14 @@
 //   type      : 'creature' | 'spell'
 //   cost      : マナコスト
 //   attack/hp : クリーチャーのみ
-//   keywords  : 能力キーワード（'haste' = 速攻）
+//   keywords  : 能力キーワード（'haste' = 速攻, 'quick' = 対応）
 //   effect    : スペルの効果 { type, ...params }（effects.js のキー）
 //   triggers  : 誘発能力 [{ on: 'summon' | 'turnStart' | 'turnEnd', effect }]
 //   text      : ルールテキスト（表示用）
 
 export const KEYWORDS = Object.freeze({
   haste: { name: '速攻', text: '召喚したターンから攻撃できる。' },
+  quick: { name: '対応', text: '相手の攻撃宣言後、ブロック宣言の前にも使える。' },
 });
 
 const CARD_LIST = [
@@ -35,7 +36,12 @@ const CARD_LIST = [
     text: 'クリーチャー1体かプレイヤー1人に3ダメージを与える。',
   },
   {
-    id: 's_mend', name: '癒しの光', type: 'spell', cost: 1,
+    id: 's_arrow', name: '迎撃の矢', type: 'spell', cost: 1, keywords: ['quick'],
+    effect: { type: 'damage', amount: 2, target: 'enemyCreature' },
+    text: '相手のクリーチャー1体に2ダメージを与える。',
+  },
+  {
+    id: 's_mend', name: '癒しの光', type: 'spell', cost: 1, keywords: ['quick'],
     effect: { type: 'healAll', target: 'friendlyCreature' },
     text: '自分のクリーチャー1体のダメージをすべて回復する。',
   },
@@ -53,9 +59,13 @@ export function hasKeyword(card, kw) {
   return Array.isArray(card.keywords) && card.keywords.includes(kw);
 }
 
-/** 各カード3枚ずつの30枚テストデッキ */
+/** 30枚のテストデッキ */
+const TEST_DECK_COUNTS = {
+  c_apprentice: 2, c_scout: 2, c_shield: 3, c_wolf: 3, c_messenger: 2, c_warrior: 3,
+  c_golem: 3, c_dragon: 3, s_fireball: 3, s_arrow: 3, s_mend: 3,
+};
 export function testDeck() {
-  return CARD_LIST.flatMap((c) => [c.id, c.id, c.id]);
+  return Object.entries(TEST_DECK_COUNTS).flatMap(([id, n]) => Array(n).fill(id));
 }
 
 /** デッキ構築ルールの検証。問題があればエラーメッセージの配列を返す。 */
