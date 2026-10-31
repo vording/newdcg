@@ -50,7 +50,7 @@ const head = full
 // ビルド識別子（どの版が表示されているか画面で確認するため）
 const css = read('src/ui/style.css');
 const rev = createHash('sha256').update(js + css + body).digest('hex').slice(0, 7);
-const buildId = `v0.1 build ${rev}`;
+const buildId = `v0.2 build ${rev}`;
 
 // 実行時エラーを画面に表示する（真っ白・テキストだけになる問題の切り分け用）
 const errorHandler = `<script>
