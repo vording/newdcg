@@ -44,8 +44,8 @@ const head = full
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>チャージの王様</title>`
-  : `<title>チャージの王様</title>
+<title>カードバトル（タイトル未定）</title>`
+  : `<title>カードバトル（タイトル未定）</title>
 <meta name="claude:viewport-fit-sides" content="cover">`;
 // ビルド識別子（どの版が表示されているか画面で確認するため）
 const css = read('src/ui/style.css');

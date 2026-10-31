@@ -1,4 +1,4 @@
-// 「チャージの王様」ブラウザUI。ゲームロジックは src/engine のみが持ち、ここは表示と入力の変換だけを行う。
+// ブラウザUI（ゲーム名は未定）。ゲームロジックは src/engine のみが持ち、ここは表示と入力の変換だけを行う。
 import {
   applyAction, canAttack, canBlock, canBlockAttacker, createGame, DECKS, deckList, getCard, hasKeyword,
   KEYWORDS, playability, sameTarget, targetsForHandCard,
@@ -410,7 +410,7 @@ function renderOverlay() {
   const box = el('div', `result ${mode === 'hotseat' || won ? 'win' : 'lose'}`);
   const title = game.winner === 'draw' ? '引き分け' : mode === 'hotseat' ? `${game.players[game.winner].name}の勝利` : won ? '勝利！' : '敗北…';
   box.append(el('h2', '', title));
-  box.append(el('p', '', mode === 'cpu' && won ? 'あなたこそチャージの王様だ。' : mode === 'cpu' ? 'CPUが王座を守った。もう一度挑もう。' : '見事な戦いだった。'));
+  box.append(el('p', '', mode === 'cpu' && won ? '見事な勝利だ。' : mode === 'cpu' ? 'CPUの勝ち。もう一度挑もう。' : '見事な戦いだった。'));
   box.append(el('p', '', `${Math.ceil(game.turn / 2)}ターンで決着　あなた：${deckNames[0]}／相手：${deckNames[1]}`));
   const actions = el('div', 'actions');
   actions.append(button('もう一度', startGame, 'btn-gold'), button('タイトルへ', showTitle));
