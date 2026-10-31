@@ -294,7 +294,10 @@ function declareBlocks(state, playerIndex, { blocks = [] }) {
 
   for (const { attacker, blocker } of blocks) {
     combat.blocks[attacker] = blocker;
-    if (state.config.blockerExhaustsOnBlock) defBoard.find((x) => x.uid === blocker).exhausted = true;
+    if (state.config.blockerExhaustsOnBlock) {
+      defBoard.find((x) => x.uid === blocker).exhausted = true;
+      log(state, 'blockerExhausted', { uid: blocker });
+    }
   }
   log(state, 'blocks', { player: playerIndex, blocks: blocks.map((b) => ({ ...b })) });
 

@@ -13,17 +13,20 @@ export const DEFAULT_CONFIG = Object.freeze({
   maxMana: 10,
   boardLimit: 5, // 暫定
 
-  // --- 仕様書で未確定の項目（仮置き。docs/open-questions.md 参照） ---
+  // --- 確認済みのルール（docs/open-questions.md 参照） ---
 
-  // Q1: ブロックしたクリーチャーを行動済みにするか（§7 で未確定と明記）
-  blockerExhaustsOnBlock: false,
-  // Q2: 行動済み（攻撃した）クリーチャーがブロックできるか
+  // Q1【確定】ブロックしたクリーチャーは行動済みになる
+  blockerExhaustsOnBlock: true,
+  // Q2【確定】行動済み（攻撃した）クリーチャーはブロックできない
   exhaustedCanBlock: false,
-  // Q3: 先攻1ターン目にドローするか（仕様書の記述どおりなら true）
+  // Q6【確定】先攻も1ターン目にドローする
   firstPlayerDrawsOnFirstTurn: true,
-  // Q4: デッキ切れでドローできないときの扱い: 'skip'（何もしない） | 'lose'（敗北） | 'fatigue'（ダメージ）
-  deckOutRule: 'skip',
-  // Q5: 手札上限（null = 上限なし）
+  // Q8【確定】ドローできなくなった時点で敗北: 'lose'（他に 'skip' | 'fatigue' も選択可）
+  deckOutRule: 'lose',
+
+  // --- 未確定の項目（仮置き） ---
+
+  // Q9: 手札上限（null = 上限なし）
   handLimit: null,
 });
 

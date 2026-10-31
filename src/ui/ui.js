@@ -270,7 +270,7 @@ function describe(e) {
     case 'playerDamage': return `${pn(e.player)} に ${e.amount} ダメージ`;
     case 'heal': return `${pn(e.owner)}の ${e.targetName} のダメージを ${e.amount} 回復`;
     case 'destroyed': return `${pn(e.owner)}の ${e.name} は破壊された`;
-    case 'deckOut': return `${pn(e.player)} はデッキ切れ`;
+    case 'deckOut': return `${pn(e.player)} はデッキ切れでドローできない`;
     case 'gameOver': return e.winner === 'draw' ? '引き分け' : `${pn(e.winner)} の勝利`;
     default: return null;
   }

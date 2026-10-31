@@ -95,13 +95,19 @@ test('未確定Q2: exhaustedCanBlock=false なら攻撃したクリーチャー�
   ok(block(t, [{ attacker: e2.uid, blocker: m2.uid }]));
 });
 
-test('未確定Q1: blockerExhaustsOnBlock=true ならブロッカーは行動済みになる', () => {
-  const s = newGame({ blockerExhaustsOnBlock: true });
-  const a = put(s, 0, 'c_apprentice');
+test('Q1: ブロックしたクリーチャーは行動済みになり、自分のターン開始時に解除される', () => {
+  const s = newGame();
+  const a1 = put(s, 0, 'c_apprentice');
+  const a2 = put(s, 0, 'c_apprentice');
   const b = put(s, 1, 'c_shield');
-  ok(attack(s, a.uid));
-  ok(block(s, [{ attacker: a.uid, blocker: b.uid }]));
-  assert.equal(b.exhausted, false); // 自分のターン開始時にリフレッシュされるため実質影響なし
+  ok(attack(s, a1.uid, a2.uid));
+  // 戦闘解決前のブロック宣言時点で行動済みになることを確認するため、ダメージ解決を観測する
+  ok(block(s, [{ attacker: a1.uid, blocker: b.uid }]));
+  const ev = s.log.find((e) => e.type === 'blockerExhausted' && e.uid === b.uid);
+  assert.ok(ev, 'ブロッカーが行動済みになったログがある');
+  // 戦闘後に防御側のターンが始まり、リフレッシュされている
+  assert.equal(s.activePlayer, 1);
+  assert.equal(b.exhausted, false);
 });
 
 test('勝敗: ライフ0以下で敗北', () => {

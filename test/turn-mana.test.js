@@ -39,14 +39,34 @@ test('手番でないプレイヤーは行動できない', () => {
   assert.equal(applyAction(s, 1, { type: 'playCard', handIndex: 0 }).ok, false);
 });
 
-test('デッキ切れ: skip では何も起きない / lose では敗北', () => {
-  const s = newGame();
-  s.players[1].deck = [];
-  ok(applyAction(s, 0, { type: 'endTurn' }));
-  assert.equal(s.winner, null);
-
-  const t = newGame({ deckOutRule: 'lose' });
+test('デッキ切れ: ドローできなくなった時点で敗北（デフォルト）', () => {
+  const t = newGame();
   t.players[1].deck = [];
   ok(applyAction(t, 0, { type: 'endTurn' }));
   assert.equal(t.winner, 0);
+  assert.equal(t.awaiting, null);
+});
+
+test('デッキ切れ: カード効果のドローでも引けなければ敗北', () => {
+  const t = newGame();
+  t.players[0].deck = [];
+  t.players[0].mana = 2;
+  t.players[0].hand = ['c_messenger'];
+  ok(applyAction(t, 0, { type: 'playCard', handIndex: 0 }));
+  assert.equal(t.winner, 1);
+});
+
+test('デッキ切れ: 最後の1枚は引ける（引けなくなるまでは負けない）', () => {
+  const t = newGame();
+  t.players[1].deck = t.players[1].deck.slice(0, 1);
+  ok(applyAction(t, 0, { type: 'endTurn' }));
+  assert.equal(t.winner, null);
+  assert.equal(t.players[1].deck.length, 0);
+});
+
+test('デッキ切れ: deckOutRule=skip に切り替えると何も起きない', () => {
+  const s = newGame({ deckOutRule: 'skip' });
+  s.players[1].deck = [];
+  ok(applyAction(s, 0, { type: 'endTurn' }));
+  assert.equal(s.winner, null);
 });
