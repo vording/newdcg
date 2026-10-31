@@ -55,6 +55,6 @@ docs/         ルール整理・未確定事項・開発レポート
 
 ## 公開（GitHub Pages）
 
-`.github/workflows/pages.yml` が push のたびにテスト → `index.html` をビルド → GitHub Pages へデプロイします。
-リポジトリ直下の `index.html` も同じビルド結果なので、Pages の公開元が「ブランチ直下」の設定でも動きます
-（カードやルールを変えたら `npm run build:pages` で更新してコミットしてください）。
+GitHub Pages はブランチ直下を公開する設定になっており、リポジトリ直下の `index.html`（ビルド済みの1ファイル版）が配信されます。
+カードやルールを変えたら `npm run build:pages` で `index.html` を作り直してコミットしてください。
+作り直し忘れは `npm test` で検出されます。
