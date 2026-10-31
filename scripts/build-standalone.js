@@ -44,8 +44,8 @@ const head = full
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>DCG プロトタイプ</title>`
-  : `<title>DCG プロトタイプ</title>
+<title>チャージの王様</title>`
+  : `<title>チャージの王様</title>
 <meta name="claude:viewport-fit-sides" content="cover">`;
 // ビルド識別子（どの版が表示されているか画面で確認するため）
 const css = read('src/ui/style.css');
@@ -55,8 +55,7 @@ const buildId = `v0.3 build ${rev}`;
 // 実行時エラーを画面に表示する（真っ白・テキストだけになる問題の切り分け用）
 const errorHandler = `<script>
 window.addEventListener('error', function (e) {
-  var t = document.getElementById('table');
-  if (!t) return;
+  var t = document.body;
   var p = document.createElement('p');
   p.className = 'fatal';
   p.textContent = 'エラーが発生しました: ' + (e.message || e) + (e.lineno ? ' (line ' + e.lineno + ')' : '');

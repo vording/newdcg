@@ -1,4 +1,4 @@
-# newdcg — 1対1デジタルカードゲーム プロトタイプ
+# チャージの王様（newdcg）— 1対1デジタルカードゲーム プロトタイプ
 
 **▶ ブラウザで遊ぶ: https://vording.github.io/newdcg/**
 

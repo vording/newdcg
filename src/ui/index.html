@@ -2,49 +2,73 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DCG プロトタイプ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>チャージの王様</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
-    <strong>DCG プロトタイプ</strong> <small id="build" class="muted"></small>
-    <label>対戦
-      <select id="mode">
-        <option value="cpu">CPU対戦</option>
-        <option value="hotseat">2人対戦（同じ画面）</option>
-      </select>
-    </label>
-    <label>デッキ <select id="deck"></select></label>
-    <label>CPU
-      <select id="level">
-        <option value="easy" selected>やさしい</option>
-        <option value="normal">ふつう</option>
-        <option value="hard">つよい</option>
-      </select>
-    </label>
-    <button id="newGame" type="button">新しいゲーム</button>
-  </header>
-  <main>
-    <section id="table"><p id="boot">ゲームを読み込んでいます…（この表示が消えない場合は、ページを再読み込みしてください）</p></section>
-    <aside>
-      <details id="help">
+  <!-- タイトル画面 -->
+  <section id="title" class="screen title-screen">
+    <div class="title-inner">
+      <div class="crest" aria-hidden="true">
+        <svg viewBox="0 0 120 80" width="120" height="80"><path d="M10 70 L18 22 L42 46 L60 8 L78 46 L102 22 L110 70 Z" fill="var(--gold)" stroke="var(--gold-deep)" stroke-width="3" stroke-linejoin="round"/><circle cx="18" cy="20" r="6" fill="var(--gold)"/><circle cx="60" cy="7" r="6" fill="var(--gold)"/><circle cx="102" cy="20" r="6" fill="var(--gold)"/><rect x="10" y="66" width="100" height="8" rx="2" fill="var(--gold-deep)"/></svg>
+      </div>
+      <h1 class="logo"><span class="logo-small">チャージの</span><span class="logo-big">王様</span></h1>
+      <p class="tagline">マナを溜め、軍勢を率い、王の座へ突撃せよ。</p>
+
+      <form id="setup" class="setup">
+        <fieldset>
+          <legend>デッキを選ぶ</legend>
+          <div id="deckChoices" class="deck-choices"></div>
+        </fieldset>
+        <div class="setup-row">
+          <fieldset class="seg">
+            <legend>CPUの強さ</legend>
+            <label><input type="radio" name="level" id="level-easy" value="easy" checked><span>やさしい</span></label>
+            <label><input type="radio" name="level" id="level-normal" value="normal"><span>ふつう</span></label>
+            <label><input type="radio" name="level" id="level-hard" value="hard"><span>つよい</span></label>
+          </fieldset>
+          <fieldset class="seg">
+            <legend>対戦</legend>
+            <label><input type="radio" name="mode" id="mode-cpu" value="cpu" checked><span>CPU</span></label>
+            <label><input type="radio" name="mode" id="mode-hotseat" value="hotseat"><span>2人（同じ画面）</span></label>
+          </fieldset>
+        </div>
+        <button id="start" type="submit" class="btn btn-gold btn-big">対戦開始</button>
+      </form>
+
+      <details class="howto">
         <summary>遊び方</summary>
         <ul>
-          <li>相手のライフ（初期20）を0にすれば勝ち。デッキが尽きてドローできなくなっても負け。</li>
-          <li>マナは毎ターン1ずつ増え（最大10）、ターン開始時に全回復する。</li>
-          <li>クリーチャーは出したターンは攻撃できない（速攻を除く）。攻撃したクリーチャーは行動済みになり、相手ターンにブロックできない。</li>
-          <li>攻撃されたら、攻撃1体につき自分のクリーチャー1体でブロックできる。ブロックされると互いの攻撃力ぶんダメージを与え合う。</li>
-          <li>ダメージはターン終了時に回復する。そのターン中に倒し切ること。</li>
-          <li>「対応」カードは、相手の攻撃宣言後・ブロック前にも使える（1枚まで）。マナを残してターンを終えよう。</li>
-          <li>飛行＝飛行でしかブロックできない。先制＝戦闘で先にダメージを与える。警戒＝攻撃しても行動済みにならない。速攻＝出したターンに攻撃できる。</li>
-          <li>後攻は開始時に「マナの雫」（0コスト：このターンマナ+1、1枚引く）を受け取る。</li>
+          <li>相手のライフ（20）を0にすれば勝ち。山札が尽きてカードを引けなくなっても負け。</li>
+          <li>マナは毎ターン1ずつ増え（最大10）、ターン開始時に満タンになる。</li>
+          <li>クリーチャーは出したターンは攻撃できない（<b>速攻</b>を除く）。攻撃すると行動済みになり、相手のターンにブロックできない。</li>
+          <li>攻撃されたら、攻撃1体につき1体でブロックできる。ブロックすると互いの攻撃力ぶんダメージを与え合う。</li>
+          <li>ダメージはターン終了時に回復する。倒すならそのターンのうちに。</li>
+          <li><b>対応</b>カードは、相手の攻撃宣言後・ブロック前にも1枚使える。マナを残してターンを終えよう。</li>
+          <li><b>飛行</b>は飛行でしか止められない。<b>先制</b>は先にダメージを与える。<b>警戒</b>は攻撃しても行動済みにならない。</li>
+          <li>後攻は「マナの雫」（0マナ：このターンマナ+1、1枚引く）を受け取る。</li>
         </ul>
       </details>
-      <h3>ログ</h3>
+      <p class="build"><small id="build"></small></p>
+    </div>
+  </section>
+
+  <!-- 対戦画面 -->
+  <section id="game" class="screen game-screen" hidden>
+    <header class="topbar">
+      <button id="menuBtn" type="button" class="btn btn-ghost">≡ タイトル</button>
+      <div class="topbar-title">チャージの王様</div>
+      <div id="turnInfo" class="turn-info"></div>
+      <button id="logBtn" type="button" class="btn btn-ghost">記録</button>
+    </header>
+    <div id="table" class="table"><p id="boot">読み込み中…</p></div>
+    <aside id="logPanel" class="log-panel" hidden>
+      <div class="log-head"><strong>対戦の記録</strong><button id="logClose" type="button" class="btn btn-ghost">閉じる</button></div>
       <ol id="log"></ol>
     </aside>
-  </main>
+    <div id="overlay" class="overlay" hidden></div>
+  </section>
   <script type="module" src="ui.js"></script>
 </body>
 </html>

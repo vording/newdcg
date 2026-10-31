@@ -3,159 +3,384 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>DCG プロトタイプ</title>
+<title>チャージの王様</title>
 <style>
-/* 卓上レイアウト: 上=相手、下=自分、右=ログ。冷たいフェルト卓の色味に、マナ=青・攻撃=琥珀・ダメージ=赤の意味色。 */
+@import url('https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap');
+
+/* 夜の軍議卓：紺の卓、金の王冠、青いマナ（チャージ）、赤い攻撃。カードは羊皮紙。
+   単一のダークな世界観で統一する（ライト/ダークの切り替えはしない）。 */
 :root {
-  --bg: #e9eef0; --panel: #f9fbfb; --ink: #1d2a30; --muted: #5f7079; --line: #c6d2d7;
-  --accent: #2563c9; --danger: #c43c3c; --ok: #24845a; --warn: #b87500; --on-accent: #ffffff;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #151c20; --panel: #1f292e; --ink: #e6eef1; --muted: #93a4ac; --line: #34434a;
-    --accent: #5b92ea; --danger: #e46a6a; --ok: #4cbf89; --warn: #e0a43a; --on-accent: #0d1418;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #151c20; --panel: #1f292e; --ink: #e6eef1; --muted: #93a4ac; --line: #34434a;
-  --accent: #5b92ea; --danger: #e46a6a; --ok: #4cbf89; --warn: #e0a43a; --on-accent: #0d1418;
+  --night: #0e1226;      /* 背景 */
+  --felt: #182044;       /* 卓 */
+  --felt-hi: #232d5c;    /* 卓の明るい面 */
+  --line: #34407a;       /* 罫線 */
+  --text: #e8ebf7;       /* 卓上の文字 */
+  --muted: #9ba5cc;
+  --gold: #eab84a;       /* 王冠・選択・主要ボタン */
+  --gold-deep: #a9761c;
+  --gold-ink: #2a1d04;
+  --parchment: #f3e8cf;  /* カード面 */
+  --parchment-2: #e6d6b0;
+  --ink: #2b2318;        /* カード上の文字 */
+  --ink-muted: #6c5d45;
+  --charge: #5cc6ff;     /* マナ */
+  --crimson: #e2564a;    /* 攻撃・危険 */
+  --verdant: #4fcf8f;    /* HP・使える */
+  --violet: #a98bff;     /* 一時強化・飛行 */
+  --shadow: rgba(0, 0, 0, .45);
+
+  --font-display: 'Dela Gothic One', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+  --font-body: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', system-ui, sans-serif;
+  --card-w: 112px;
+  --card-h: 156px;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-body { margin: 0; font-family: system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif; background: var(--bg); color: var(--ink); }
-header { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; padding-block: 8px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); border-bottom: 1px solid var(--line); }
-main { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 12px; padding-block: 12px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-@media (max-width: 800px) { main { grid-template-columns: 1fr; } }
-aside { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px; max-height: 80vh; overflow: auto; font-size: 12px; }
-aside ol { padding-left: 20px; margin: 0; }
-button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
-button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-button:disabled { opacity: .4; cursor: default; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: radial-gradient(1200px 600px at 50% -10%, #1d2756 0%, var(--night) 60%) fixed, var(--night);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+}
+button { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
 
-.side { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px; margin-bottom: 8px; }
-.side.active { border-color: var(--accent); }
-.status { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; font-size: 14px; }
-.life { font-size: 22px; font-weight: bold; padding: 2px 10px; border-radius: 6px; border: 2px solid transparent; }
-.life.targetable { border-color: var(--warn); cursor: pointer; }
-.mana { font-variant-numeric: tabular-nums; font-family: ui-monospace, monospace; font-size: 16px; }
-.mana .full { color: var(--accent); } .mana .empty { color: var(--muted); }
-.row { display: flex; gap: 8px; min-height: 120px; padding: 8px 0; flex-wrap: wrap; }
-.hand .row { min-height: 100px; }
+/* ---------- ボタン ---------- */
+.btn {
+  border: 1px solid var(--line); background: var(--felt-hi); color: var(--text);
+  padding: 8px 14px; border-radius: 10px; cursor: pointer; font-weight: 700;
+  transition: transform .08s ease, background .15s ease;
+}
+.btn:hover:not(:disabled) { background: #2c3870; }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn-gold { background: linear-gradient(180deg, #f6cf6c, var(--gold)); border-color: var(--gold-deep); color: var(--gold-ink); box-shadow: 0 3px 0 var(--gold-deep); }
+.btn-gold:hover:not(:disabled) { background: linear-gradient(180deg, #ffdc80, #f0c25a); }
+.btn-crimson { background: linear-gradient(180deg, #f07064, var(--crimson)); border-color: #9c2e25; color: #fff; box-shadow: 0 3px 0 #9c2e25; }
+.btn-crimson:hover:not(:disabled) { background: linear-gradient(180deg, #ff8074, #ea6155); }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--muted); padding: 6px 10px; }
+.btn-ghost:hover:not(:disabled) { background: var(--felt-hi); color: var(--text); }
+.btn-big { font-family: var(--font-display); font-weight: 400; font-size: 22px; padding: 12px 40px; letter-spacing: .08em; }
+:focus-visible { outline: 3px solid var(--charge); outline-offset: 2px; }
 
-.card { width: 104px; min-height: 100px; border: 2px solid var(--line); border-radius: 8px; padding: 6px; font-size: 12px; background: var(--bg); position: relative; user-select: none; }
-.card .cost { position: absolute; top: 4px; right: 6px; background: var(--accent); color: var(--on-accent); border-radius: 50%; width: 20px; height: 20px; text-align: center; line-height: 20px; font-weight: bold; }
-.card .name { font-weight: bold; margin-right: 20px; }
-.card .text { color: var(--muted); font-size: 11px; margin-top: 2px; }
-.card .stats { display: flex; justify-content: space-between; margin-top: 6px; font-weight: bold; font-size: 14px; }
-.card .atk { color: var(--warn); }
-.card .hp.damaged { color: var(--danger); }
-.hpbar { height: 5px; background: var(--line); border-radius: 3px; margin-top: 4px; overflow: hidden; }
-.hpbar > div { height: 100%; background: var(--ok); }
-.hpbar > div.low { background: var(--danger); }
-.dmg { font-size: 11px; color: var(--danger); }
-.badges { font-size: 11px; color: var(--muted); min-height: 14px; }
+/* ---------- タイトル画面 ---------- */
+.title-screen {
+  min-height: 100%;
+  display: grid; place-items: center;
+  padding-block: 32px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.title-inner { width: 100%; max-width: 760px; display: grid; gap: 20px; justify-items: center; text-align: center; }
+.crest { filter: drop-shadow(0 6px 18px rgba(234, 184, 74, .35)); animation: crest 3s ease-in-out infinite alternate; }
+@keyframes crest { from { transform: translateY(0); } to { transform: translateY(-4px); } }
+.logo { margin: -8px 0 0; font-family: var(--font-display); font-weight: 400; line-height: 1; display: grid; gap: 6px; }
+.logo-small { font-size: clamp(22px, 5vw, 34px); color: var(--charge); letter-spacing: .2em; }
+.logo-big {
+  font-size: clamp(64px, 16vw, 128px); letter-spacing: .1em;
+  background: linear-gradient(180deg, #ffe7a3 0%, var(--gold) 55%, var(--gold-deep) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: 0 6px 24px rgba(234, 184, 74, .25);
+}
+.tagline { margin: 0; color: var(--muted); font-size: 15px; }
+.setup { width: 100%; display: grid; gap: 16px; justify-items: center; }
+.setup fieldset { border: 0; margin: 0; padding: 0; width: 100%; }
+.setup legend { font-weight: 700; color: var(--muted); font-size: 12px; letter-spacing: .12em; margin: 0 auto 8px; padding: 0; }
+.deck-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.deck-choice { position: relative; display: block; cursor: pointer; text-align: left; }
+.deck-choice input { position: absolute; opacity: 0; pointer-events: none; }
+.deck-choice .face {
+  display: grid; gap: 4px; height: 100%;
+  background: var(--felt); border: 2px solid var(--line); border-radius: 14px; padding: 12px 14px;
+  transition: border-color .15s ease, transform .15s ease;
+}
+.deck-choice:hover .face { transform: translateY(-2px); }
+.deck-choice input:checked + .face { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(234, 184, 74, .25); }
+.deck-choice input:focus-visible + .face { outline: 3px solid var(--charge); outline-offset: 2px; }
+.deck-choice .dname { font-family: var(--font-display); font-size: 20px; }
+.deck-choice .dtype { font-size: 11px; color: var(--gold); letter-spacing: .1em; }
+.deck-choice .dtext { font-size: 12px; color: var(--muted); }
+.setup-row { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; width: 100%; }
+.setup-row fieldset { width: auto; }
+.seg { display: inline-flex; flex-wrap: wrap; justify-content: center; }
+.seg legend { width: 100%; text-align: center; }
+.seg label { cursor: pointer; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg span { display: inline-block; padding: 8px 14px; border: 1px solid var(--line); background: var(--felt); font-weight: 700; }
+.seg label:first-of-type span { border-radius: 10px 0 0 10px; }
+.seg label:last-of-type span { border-radius: 0 10px 10px 0; }
+.seg input:checked + span { background: var(--gold); color: var(--gold-ink); border-color: var(--gold-deep); }
+.seg input:focus-visible + span { outline: 3px solid var(--charge); outline-offset: 2px; }
+.howto { width: 100%; text-align: left; background: rgba(24, 32, 68, .6); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+.howto summary { cursor: pointer; font-weight: 700; }
+.howto ul { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; color: var(--muted); font-size: 13px; }
+.howto b { color: var(--text); }
+.build { margin: 0; color: var(--muted); }
 
-.card.playable { border-color: var(--ok); cursor: pointer; }
-.card.unplayable { opacity: .55; }
-.card.selectable { border-color: var(--ok); cursor: pointer; }
-.card.selected { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent); }
-.card.targetable { border-color: var(--warn); cursor: pointer; box-shadow: 0 0 0 2px var(--warn); }
-.card.attacking { box-shadow: 0 0 0 3px var(--danger); }
-.card.exhausted { transform: rotate(6deg); opacity: .7; }
-.card.back { background: repeating-linear-gradient(45deg, var(--line), var(--line) 6px, var(--panel) 6px, var(--panel) 12px); min-height: 60px; width: 44px; }
-.blocklink { font-size: 11px; color: var(--accent); font-weight: bold; }
+/* ---------- 対戦画面 ---------- */
+.game-screen { min-height: 100%; display: flex; flex-direction: column; }
+.topbar {
+  display: flex; align-items: center; gap: 8px;
+  padding-block: 6px;
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  border-bottom: 1px solid var(--line); background: rgba(14, 18, 38, .8);
+}
+.topbar-title { font-family: var(--font-display); color: var(--gold); font-size: 16px; letter-spacing: .1em; }
+.turn-info { margin-left: auto; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.table {
+  flex: 1; display: grid; gap: 10px; align-content: start;
+  width: 100%; max-width: 1100px; margin: 0 auto;
+  padding-block: 10px 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
 
-.prompt { padding: 8px 12px; border-radius: 8px; background: var(--panel); border: 1px dashed var(--accent); margin-bottom: 8px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.prompt .msg { flex: 1; min-width: 200px; }
-.error { color: var(--danger); }
-.muted { color: var(--muted); }
-#boot, .fatal { padding: 16px; }
-.fatal { color: var(--danger); white-space: pre-wrap; }
-.banner { font-size: 24px; font-weight: bold; text-align: center; padding: 24px; }
-button:focus-visible, .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { .card.exhausted { transform: none; } }
-@media (max-width: 480px) { .card { width: calc(33% - 6px); min-width: 0; } .card.back { width: 32px; } }
+/* プレイヤー帯 */
+.seat { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.seat .who { font-family: var(--font-display); font-size: 16px; display: flex; align-items: center; gap: 8px; }
+.seat .who .turn-badge { font-family: var(--font-body); font-size: 11px; font-weight: 700; background: var(--gold); color: var(--gold-ink); border-radius: 999px; padding: 1px 8px; }
+.life {
+  position: relative; display: inline-grid; place-items: center;
+  width: 58px; height: 58px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff8a7d, var(--crimson) 60%, #8f2a22);
+  color: #fff; font-family: var(--font-display); font-size: 24px;
+  box-shadow: 0 4px 12px var(--shadow), inset 0 -3px 0 rgba(0, 0, 0, .25);
+  border: 2px solid transparent;
+}
+.life small { position: absolute; bottom: -16px; font-family: var(--font-body); font-size: 10px; color: var(--muted); }
+.life.low { animation: throb 1s ease-in-out infinite alternate; }
+@keyframes throb { from { box-shadow: 0 0 0 0 rgba(226, 86, 74, .6); } to { box-shadow: 0 0 0 8px rgba(226, 86, 74, 0); } }
+.life.targetable { border-color: var(--gold); cursor: pointer; box-shadow: 0 0 0 4px rgba(234, 184, 74, .5); }
+.mana { display: inline-flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+.pip { width: 14px; height: 14px; transform: rotate(45deg); border-radius: 3px; border: 2px solid var(--charge); }
+.pip.full { background: var(--charge); box-shadow: 0 0 8px rgba(92, 198, 255, .7); }
+.pip.extra { border-color: var(--gold); background: var(--gold); }
+.mana-num { margin-left: 8px; font-variant-numeric: tabular-nums; color: var(--charge); font-weight: 700; }
+.piles { margin-left: auto; display: flex; gap: 10px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 
-/* --- v0.2 追加 --- */
-:root { --buff: #1f7a8c; --flash: rgba(184, 117, 0, .35); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --buff: #5cc3d6; --flash: rgba(224, 164, 58, .35); } }
-:root[data-theme="dark"] { --buff: #5cc3d6; --flash: rgba(224, 164, 58, .35); }
-header label { display: inline-flex; gap: 6px; align-items: center; }
-.prompt { flex-direction: column; align-items: stretch; }
-.prompt .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.hint { font-size: 12px; color: var(--muted); }
-.hint.danger { color: var(--danger); font-weight: bold; }
-.feed { margin: 0; padding: 6px 8px 6px 22px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); }
-.prompt.over { align-items: center; text-align: center; }
-.banner { padding: 8px; }
-.life.low { color: var(--danger); }
-.meta { color: var(--muted); font-size: 12px; }
-.empty { color: var(--muted); font-size: 12px; align-self: center; }
-.kws { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 2px; }
-.kw { font-size: 10px; padding: 0 4px; border-radius: 4px; border: 1px solid var(--line); color: var(--ink); }
-.kw-quick { border-color: var(--accent); color: var(--accent); }
-.kw-flying { border-color: var(--buff); color: var(--buff); }
-.kw-haste, .kw-firstStrike { border-color: var(--warn); color: var(--warn); }
+/* 戦場 */
+.battlefield {
+  background: linear-gradient(180deg, var(--felt) 0%, var(--felt-hi) 50%, var(--felt) 100%);
+  border: 1px solid var(--line); border-radius: 18px; padding: 10px;
+  display: grid; gap: 6px; box-shadow: inset 0 0 40px rgba(0, 0, 0, .35);
+}
+.lane { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; min-height: calc(var(--card-h) + 8px); align-items: center; padding: 4px 0; }
+.midline { height: 2px; background: linear-gradient(90deg, transparent, var(--gold-deep), transparent); opacity: .6; }
+.lane .empty { color: var(--muted); font-size: 12px; }
+
+/* 手札 */
+.hand { display: flex; justify-content: center; padding: 10px 0 4px; min-height: calc(var(--card-h) + 16px); }
+.hand .card + .card { margin-left: -6px; }
+.hand .card { transition: transform .15s ease, box-shadow .15s ease; }
+.hand .card.playable:hover, .hand .card.playable:focus-visible { transform: translateY(-14px); z-index: 2; }
+.opp-hand { display: flex; justify-content: center; min-height: 52px; }
+.opp-hand .back + .back { margin-left: -18px; }
+
+/* カード */
+.card {
+  position: relative; flex: none;
+  width: var(--card-w); height: var(--card-h);
+  background: linear-gradient(180deg, var(--parchment) 0%, var(--parchment-2) 100%);
+  color: var(--ink); border-radius: 10px; border: 2px solid #c9b48a;
+  box-shadow: 0 4px 10px var(--shadow);
+  display: flex; flex-direction: column; overflow: hidden; user-select: none;
+}
+.card .cost {
+  position: absolute; top: 4px; left: 4px; z-index: 1;
+  width: 24px; height: 24px; display: grid; place-items: center;
+  background: radial-gradient(circle at 35% 30%, #a6e2ff, var(--charge) 60%, #1f7fb5);
+  color: #052335; font-family: var(--font-display); font-size: 14px; border-radius: 50%;
+  border: 2px solid #0e4a6c;
+}
+.card .art {
+  height: 54px; margin: 4px 4px 0; border-radius: 6px;
+  display: grid; place-items: center;
+  font-family: var(--font-display); font-size: 32px; color: rgba(255, 255, 255, .92);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, .25);
+}
+.art.t-creature { background: linear-gradient(135deg, #4a6fb5, #263c78); }
+.art.t-spell { background: linear-gradient(135deg, #b5543f, #6e2a2a); }
+.art.t-quick { background: linear-gradient(135deg, #3f9fb5, #1d5a6e); }
+.art.t-token { background: linear-gradient(135deg, #d6aa3c, #8a6418); }
+.card .name { font-weight: 700; font-size: 12px; padding: 2px 6px 0; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card .kws { display: flex; gap: 3px; flex-wrap: wrap; padding: 2px 6px 0; }
+.kw { font-size: 10px; font-weight: 700; padding: 0 5px; border-radius: 4px; background: #2b2318; color: var(--parchment); line-height: 16px; }
+.kw-quick { background: #1d5a6e; }
+.kw-flying { background: #5b44a8; }
+.kw-haste { background: #a3412f; }
+.kw-firstStrike { background: #8a5a12; }
+.kw-vigilance { background: #2f6b4a; }
+.card .text { font-size: 10px; line-height: 1.35; color: var(--ink-muted); padding: 2px 6px; overflow: hidden; flex: 1; }
+.card .stats { display: flex; justify-content: space-between; padding: 0 4px 4px; margin-top: auto; }
+.stat {
+  min-width: 28px; height: 24px; padding: 0 6px; border-radius: 12px; display: grid; place-items: center;
+  font-family: var(--font-display); font-size: 14px; color: #fff; font-variant-numeric: tabular-nums;
+}
+.stat.atk { background: #b5462f; }
+.stat.hp { background: #2f8a5c; }
+.stat.hp.damaged { background: #c23a2e; }
+.stat.buffed { box-shadow: 0 0 0 2px var(--violet); }
+.card .ribbon {
+  position: absolute; left: 0; right: 0; top: 34px; text-align: center; font-size: 11px; font-weight: 700;
+  background: rgba(14, 18, 38, .82); color: var(--text); padding: 1px 0;
+}
 .card.spell { border-style: dashed; }
-.card .atk.buffed, .card .hp.buffed { color: var(--buff); }
-.tag { font-size: 11px; font-weight: bold; color: var(--accent); margin-top: 2px; }
-.card.assigned { box-shadow: 0 0 0 3px var(--buff); }
-.card.returning { opacity: .6; }
-.card.fresh { animation: flash 1.2s ease-out 1; }
-@keyframes flash { from { box-shadow: 0 0 0 6px var(--flash); } to { box-shadow: 0 0 0 0 transparent; } }
-@media (prefers-reduced-motion: reduce) { .card.fresh { animation: none; } }
-#help { margin-bottom: 8px; font-size: 12px; }
-#help summary { cursor: pointer; font-weight: bold; font-size: 13px; }
-#help ul { padding-left: 18px; margin: 6px 0; display: grid; gap: 4px; }
-#log li.turn { color: var(--muted); margin-top: 4px; }
-aside h3 { margin: 4px 0; font-size: 13px; }
+.card.back {
+  width: 40px; height: 52px; border-radius: 6px; border: 2px solid var(--gold-deep);
+  background: repeating-linear-gradient(45deg, #2a3570 0 6px, #1d2756 6px 12px);
+}
+
+/* カードの状態 */
+.card.playable { border-color: var(--verdant); box-shadow: 0 0 0 2px var(--verdant), 0 6px 14px var(--shadow); cursor: pointer; }
+.card.unplayable { filter: saturate(.55) brightness(.85); }
+.card.selectable { cursor: pointer; border-color: var(--verdant); box-shadow: 0 0 0 2px var(--verdant), 0 4px 10px var(--shadow); }
+.card.selected { border-color: var(--gold); box-shadow: 0 0 0 4px var(--gold), 0 8px 18px var(--shadow); transform: translateY(-6px); }
+.card.targetable { cursor: pointer; border-color: var(--gold); animation: target 0.9s ease-in-out infinite alternate; }
+@keyframes target { from { box-shadow: 0 0 0 2px var(--gold); } to { box-shadow: 0 0 0 6px rgba(234, 184, 74, .35); } }
+.card.attacking { box-shadow: 0 0 0 4px var(--crimson), 0 8px 18px var(--shadow); }
+.mine .card.attacking { transform: translateY(-10px); }
+.theirs .card.attacking { transform: translateY(10px); }
+.card.exhausted { filter: grayscale(.6) brightness(.8); transform: rotate(4deg); }
+.card.assigned { box-shadow: 0 0 0 4px var(--violet); }
+.card.returning { opacity: .55; }
+.card.fresh { animation: flash 1.1s ease-out 1; }
+@keyframes flash { from { box-shadow: 0 0 0 10px rgba(234, 184, 74, .55); } to { box-shadow: 0 4px 10px var(--shadow); } }
+
+/* 指示バー */
+.command {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  background: rgba(14, 18, 38, .85); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px;
+}
+.command .msg { font-weight: 700; }
+.command .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.command .sub.danger { color: var(--crimson); }
+.command .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.command .error { color: var(--crimson); font-size: 12px; grid-column: 1 / -1; }
+.feed { grid-column: 1 / -1; margin: 0; padding: 6px 0 0 18px; border-top: 1px dashed var(--line); color: var(--muted); font-size: 12px; display: grid; gap: 1px; }
+.thinking::after { content: '…'; animation: dots 1s steps(3) infinite; display: inline-block; width: 1em; overflow: hidden; vertical-align: bottom; }
+@keyframes dots { from { width: 0; } to { width: 1em; } }
+
+/* ログ */
+.log-panel {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(340px, 90vw); z-index: 20;
+  background: var(--felt); border-left: 1px solid var(--line); box-shadow: -10px 0 30px var(--shadow);
+  display: flex; flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+.log-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.log-panel ol { margin: 0; padding: 8px 12px 16px 32px; overflow: auto; font-size: 12px; color: var(--muted); }
+.log-panel li.turn { color: var(--gold); margin-top: 6px; }
+
+/* 勝敗 */
+.overlay {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center;
+  background: rgba(8, 10, 22, .72); backdrop-filter: blur(3px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.result { text-align: center; display: grid; gap: 12px; justify-items: center; background: var(--felt); border: 2px solid var(--gold-deep); border-radius: 20px; padding: 28px 32px; max-width: 420px; width: 100%; }
+.result h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 52px; line-height: 1.1; }
+.result.win h2 { color: var(--gold); }
+.result.lose h2 { color: var(--muted); }
+.result p { margin: 0; color: var(--muted); }
+.result .actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+/* 狭い画面 */
+@media (max-width: 640px) {
+  :root { --card-w: 84px; --card-h: 124px; }
+  .card .art { height: 38px; font-size: 22px; }
+  .card .text { font-size: 9px; }
+  .card .ribbon { top: 26px; }
+  .stat { min-width: 24px; height: 20px; font-size: 12px; }
+  .lane { gap: 6px; }
+  .hand { justify-content: flex-start; overflow-x: auto; padding-bottom: 8px; }
+  .hand .card + .card { margin-left: 4px; }
+  .hand .card.playable:hover { transform: none; }
+  .command { grid-template-columns: 1fr; }
+  .command .actions { justify-content: stretch; }
+  .command .actions .btn { flex: 1; }
+  .life { width: 48px; height: 48px; font-size: 20px; }
+  .topbar-title { display: none; }
+  .piles { margin-left: 0; width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
 
 </style>
 </head>
 <body>
-<header>
-    <strong>DCG プロトタイプ</strong> <small id="build" class="muted"></small>
-    <label>対戦
-      <select id="mode">
-        <option value="cpu">CPU対戦</option>
-        <option value="hotseat">2人対戦（同じ画面）</option>
-      </select>
-    </label>
-    <label>デッキ <select id="deck"></select></label>
-    <label>CPU
-      <select id="level">
-        <option value="easy" selected>やさしい</option>
-        <option value="normal">ふつう</option>
-        <option value="hard">つよい</option>
-      </select>
-    </label>
-    <button id="newGame" type="button">新しいゲーム</button>
-  </header>
-  <main>
-    <section id="table"><p id="boot">ゲームを読み込んでいます…（この表示が消えない場合は、ページを再読み込みしてください）</p></section>
-    <aside>
-      <details id="help">
+<!-- タイトル画面 -->
+  <section id="title" class="screen title-screen">
+    <div class="title-inner">
+      <div class="crest" aria-hidden="true">
+        <svg viewBox="0 0 120 80" width="120" height="80"><path d="M10 70 L18 22 L42 46 L60 8 L78 46 L102 22 L110 70 Z" fill="var(--gold)" stroke="var(--gold-deep)" stroke-width="3" stroke-linejoin="round"/><circle cx="18" cy="20" r="6" fill="var(--gold)"/><circle cx="60" cy="7" r="6" fill="var(--gold)"/><circle cx="102" cy="20" r="6" fill="var(--gold)"/><rect x="10" y="66" width="100" height="8" rx="2" fill="var(--gold-deep)"/></svg>
+      </div>
+      <h1 class="logo"><span class="logo-small">チャージの</span><span class="logo-big">王様</span></h1>
+      <p class="tagline">マナを溜め、軍勢を率い、王の座へ突撃せよ。</p>
+
+      <form id="setup" class="setup">
+        <fieldset>
+          <legend>デッキを選ぶ</legend>
+          <div id="deckChoices" class="deck-choices"></div>
+        </fieldset>
+        <div class="setup-row">
+          <fieldset class="seg">
+            <legend>CPUの強さ</legend>
+            <label><input type="radio" name="level" id="level-easy" value="easy" checked><span>やさしい</span></label>
+            <label><input type="radio" name="level" id="level-normal" value="normal"><span>ふつう</span></label>
+            <label><input type="radio" name="level" id="level-hard" value="hard"><span>つよい</span></label>
+          </fieldset>
+          <fieldset class="seg">
+            <legend>対戦</legend>
+            <label><input type="radio" name="mode" id="mode-cpu" value="cpu" checked><span>CPU</span></label>
+            <label><input type="radio" name="mode" id="mode-hotseat" value="hotseat"><span>2人（同じ画面）</span></label>
+          </fieldset>
+        </div>
+        <button id="start" type="submit" class="btn btn-gold btn-big">対戦開始</button>
+      </form>
+
+      <details class="howto">
         <summary>遊び方</summary>
         <ul>
-          <li>相手のライフ（初期20）を0にすれば勝ち。デッキが尽きてドローできなくなっても負け。</li>
-          <li>マナは毎ターン1ずつ増え（最大10）、ターン開始時に全回復する。</li>
-          <li>クリーチャーは出したターンは攻撃できない（速攻を除く）。攻撃したクリーチャーは行動済みになり、相手ターンにブロックできない。</li>
-          <li>攻撃されたら、攻撃1体につき自分のクリーチャー1体でブロックできる。ブロックされると互いの攻撃力ぶんダメージを与え合う。</li>
-          <li>ダメージはターン終了時に回復する。そのターン中に倒し切ること。</li>
-          <li>「対応」カードは、相手の攻撃宣言後・ブロック前にも使える（1枚まで）。マナを残してターンを終えよう。</li>
-          <li>飛行＝飛行でしかブロックできない。先制＝戦闘で先にダメージを与える。警戒＝攻撃しても行動済みにならない。速攻＝出したターンに攻撃できる。</li>
-          <li>後攻は開始時に「マナの雫」（0コスト：このターンマナ+1、1枚引く）を受け取る。</li>
+          <li>相手のライフ（20）を0にすれば勝ち。山札が尽きてカードを引けなくなっても負け。</li>
+          <li>マナは毎ターン1ずつ増え（最大10）、ターン開始時に満タンになる。</li>
+          <li>クリーチャーは出したターンは攻撃できない（<b>速攻</b>を除く）。攻撃すると行動済みになり、相手のターンにブロックできない。</li>
+          <li>攻撃されたら、攻撃1体につき1体でブロックできる。ブロックすると互いの攻撃力ぶんダメージを与え合う。</li>
+          <li>ダメージはターン終了時に回復する。倒すならそのターンのうちに。</li>
+          <li><b>対応</b>カードは、相手の攻撃宣言後・ブロック前にも1枚使える。マナを残してターンを終えよう。</li>
+          <li><b>飛行</b>は飛行でしか止められない。<b>先制</b>は先にダメージを与える。<b>警戒</b>は攻撃しても行動済みにならない。</li>
+          <li>後攻は「マナの雫」（0マナ：このターンマナ+1、1枚引く）を受け取る。</li>
         </ul>
       </details>
-      <h3>ログ</h3>
+      <p class="build"><small id="build"></small></p>
+    </div>
+  </section>
+
+  <!-- 対戦画面 -->
+  <section id="game" class="screen game-screen" hidden>
+    <header class="topbar">
+      <button id="menuBtn" type="button" class="btn btn-ghost">≡ タイトル</button>
+      <div class="topbar-title">チャージの王様</div>
+      <div id="turnInfo" class="turn-info"></div>
+      <button id="logBtn" type="button" class="btn btn-ghost">記録</button>
+    </header>
+    <div id="table" class="table"><p id="boot">読み込み中…</p></div>
+    <aside id="logPanel" class="log-panel" hidden>
+      <div class="log-head"><strong>対戦の記録</strong><button id="logClose" type="button" class="btn btn-ghost">閉じる</button></div>
       <ol id="log"></ol>
     </aside>
-  </main>
+    <div id="overlay" class="overlay" hidden></div>
+  </section>
 <script>
 window.addEventListener('error', function (e) {
-  var t = document.getElementById('table');
-  if (!t) return;
+  var t = document.body;
   var p = document.createElement('p');
   p.className = 'fatal';
   p.textContent = 'エラーが発生しました: ' + (e.message || e) + (e.lineno ? ' (line ' + e.lineno + ')' : '');
@@ -1332,7 +1557,7 @@ function quickBlocks(state, me) {
 }
 
 // ---- src/ui/ui.js ----
-// ブラウザUI。ゲームロジックは src/engine のみが持ち、ここは表示と入力の変換だけを行う。
+// 「チャージの王様」ブラウザUI。ゲームロジックは src/engine のみが持ち、ここは表示と入力の変換だけを行う。
 
 
 const $ = (sel) => document.querySelector(sel);
@@ -1343,16 +1568,55 @@ const el = (tag, cls, text) => {
   return e;
 };
 
-let game;
+// カードの絵の代わりに表示する一文字
+const GLYPH = {
+  c_apprentice: '剣', c_scout: '斥', c_shield: '盾', c_wolf: '狼', c_messenger: '鳥', c_warrior: '槌',
+  c_rider: '騎', c_pikeman: '槍', c_hawk: '鷹', c_salamander: '蜥', c_golem: '岩', c_knight: '犬',
+  c_general: '将', c_dragon: '竜', s_arrow: '矢', s_might: '力', s_rally: '鬨', s_fireball: '炎',
+  s_insight: '泉', s_wave: '波', s_coin: '雫', s_mend: '癒',
+};
+const DECK_TYPE = { swift: '速攻型', fortress: '防御型', balance: '標準型' };
+
+let game = null;
 let mode = 'cpu';
+let level = 'easy';
 let deckNames = ['', ''];
-let ui; // 画面上の一時的な選択状態
-let seenLog = 0; // 人間が最後に見たログ位置（それ以降の出来事を「直前の出来事」として表示）
-let feed = []; // 直前の出来事
-let fresh = new Set(); // 直前にダメージや召喚があったクリーチャー
+let ui;
+let seenLog = 0;
+let feed = [];
+let fresh = new Set();
 
 function resetUi() {
   ui = { attackers: new Set(), targeting: null, blocker: null, blocks: new Map(), mulligan: new Set(), error: '' };
+}
+
+// ---------------------------------------------------------------------------
+// タイトル画面
+// ---------------------------------------------------------------------------
+
+function buildTitle() {
+  const box = $('#deckChoices');
+  const choices = [...Object.entries(DECKS).map(([id, d]) => ({ id, name: d.name.replace(/（.*）/, ''), type: DECK_TYPE[id] ?? '', text: d.text })),
+    { id: 'random', name: 'おまかせ', type: 'ランダム', text: '3つのデッキからランダムに選ぶ。' }];
+  choices.forEach((c, i) => {
+    const label = el('label', 'deck-choice');
+    const input = el('input');
+    input.type = 'radio'; input.name = 'deck'; input.value = c.id; input.id = `deck-${c.id}`;
+    if (i === 0) input.checked = true;
+    const face = el('span', 'face');
+    face.append(el('span', 'dtype', c.type), el('span', 'dname', c.name), el('span', 'dtext', c.text));
+    label.append(input, face);
+    box.append(label);
+  });
+  $('#setup').addEventListener('submit', (e) => { e.preventDefault(); startGame(); });
+}
+
+function showTitle() {
+  clearTimeout(cpuTimer);
+  $('#overlay').hidden = true;
+  $('#logPanel').hidden = true;
+  $('#game').hidden = true;
+  $('#title').hidden = false;
 }
 
 function pickDeck(value) {
@@ -1360,43 +1624,49 @@ function pickDeck(value) {
   return value === 'random' ? ids[Math.floor(Math.random() * ids.length)] : value;
 }
 
-function newGame() {
-  mode = $('#mode').value;
-  const mine = pickDeck($('#deck').value);
-  const theirs = mode === 'cpu' ? pickDeck('random') : pickDeck($('#deck2')?.value ?? 'random');
+function startGame() {
+  const form = new FormData($('#setup'));
+  mode = form.get('mode');
+  level = form.get('level');
+  const mine = pickDeck(form.get('deck'));
+  const theirs = pickDeck('random');
   deckNames = [DECKS[mine].name, DECKS[theirs].name];
   game = createGame({
     decks: [deckList(mine), deckList(theirs)],
     seed: Date.now(),
     names: mode === 'cpu' ? ['あなた', 'CPU'] : ['プレイヤー1', 'プレイヤー2'],
   });
-  seenLog = 0;
-  feed = [];
-  fresh = new Set();
+  seenLog = 0; feed = []; fresh = new Set();
   resetUi();
+  $('#title').hidden = true;
+  $('#game').hidden = false;
+  $('#overlay').hidden = true;
   render();
 }
 
-/** 画面の手前側に表示するプレイヤー */
+// ---------------------------------------------------------------------------
+// 対戦画面
+// ---------------------------------------------------------------------------
+
 function viewer() {
   if (mode === 'cpu') return 0;
   return game.awaiting?.player ?? game.activePlayer;
 }
-
 function isHumanTurn() {
   return game.awaiting && (mode === 'hotseat' || game.awaiting.player === 0);
 }
-
+function nm(i) {
+  return mode === 'cpu' ? (i === 0 ? 'あなた' : 'CPU') : game.players[i].name;
+}
 function act(action) {
   const res = applyAction(game, game.awaiting.player, action);
   resetUi();
   if (!res.ok) ui.error = res.error;
   render();
 }
-
-// ---------------------------------------------------------------------------
-// 描画
-// ---------------------------------------------------------------------------
+function creatureByUid(uid) {
+  return game.players.flatMap((p) => p.board).find((c) => c.uid === uid);
+}
 
 function render() {
   updateFeed();
@@ -1404,175 +1674,121 @@ function render() {
   const opp = 1 - me;
   const table = $('#table');
   table.textContent = '';
-  table.append(game.winner !== null ? renderGameOver() : renderPrompt(me));
-  table.append(renderSide(opp, false));
-  table.append(renderSide(me, true));
+  table.append(
+    renderSeat(opp, false),
+    renderOppHand(opp),
+    renderBattlefield(me, opp),
+    renderCommand(me),
+    renderHand(me),
+    renderSeat(me, true),
+  );
+  $('#turnInfo').textContent = game.turn > 0 ? `ターン ${Math.ceil(game.turn / 2)}・${nm(game.activePlayer)}の番` : '準備中';
   renderLog();
+  renderOverlay();
   scheduleCpu();
 }
 
-/** 人間が操作する番になったら、前回からの出来事をまとめて表示する */
 function updateFeed() {
   if (!isHumanTurn() && game.winner === null) return;
   const entries = game.log.slice(seenLog);
   if (entries.length === 0) return;
   seenLog = game.log.length;
-  feed = entries.map(describe).filter(Boolean).filter((t) => !t.startsWith('――')).slice(-6);
+  feed = entries.map(describe).filter(Boolean).filter((t) => !t.startsWith('――')).slice(-5);
   fresh = new Set(entries.filter((e) => e.type === 'damage' || e.type === 'summon' || e.type === 'buff').map((e) => e.target ?? e.uid));
 }
 
-function renderGameOver() {
-  const box = el('div', 'prompt over');
-  const won = game.winner === 0 && mode === 'cpu';
-  const msg = game.winner === 'draw' ? '引き分け' : (mode === 'cpu' ? (won ? 'あなたの勝利！' : 'CPU の勝利') : `${game.players[game.winner].name} の勝利！`);
-  box.append(el('div', 'banner', msg));
-  box.append(el('div', 'msg', `${Math.ceil(game.turn / 2)}ターンで決着。あなた：${deckNames[0]} / 相手：${deckNames[1]}`));
-  box.append(button('もう一度遊ぶ', newGame, 'primary'));
-  return box;
-}
-
-function renderPrompt(me) {
-  const box = el('div', 'prompt');
-  const msg = el('div', 'msg');
-  box.append(msg);
-  const aw = game.awaiting;
-  if (!isHumanTurn()) {
-    msg.textContent = `${game.players[aw.player].name} が考えています…`;
-    return box;
-  }
-  const name = mode === 'cpu' ? 'あなた' : game.players[aw.player].name;
-  const actions = el('div', 'actions');
-  box.append(actions);
-
-  if (ui.targeting !== null) {
-    msg.textContent = `${getCard(game.players[me].hand[ui.targeting]).name} の対象を選んでください（オレンジ枠）`;
-    actions.append(button('キャンセル', () => { ui.targeting = null; render(); }));
-  } else if (aw.step === 'mulligan') {
-    msg.textContent = `${name}の最初の手札です。引き直したいカードを選んでください（1回だけ）。`
-      + (game.firstPlayer === aw.player ? ' あなたが先攻です。' : ' あなたは後攻です。開始時に「マナの雫」を受け取ります。');
-    const n = ui.mulligan.size;
-    actions.append(button(n ? `${n}枚引き直す` : 'このまま始める', () => act({ type: 'mulligan', handIndices: [...ui.mulligan] }), 'primary'));
-  } else if (aw.step === 'response') {
-    const n = game.combat.attackers.length;
-    msg.textContent = `${game.players[game.activePlayer].name}が ${n}体で攻撃してきました（赤枠）。ブロックの前に「対応」カードを1枚使えます。`;
-    actions.append(button('対応しない', () => act({ type: 'pass' }), 'primary'));
-  } else if (aw.step === 'main') {
-    msg.textContent = `${name}のターン：緑枠の手札を使う／攻撃させるクリーチャーを選んで「攻撃」。`;
-    const atk = button(ui.attackers.size ? `${ui.attackers.size}体で攻撃` : '攻撃（未選択）', () => act({ type: 'attack', attackers: [...ui.attackers] }), 'primary');
-    atk.disabled = ui.attackers.size === 0;
-    const ready = game.players[aw.player].board.filter((c) => canAttack(game, c));
-    const all = button('全員選択', () => { ready.forEach((c) => ui.attackers.add(c.uid)); render(); });
-    all.disabled = ready.length === 0 || ui.attackers.size === ready.length;
-    actions.append(atk, all, button('ターン終了', () => act({ type: 'endTurn' })));
-    const p = game.players[aw.player];
-    if (p.hand.some((id) => hasKeyword(getCard(id), 'quick') && getCard(id).id !== 's_coin')) {
-      box.append(el('div', 'hint', 'ヒント：「対応」カードは、マナを残してターンを終えると相手の攻撃時に使えます。'));
-    }
-  } else if (aw.step === 'block') {
-    msg.textContent = ui.blocker === null
-      ? `ブロック：自分のクリーチャーを選び、止めたい攻撃クリーチャー（赤枠）をクリック。飛行は飛行でしか止められません。`
-      : 'このクリーチャーで止める攻撃クリーチャー（オレンジ枠）を選んでください。';
-    const blocks = [...ui.blocks].map(([attacker, blocker]) => ({ attacker, blocker }));
-    const incoming = game.combat.attackers
-      .filter((uid) => !ui.blocks.has(uid))
-      .reduce((s, uid) => s + (creatureByUid(uid)?.attack ?? 0), 0);
-    actions.append(
-      button(blocks.length ? `ブロック確定（${blocks.length}体）` : 'ブロックしない', () => act({ type: 'declareBlocks', blocks }), 'primary'),
-      button('選び直す', () => { ui.blocks.clear(); ui.blocker = null; render(); }),
-    );
-    box.append(el('div', incoming >= game.players[aw.player].life ? 'hint danger' : 'hint',
-      `このままだと受けるダメージ：${incoming}（ライフ ${game.players[aw.player].life}）`));
-  }
-  if (ui.error) box.append(el('div', 'error', ui.error));
-  if (feed.length) {
-    const f = el('ul', 'feed');
-    f.setAttribute('aria-label', '直前の出来事');
-    for (const t of feed) f.append(el('li', '', t));
-    box.append(f);
-  }
-  return box;
-}
-
-function button(label, onClick, cls) {
-  const b = el('button', cls, label);
-  b.type = 'button';
-  b.addEventListener('click', onClick);
-  return b;
-}
-
-function creatureByUid(uid) {
-  return game.players.flatMap((p) => p.board).find((c) => c.uid === uid);
-}
-
-function renderSide(pi, isFront) {
+function renderSeat(pi, isFront) {
   const p = game.players[pi];
-  const side = el('div', `side${game.activePlayer === pi && game.turn > 0 ? ' active' : ''}`);
+  const seat = el('div', `seat ${isFront ? 'mine' : 'theirs'}`);
+  const who = el('div', 'who', nm(pi));
+  if (game.activePlayer === pi && game.turn > 0 && game.winner === null) who.append(el('span', 'turn-badge', '手番'));
 
-  const status = el('div', 'status');
-  const life = el('span', `life${p.life <= 5 ? ' low' : ''}`, `♥ ${p.life}`);
-  const playerTarget = { kind: 'player', player: pi };
-  if (isTargetable(playerTarget)) {
+  const life = el('div', `life${p.life <= 5 ? ' low' : ''}`, String(Math.max(p.life, 0)));
+  life.append(el('small', '', 'ライフ'));
+  life.setAttribute('aria-label', `${nm(pi)}のライフ ${p.life}`);
+  const target = { kind: 'player', player: pi };
+  if (isTargetable(target)) {
     life.classList.add('targetable');
-    life.title = 'クリックして対象に選ぶ';
-    life.addEventListener('click', () => playAt(playerTarget));
+    life.tabIndex = 0;
+    life.addEventListener('click', () => playAt(target));
   }
-  const mana = el('span', 'mana');
-  mana.title = '現在マナ / 最大マナ';
-  for (let i = 0; i < Math.max(p.maxMana, p.mana); i++) {
-    const full = i < p.mana;
-    mana.append(el('span', full ? 'full' : 'empty', full ? '◆' : '◇'));
-  }
-  mana.append(` ${p.mana}/${p.maxMana}`);
-  status.append(
-    el('strong', '', p.name + (game.activePlayer === pi && game.turn > 0 ? '（手番）' : '')),
-    life, mana,
-    el('span', 'meta', `デッキ ${p.deck.length}・手札 ${p.hand.length}・墓地 ${p.graveyard.length}`),
-  );
 
-  const board = el('div', 'row board');
-  if (p.board.length === 0) board.append(el('div', 'empty', 'クリーチャーなし'));
-  for (const c of p.board) board.append(renderCreature(c));
+  const mana = el('div', 'mana');
+  mana.setAttribute('aria-label', `マナ ${p.mana}/${p.maxMana}`);
+  const pips = Math.max(p.maxMana, p.mana);
+  for (let i = 0; i < pips; i++) mana.append(el('span', `pip${i < p.mana ? (i >= p.maxMana ? ' extra' : ' full') : ''}`));
+  mana.append(el('span', 'mana-num', `${p.mana}/${p.maxMana}`));
 
-  const hand = el('div', 'row hand');
-  const showHand = isFront && (mode === 'hotseat' || pi === 0);
-  p.hand.forEach((id, i) => hand.append(showHand ? renderHandCard(pi, id, i) : el('div', 'card back')));
-
-  if (isFront) side.append(board, status, hand);
-  else side.append(hand, status, board);
-  return side;
+  const piles = el('div', 'piles', `山札 ${p.deck.length}　手札 ${p.hand.length}　捨て札 ${p.graveyard.length}`);
+  seat.append(life, who, mana, piles);
+  return seat;
 }
 
-function cardBody(card, node) {
-  node.append(el('div', 'cost', String(card.cost)), el('div', 'name', card.name));
-  const kws = el('div', 'kws');
-  for (const k of card.keywords ?? []) {
-    const chip = el('span', `kw kw-${k}`, KEYWORDS[k].name);
-    chip.title = KEYWORDS[k].text;
-    kws.append(chip);
+function renderOppHand(pi) {
+  const row = el('div', 'opp-hand');
+  row.setAttribute('aria-label', `${nm(pi)}の手札 ${game.players[pi].hand.length}枚`);
+  if (mode === 'hotseat') return row;
+  for (let i = 0; i < game.players[pi].hand.length; i++) row.append(el('div', 'card back'));
+  return row;
+}
+
+function renderBattlefield(me, opp) {
+  const bf = el('div', 'battlefield');
+  const lane = (pi, cls) => {
+    const l = el('div', `lane ${cls}`);
+    const board = game.players[pi].board;
+    if (board.length === 0) l.append(el('div', 'empty', `${nm(pi)}の場にクリーチャーはいない`));
+    for (const c of board) l.append(renderCreature(c));
+    return l;
+  };
+  bf.append(lane(opp, 'theirs'), el('div', 'midline'), lane(me, 'mine'));
+  return bf;
+}
+
+function renderHand(pi) {
+  const row = el('div', 'hand');
+  const p = game.players[pi];
+  const show = mode === 'hotseat' || pi === 0;
+  p.hand.forEach((id, i) => row.append(show ? renderHandCard(pi, id, i) : el('div', 'card back')));
+  return row;
+}
+
+// --- カード ---
+
+function cardFace(card, node) {
+  node.append(el('div', 'cost', String(card.cost)));
+  const kind = card.token ? 't-token' : card.type === 'creature' ? 't-creature' : hasKeyword(card, 'quick') ? 't-quick' : 't-spell';
+  node.append(el('div', `art ${kind}`, GLYPH[card.id] ?? card.name[0]));
+  node.append(el('div', 'name', card.name));
+  if (card.keywords?.length) {
+    const kws = el('div', 'kws');
+    for (const k of card.keywords) {
+      const chip = el('span', `kw kw-${k}`, KEYWORDS[k].name);
+      chip.title = KEYWORDS[k].text;
+      kws.append(chip);
+    }
+    node.append(kws);
   }
-  if (card.keywords?.length) node.append(kws);
-  if (card.text) node.append(el('div', 'text', card.text));
+  node.append(el('div', 'text', card.text ?? ''));
   node.title = [card.name, ...(card.keywords ?? []).map((k) => `${KEYWORDS[k].name}：${KEYWORDS[k].text}`), card.text].filter(Boolean).join('\n');
 }
 
 function renderHandCard(pi, cardId, handIndex) {
   const card = getCard(cardId);
   const node = el('div', `card ${card.type}`);
-  cardBody(card, node);
+  cardFace(card, node);
   if (card.type === 'creature') {
     const stats = el('div', 'stats');
-    stats.append(el('span', 'atk', `⚔${card.attack}`), el('span', 'hp', `♥${card.hp}`));
+    stats.append(el('span', 'stat atk', String(card.attack)), el('span', 'stat hp', String(card.hp)));
     node.append(stats);
-  } else {
-    node.append(el('div', 'badges', 'スペル'));
   }
   if (isHumanTurn() && game.awaiting.step === 'mulligan') {
     node.classList.add('selectable');
-    if (ui.mulligan.has(handIndex)) { node.classList.add('selected', 'returning'); node.append(el('div', 'tag', '引き直す')); }
-    node.addEventListener('click', () => {
-      ui.mulligan.has(handIndex) ? ui.mulligan.delete(handIndex) : ui.mulligan.add(handIndex);
-      render();
-    });
+    node.tabIndex = 0;
+    if (ui.mulligan.has(handIndex)) { node.classList.add('selected', 'returning'); node.append(el('div', 'ribbon', '引き直す')); }
+    const toggle = () => { ui.mulligan.has(handIndex) ? ui.mulligan.delete(handIndex) : ui.mulligan.add(handIndex); render(); };
+    node.addEventListener('click', toggle);
+    onKey(node, toggle);
     return node;
   }
   const check = playability(game, pi, handIndex);
@@ -1585,12 +1801,12 @@ function renderHandCard(pi, cardId, handIndex) {
       else { ui.targeting = handIndex; ui.attackers.clear(); render(); }
     };
     node.addEventListener('click', use);
-    node.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); use(); } });
+    onKey(node, use);
   } else {
     node.classList.add('unplayable');
     if (!check.ok) node.title += `\n（${check.reason}）`;
   }
-  if (ui.targeting === handIndex) node.classList.add('selected');
+  if (ui.targeting === handIndex) { node.classList.add('selected'); node.append(el('div', 'ribbon', '対象を選択中')); }
   return node;
 }
 
@@ -1598,73 +1814,164 @@ function renderCreature(c) {
   const card = getCard(c.cardId);
   const node = el('div', 'card creature');
   if (fresh.has(c.uid)) node.classList.add('fresh');
-  cardBody(card, node);
+  cardFace(card, node);
   const left = c.hp - c.damage;
   const stats = el('div', 'stats');
-  const atkCls = c.attack > card.attack ? 'atk buffed' : 'atk';
-  const hpCls = c.damage ? 'hp damaged' : (c.hp > card.hp ? 'hp buffed' : 'hp');
-  stats.append(el('span', atkCls, `⚔${c.attack}`), el('span', hpCls, `♥${left}/${c.hp}`));
-  const bar = el('div', 'hpbar');
-  const fill = el('div', left / c.hp <= 0.34 ? 'low' : '');
-  fill.style.width = `${Math.max(0, (left / c.hp) * 100)}%`;
-  bar.append(fill);
-  node.append(stats, bar);
-  const badges = [];
-  if (c.tempAttack || c.tempHp) badges.push(`このターン+${c.tempAttack}/+${c.tempHp}`);
-  if (c.exhausted) badges.push('行動済み');
-  if (c.summoningSick && c.owner === game.activePlayer && !hasKeyword(card, 'haste')) badges.push('召喚酔い');
-  node.append(el('div', 'badges', badges.join('・')));
-  if (c.exhausted) node.classList.add('exhausted');
+  const atk = el('span', `stat atk${c.attack > card.attack ? ' buffed' : ''}`, String(c.attack));
+  const hp = el('span', `stat hp${c.damage ? ' damaged' : ''}${c.hp > card.hp ? ' buffed' : ''}`, String(left));
+  atk.title = `攻撃力 ${c.attack}`;
+  hp.title = `HP ${left}/${c.hp}${c.damage ? `（このターン${c.damage}ダメージ）` : ''}`;
+  stats.append(atk, hp);
+  node.append(stats);
+
+  const status = [];
+  if (c.tempAttack || c.tempHp) status.push(`+${c.tempAttack}/+${c.tempHp}`);
+  if (c.exhausted) status.push('行動済み');
+  else if (c.summoningSick && c.owner === game.activePlayer && !hasKeyword(card, 'haste')) status.push('召喚酔い');
+  if (c.damage) status.push(`-${c.damage}`);
 
   const aw = game.awaiting;
-  const target = { kind: 'creature', uid: c.uid };
+  if (c.exhausted) node.classList.add('exhausted');
   if (game.combat?.attackers.includes(c.uid)) {
     node.classList.add('attacking');
-    const blockedBy = ui.blocks.get(c.uid);
-    if (blockedBy !== undefined) node.append(el('div', 'tag', `${nameOf(blockedBy)}がブロック`));
+    const by = ui.blocks.get(c.uid) ?? game.combat.blocks[c.uid];
+    if (by !== undefined) status.unshift(`${creatureByUid(by)?.name ?? '?'}が防ぐ`);
+    else status.unshift('攻撃中');
   }
-  if (aw?.step === 'block' && [...ui.blocks.values()].includes(c.uid)) node.classList.add('assigned');
+  if (aw?.step === 'block' && [...ui.blocks.values()].includes(c.uid)) { node.classList.add('assigned'); status.unshift('ブロック'); }
+  if (ui.attackers.has(c.uid)) status.unshift('攻撃する');
+  if (status.length) node.append(el('div', 'ribbon', status.join('・')));
 
   if (!isHumanTurn()) return node;
-
+  const target = { kind: 'creature', uid: c.uid };
+  let onPick = null;
   if (isTargetable(target)) {
     node.classList.add('targetable');
-    node.addEventListener('click', () => playAt(target));
+    onPick = () => playAt(target);
   } else if (aw.step === 'main' && ui.targeting === null && c.owner === aw.player && canAttack(game, c)) {
     node.classList.add('selectable');
-    if (ui.attackers.has(c.uid)) { node.classList.add('selected'); node.append(el('div', 'tag', '攻撃する')); }
-    node.addEventListener('click', () => {
-      ui.attackers.has(c.uid) ? ui.attackers.delete(c.uid) : ui.attackers.add(c.uid);
-      ui.error = '';
-      render();
-    });
+    if (ui.attackers.has(c.uid)) node.classList.add('selected');
+    onPick = () => { ui.attackers.has(c.uid) ? ui.attackers.delete(c.uid) : ui.attackers.add(c.uid); ui.error = ''; render(); };
   } else if (aw.step === 'block') {
     const assigned = [...ui.blocks.values()].includes(c.uid);
-    const openAttackers = game.combat.attackers.filter((uid) => !ui.blocks.has(uid)).map(creatureByUid).filter(Boolean);
-    if (c.owner === aw.player && canBlock(game, c) && !assigned && openAttackers.some((a) => canBlockAttacker(game, c, a))) {
+    const open = game.combat.attackers.filter((uid) => !ui.blocks.has(uid)).map(creatureByUid).filter(Boolean);
+    if (c.owner === aw.player && canBlock(game, c) && !assigned && open.some((a) => canBlockAttacker(game, c, a))) {
       node.classList.add('selectable');
       if (ui.blocker === c.uid) node.classList.add('selected');
-      node.addEventListener('click', () => { ui.blocker = ui.blocker === c.uid ? null : c.uid; render(); });
+      onPick = () => { ui.blocker = ui.blocker === c.uid ? null : c.uid; render(); };
     } else if (ui.blocker !== null && game.combat.attackers.includes(c.uid) && !ui.blocks.has(c.uid)
       && canBlockAttacker(game, creatureByUid(ui.blocker), c)) {
       node.classList.add('targetable');
-      node.addEventListener('click', () => { ui.blocks.set(c.uid, ui.blocker); ui.blocker = null; render(); });
+      onPick = () => { ui.blocks.set(c.uid, ui.blocker); ui.blocker = null; render(); };
     }
+  }
+  if (onPick) {
+    node.tabIndex = 0;
+    node.addEventListener('click', onPick);
+    onKey(node, onPick);
   }
   return node;
 }
 
-function nameOf(uid) {
-  return creatureByUid(uid)?.name ?? '?';
+function onKey(node, fn) {
+  node.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } });
 }
 
 function isTargetable(target) {
   if (ui.targeting === null || !isHumanTurn()) return false;
   return targetsForHandCard(game, game.awaiting.player, ui.targeting).some((t) => sameTarget(t, target));
 }
-
 function playAt(target) {
   act({ type: 'playCard', handIndex: ui.targeting, target });
+}
+
+// --- 指示バー ---
+
+function button(label, onClick, cls = '') {
+  const b = el('button', `btn ${cls}`, label);
+  b.type = 'button';
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+function renderCommand(me) {
+  const box = el('div', 'command');
+  const left = el('div');
+  const msg = el('div', 'msg');
+  const sub = el('div', 'sub');
+  left.append(msg, sub);
+  const actions = el('div', 'actions');
+  box.append(left, actions);
+  const aw = game.awaiting;
+
+  if (game.winner !== null) {
+    msg.textContent = '決着！';
+  } else if (!isHumanTurn()) {
+    msg.textContent = `${nm(aw.player)}が考えています`;
+    msg.classList.add('thinking');
+  } else if (ui.targeting !== null) {
+    msg.textContent = `${getCard(game.players[me].hand[ui.targeting]).name}：対象を選んでください`;
+    sub.textContent = '金色に光っているものが選べます。';
+    actions.append(button('やめる', () => { ui.targeting = null; render(); }));
+  } else if (aw.step === 'mulligan') {
+    msg.textContent = '最初の手札です。引き直すカードを選んでください';
+    sub.textContent = (game.firstPlayer === aw.player ? 'あなたは先攻です。' : 'あなたは後攻です。開始時に「マナの雫」を受け取ります。') + '引き直しは1回だけ。';
+    const n = ui.mulligan.size;
+    actions.append(button(n ? `${n}枚引き直す` : 'このまま始める', () => act({ type: 'mulligan', handIndices: [...ui.mulligan] }), 'btn-gold'));
+  } else if (aw.step === 'response') {
+    msg.textContent = `${nm(game.activePlayer)}が${game.combat.attackers.length}体で攻撃してきた！`;
+    sub.textContent = 'ブロックの前に「対応」カードを1枚使えます。';
+    actions.append(button('対応しない', () => act({ type: 'pass' }), 'btn-gold'));
+  } else if (aw.step === 'main') {
+    const ready = game.players[aw.player].board.filter((c) => canAttack(game, c));
+    msg.textContent = ui.attackers.size ? `${ui.attackers.size}体で攻撃する` : 'あなたのターン';
+    sub.textContent = ready.length
+      ? '光っている手札を使う／攻撃するクリーチャーを選ぶ'
+      : '光っている手札を使ってから、ターンを終了';
+    if (game.players[aw.player].hand.some((id) => hasKeyword(getCard(id), 'quick'))) sub.textContent += '（対応カードはマナを残すと相手の攻撃時にも使える）';
+    const all = button('全員で攻撃', () => { ready.forEach((c) => ui.attackers.add(c.uid)); render(); });
+    all.disabled = ready.length === 0 || ui.attackers.size === ready.length;
+    const atk = button(ui.attackers.size ? `突撃！（${ui.attackers.size}体）` : '突撃！', () => act({ type: 'attack', attackers: [...ui.attackers] }), 'btn-crimson');
+    atk.disabled = ui.attackers.size === 0;
+    actions.append(all, atk, button('ターン終了', () => act({ type: 'endTurn' }), ui.attackers.size ? '' : 'btn-gold'));
+  } else if (aw.step === 'block') {
+    const blocks = [...ui.blocks].map(([attacker, blocker]) => ({ attacker, blocker }));
+    const incoming = game.combat.attackers.filter((uid) => !ui.blocks.has(uid)).reduce((s, uid) => s + (creatureByUid(uid)?.attack ?? 0), 0);
+    msg.textContent = ui.blocker === null ? 'ブロックするクリーチャーを選ぶ' : '止める相手（金色）を選ぶ';
+    sub.textContent = `このままだと${incoming}ダメージを受ける（ライフ${game.players[aw.player].life}）。飛行は飛行でしか止められない。`;
+    if (incoming >= game.players[aw.player].life) sub.classList.add('danger');
+    actions.append(
+      button('選び直す', () => { ui.blocks.clear(); ui.blocker = null; render(); }),
+      button(blocks.length ? `ブロック確定（${blocks.length}）` : 'ブロックしない', () => act({ type: 'declareBlocks', blocks }), 'btn-gold'),
+    );
+  }
+  if (ui.error) box.append(el('div', 'error', ui.error));
+  if (feed.length && game.winner === null) {
+    const f = el('ul', 'feed');
+    f.setAttribute('aria-label', '直前の出来事');
+    for (const t of feed) f.append(el('li', '', t));
+    box.append(f);
+  }
+  return box;
+}
+
+// --- 勝敗 ---
+
+function renderOverlay() {
+  const ov = $('#overlay');
+  if (game.winner === null) { ov.hidden = true; return; }
+  ov.textContent = '';
+  const won = game.winner === 0;
+  const box = el('div', `result ${mode === 'hotseat' || won ? 'win' : 'lose'}`);
+  const title = game.winner === 'draw' ? '引き分け' : mode === 'hotseat' ? `${game.players[game.winner].name}の勝利` : won ? '勝利！' : '敗北…';
+  box.append(el('h2', '', title));
+  box.append(el('p', '', mode === 'cpu' && won ? 'あなたこそチャージの王様だ。' : mode === 'cpu' ? 'CPUが王座を守った。もう一度挑もう。' : '見事な戦いだった。'));
+  box.append(el('p', '', `${Math.ceil(game.turn / 2)}ターンで決着　あなた：${deckNames[0]}／相手：${deckNames[1]}`));
+  const actions = el('div', 'actions');
+  actions.append(button('もう一度', startGame, 'btn-gold'), button('タイトルへ', showTitle));
+  box.append(actions);
+  ov.append(box);
+  ov.hidden = false;
 }
 
 // ---------------------------------------------------------------------------
@@ -1672,14 +1979,12 @@ function playAt(target) {
 // ---------------------------------------------------------------------------
 
 function describe(e) {
-  const pn = (i) => game.players[i].name;
-  const nm = (i) => (mode === 'cpu' ? (i === 0 ? 'あなた' : 'CPU') : pn(i));
   switch (e.type) {
-    case 'gameStart': return `ゲーム開始。先攻は ${nm(e.firstPlayer)}`;
-    case 'turnStart': return `―― ${nm(e.player)} のターン（${e.turnOfPlayer}ターン目） ――`;
-    case 'summon': return `${nm(e.player)}：${e.name} を召喚`;
-    case 'castSpell': return `${nm(e.player)}：${e.name} を使用${e.response ? '（対応）' : ''}`;
-    case 'attack': return `${nm(e.player)}：${e.attackers.length}体で攻撃`;
+    case 'gameStart': return `ゲーム開始。先攻は${nm(e.firstPlayer)}`;
+    case 'turnStart': return `―― ${nm(e.player)}のターン（${e.turnOfPlayer}ターン目） ――`;
+    case 'summon': return `${nm(e.player)}：${e.name}を召喚`;
+    case 'castSpell': return `${nm(e.player)}：${e.name}を使用${e.response ? '（対応）' : ''}`;
+    case 'attack': return `${nm(e.player)}：${e.attackers.length}体で突撃`;
     case 'blocks': return e.blocks.length ? `${nm(e.player)}：${e.blocks.length}体でブロック` : `${nm(e.player)}：ブロックしない`;
     case 'damage': return `${e.sourceName ? `${e.sourceName}→` : ''}${nm(e.owner)}の${e.targetName}に${e.amount}ダメージ`;
     case 'playerDamage': return `${e.sourceName ? `${e.sourceName}→` : ''}${nm(e.player)}に${e.amount}ダメージ`;
@@ -1692,21 +1997,22 @@ function describe(e) {
     case 'mulligan': return e.count ? `${nm(e.player)}：${e.count}枚引き直した` : `${nm(e.player)}：手札をそのままにした`;
     case 'pass': return `${nm(e.player)}：対応しない`;
     case 'combatCancelled': return '攻撃クリーチャーがいなくなり、戦闘は終了';
-    case 'burn': return `${nm(e.player)}は手札がいっぱいで、引いたカードが墓地へ`;
-    case 'deckOut': return `${nm(e.player)}はデッキ切れでドローできない`;
+    case 'burn': return `${nm(e.player)}は手札がいっぱいで、引いたカードが捨て札へ`;
+    case 'deckOut': return `${nm(e.player)}は山札切れでカードを引けない`;
     case 'gameOver': return e.winner === 'draw' ? '引き分け' : `${nm(e.winner)}の勝利`;
     default: return null;
   }
 }
 
 function renderLog() {
+  if ($('#logPanel').hidden) return;
   const ol = $('#log');
   ol.textContent = '';
   for (const e of game.log) {
     const text = describe(e);
     if (text) ol.append(el('li', e.type === 'turnStart' ? 'turn' : '', text));
   }
-  ol.parentElement.scrollTop = ol.parentElement.scrollHeight;
+  ol.scrollTop = ol.scrollHeight;
 }
 
 let cpuTimer = null;
@@ -1714,27 +2020,23 @@ function scheduleCpu() {
   clearTimeout(cpuTimer);
   if (mode !== 'cpu' || !game.awaiting || game.awaiting.player !== 1) return;
   cpuTimer = setTimeout(() => {
-    applyAction(game, 1, chooseAction(game, { level: $('#level').value }));
+    if ($('#game').hidden) return;
+    applyAction(game, 1, chooseAction(game, { level }));
     render();
-  }, 550);
+  }, 650);
 }
 
-// デッキ選択肢を作る
-for (const sel of [$('#deck')]) {
-  for (const [id, d] of Object.entries(DECKS)) {
-    const o = el('option', '', `${d.name}`);
-    o.value = id;
-    o.title = d.text;
-    sel.append(o);
-  }
-  const r = el('option', '', 'ランダム');
-  r.value = 'random';
-  sel.append(r);
-}
-$('#newGame').addEventListener('click', newGame);
-newGame();
+// ---------------------------------------------------------------------------
+// 起動
+// ---------------------------------------------------------------------------
 
-document.getElementById('build').textContent = "v0.3 build 450ada8";
+buildTitle();
+$('#menuBtn').addEventListener('click', showTitle);
+$('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logPanel').hidden; renderLog(); });
+$('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
+showTitle();
+
+document.getElementById('build').textContent = "v0.3 build c068eaf";
 })();
 </script>
 </body>
