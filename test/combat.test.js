@@ -34,7 +34,7 @@ test('ブロック: 互いの攻撃力分を同時に与え、HP以上で破壊�
 test('ダメージはターン終了時に全回復する（デフォルト）', () => {
   const s = newGame();
   const a = put(s, 0, 'c_warrior'); // 3/3
-  const golem = put(s, 1, 'c_golem'); // 3/6
+  const golem = put(s, 1, 'c_golem', { attack: 3 }); // 3/6
   ok(attack(s, a.uid));
   ok(block(s, [{ attacker: a.uid, blocker: golem.uid }]));
   assert.equal(s.players[0].board.length, 0); // 致死ダメージは即座に破壊
@@ -43,7 +43,7 @@ test('ダメージはターン終了時に全回復する（デフォルト）',
 
 test('ダメージはターン中は残る（同じターン内の火球と組み合わせ）', () => {
   const s = newGame();
-  const golem = put(s, 1, 'c_golem'); // 3/6
+  const golem = put(s, 1, 'c_golem', { attack: 3 }); // 3/6
   s.players[0].mana = 4;
   setHand(s, 0, ['s_fireball', 's_fireball']);
   ok(applyAction(s, 0, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: golem.uid } }));
@@ -55,7 +55,7 @@ test('ダメージはターン中は残る（同じターン内の火球と組�
 test('damageResetsAtTurnEnd=false: ダメージは蓄積しターンをまたいで回復しない', () => {
   const s = newGame({ damageResetsAtTurnEnd: false });
   const a = put(s, 0, 'c_warrior'); // 3/3
-  const golem = put(s, 1, 'c_golem'); // 3/6
+  const golem = put(s, 1, 'c_golem', { attack: 3 }); // 3/6
   ok(attack(s, a.uid));
   ok(block(s, [{ attacker: a.uid, blocker: golem.uid }]));
   assert.equal(golem.damage, 3);

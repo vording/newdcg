@@ -12,7 +12,8 @@ test('AI同士の対戦200戦が不正アクションなく決着する', () => 
     for (const p of s.players) {
       assert.ok(p.board.length <= s.config.boardLimit);
       assert.ok(p.board.every((c) => c.damage < c.hp));
-      assert.equal(p.deck.length + p.hand.length + p.board.length + p.graveyard.length, 30);
+      const cards = [...p.deck, ...p.hand, ...p.board.map((c) => c.cardId), ...p.graveyard].filter((id) => id !== 's_coin');
+      assert.equal(cards.length, 30);
     }
   }
 });

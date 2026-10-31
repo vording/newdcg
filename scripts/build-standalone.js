@@ -24,6 +24,16 @@ const strip = (src) => src
   .replace(/^export\s+(?=(const|function|let|class|async)\b)/gm, '');
 const js = modules.map((m) => `// ---- ${m} ----\n${strip(read(m))}`).join('\n');
 
+// 1つのスコープに連結するので、モジュール間でトップレベルの名前が重複すると後の定義が前を上書きしてしまう。
+// 重複があればビルドを失敗させる。
+const owner = new Map();
+for (const m of modules) {
+  for (const [, name] of strip(read(m)).matchAll(/^(?:async\s+)?(?:function\*?|const|let|class|var)\s+([A-Za-z_$][\w$]*)/gm)) {
+    if (owner.has(name)) throw new Error(`トップレベルの名前 "${name}" が ${owner.get(name)} と ${m} で重複しています`);
+    owner.set(name, m);
+  }
+}
+
 const html = read('src/ui/index.html');
 const body = html.slice(html.indexOf('<body>') + 6, html.indexOf('</body>'))
   .replace(/<script type="module" src="ui.js"><\/script>/, '');

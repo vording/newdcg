@@ -1,6 +1,6 @@
 // エンジンの公開API
 export * from './game.js';
 export { DEFAULT_CONFIG, makeConfig } from './config.js';
-export { CARDS, KEYWORDS, getCard, hasKeyword, testDeck, validateDeck } from './cards.js';
+export { CARDS, DECKS, KEYWORDS, deckList, getCard, hasKeyword, testDeck, validateDeck } from './cards.js';
 export { legalTargets, sameTarget, EFFECTS } from './effects.js';
 export { remainingHp, opponentOf } from './state.js';

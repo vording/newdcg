@@ -69,3 +69,37 @@ button:disabled { opacity: .4; cursor: default; }
 button:focus-visible, .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .card.exhausted { transform: none; } }
 @media (max-width: 480px) { .card { width: calc(33% - 6px); min-width: 0; } .card.back { width: 32px; } }
+
+/* --- v0.2 追加 --- */
+:root { --buff: #1f7a8c; --flash: rgba(184, 117, 0, .35); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --buff: #5cc3d6; --flash: rgba(224, 164, 58, .35); } }
+:root[data-theme="dark"] { --buff: #5cc3d6; --flash: rgba(224, 164, 58, .35); }
+header label { display: inline-flex; gap: 6px; align-items: center; }
+.prompt { flex-direction: column; align-items: stretch; }
+.prompt .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.hint { font-size: 12px; color: var(--muted); }
+.hint.danger { color: var(--danger); font-weight: bold; }
+.feed { margin: 0; padding: 6px 8px 6px 22px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); }
+.prompt.over { align-items: center; text-align: center; }
+.banner { padding: 8px; }
+.life.low { color: var(--danger); }
+.meta { color: var(--muted); font-size: 12px; }
+.empty { color: var(--muted); font-size: 12px; align-self: center; }
+.kws { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 2px; }
+.kw { font-size: 10px; padding: 0 4px; border-radius: 4px; border: 1px solid var(--line); color: var(--ink); }
+.kw-quick { border-color: var(--accent); color: var(--accent); }
+.kw-flying { border-color: var(--buff); color: var(--buff); }
+.kw-haste, .kw-firstStrike { border-color: var(--warn); color: var(--warn); }
+.card.spell { border-style: dashed; }
+.card .atk.buffed, .card .hp.buffed { color: var(--buff); }
+.tag { font-size: 11px; font-weight: bold; color: var(--accent); margin-top: 2px; }
+.card.assigned { box-shadow: 0 0 0 3px var(--buff); }
+.card.returning { opacity: .6; }
+.card.fresh { animation: flash 1.2s ease-out 1; }
+@keyframes flash { from { box-shadow: 0 0 0 6px var(--flash); } to { box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .card.fresh { animation: none; } }
+#help { margin-bottom: 8px; font-size: 12px; }
+#help summary { cursor: pointer; font-weight: bold; font-size: 13px; }
+#help ul { padding-left: 18px; margin: 6px 0; display: grid; gap: 4px; }
+#log li.turn { color: var(--muted); margin-top: 4px; }
+aside h3 { margin: 4px 0; font-size: 13px; }

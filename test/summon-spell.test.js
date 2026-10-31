@@ -30,7 +30,7 @@ test('速攻は召喚したターンに攻撃できる', () => {
   s.players[1].hand = [];
   ok(applyAction(s, 0, { type: 'attack', attackers: [uid] }));
   ok(applyAction(s, 1, { type: 'declareBlocks', blocks: [] }));
-  assert.equal(s.players[1].life, 18);
+  assert.equal(s.players[1].life, 17);
 });
 
 test('配置上限5体を超えて召喚できない', () => {

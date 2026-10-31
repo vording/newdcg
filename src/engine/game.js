@@ -69,8 +69,18 @@ export function createGame({ decks, seed = Date.now(), firstPlayer = null, confi
   log(state, 'gameStart', { firstPlayer: first });
 
   if (cfg.mulligan) state.awaiting = { player: first, step: 'mulligan' };
-  else startTurn(state, first);
+  else beginFirstTurn(state);
   return state;
+}
+
+function beginFirstTurn(state) {
+  const bonus = state.config.secondPlayerBonusCard;
+  if (bonus) {
+    const second = opponentOf(state.firstPlayer);
+    state.players[second].hand.push(bonus);
+    log(state, 'bonusCard', { player: second, cardId: bonus });
+  }
+  startTurn(state, state.firstPlayer);
 }
 
 function mulligan(state, playerIndex, { handIndices = [] }) {
@@ -88,7 +98,7 @@ function mulligan(state, playerIndex, { handIndices = [] }) {
 
   const other = opponentOf(playerIndex);
   if (!state.players[other].mulliganDone) state.awaiting = { player: other, step: 'mulligan' };
-  else startTurn(state, state.firstPlayer);
+  else beginFirstTurn(state);
   return { ok: true };
 }
 
@@ -129,9 +139,15 @@ function endTurn(state) {
   // 5. エンドフェイズ
   runTriggers(state, playerIndex, 'turnEnd');
   if (checkStateBased(state)) return;
-  if (state.config.damageResetsAtTurnEnd) {
-    for (const p of state.players) for (const c of p.board) c.damage = 0;
+  for (const p of state.players) {
+    for (const c of p.board) {
+      // 「ターン終了時まで」の修整を戻す
+      c.attack -= c.tempAttack; c.hp -= c.tempHp;
+      c.tempAttack = 0; c.tempHp = 0;
+      if (state.config.damageResetsAtTurnEnd) c.damage = 0;
+    }
   }
+  if (checkStateBased(state)) return;
   log(state, 'turnEnd', { player: playerIndex });
   startTurn(state, opponentOf(playerIndex));
 }
@@ -187,6 +203,13 @@ export function canBlock(state, creature) {
     && (state.config.exhaustedCanBlock || !creature.exhausted);
 }
 
+/** blocker が attacker をブロックできるか（飛行は飛行でしかブロックできない） */
+export function canBlockAttacker(state, blocker, attacker) {
+  if (!canBlock(state, blocker)) return false;
+  if (hasKeyword(getCard(attacker.cardId), 'flying') && !hasKeyword(getCard(blocker.cardId), 'flying')) return false;
+  return true;
+}
+
 /** 手札のカードが今プレイ可能か。不可なら理由を返す。 */
 export function playability(state, playerIndex, handIndex) {
   const p = state.players[playerIndex];
@@ -212,10 +235,16 @@ export function playability(state, playerIndex, handIndex) {
   return { ok: true };
 }
 
+/**
+ * 手札のカードを使うときに選べる対象。[null] は「対象なし」。
+ * クリーチャーの召喚時効果は、対象がいなければ対象なしで召喚できる（効果は不発）。
+ */
 export function targetsForHandCard(state, playerIndex, handIndex) {
   const card = getCard(state.players[playerIndex].hand[handIndex]);
-  if (card.type !== 'spell') return [null];
-  return legalTargets(state, playerIndex, card.effect);
+  if (!card.effect) return [null];
+  const targets = legalTargets(state, playerIndex, card.effect);
+  if (card.type === 'creature' && targets.length === 0) return [null];
+  return targets;
 }
 
 // ---------------------------------------------------------------------------
@@ -263,10 +292,8 @@ function playCard(state, playerIndex, { handIndex, target = null }) {
   const cardId = p.hand[handIndex];
   const card = getCard(cardId);
 
-  if (card.type === 'spell') {
-    const targets = legalTargets(state, playerIndex, card.effect);
-    if (!targets.some((t) => sameTarget(t, target))) return fail('その対象は選べません');
-  }
+  const targets = targetsForHandCard(state, playerIndex, handIndex);
+  if (!targets.some((t) => sameTarget(t, target))) return fail('その対象は選べません');
 
   p.mana -= card.cost;
   p.hand.splice(handIndex, 1);
@@ -280,11 +307,14 @@ function playCard(state, playerIndex, { handIndex, target = null }) {
       attack: card.attack,
       hp: card.hp,
       damage: 0,
+      tempAttack: 0,
+      tempHp: 0,
       exhausted: false,
       summoningSick: true,
     };
     p.board.push(creature);
     log(state, 'summon', { player: playerIndex, uid: creature.uid, name: card.name });
+    if (card.effect && target) resolveEffect(state, playerIndex, card.effect, target, creature.uid);
     for (const t of card.triggers ?? []) {
       if (t.on === 'summon') resolveEffect(state, playerIndex, t.effect, null, creature.uid);
     }
@@ -306,7 +336,10 @@ function declareAttack(state, playerIndex, { attackers }) {
     if (!c) return fail('自分のクリーチャーではありません');
     if (!canAttack(state, c)) return fail(`${c.name} は攻撃できません`);
   }
-  for (const uid of attackers) board.find((x) => x.uid === uid).exhausted = true;
+  for (const uid of attackers) {
+    const c = board.find((x) => x.uid === uid);
+    if (!hasKeyword(getCard(c.cardId), 'vigilance')) c.exhausted = true; // 警戒は行動済みにならない
+  }
   state.combat = { attackers: [...attackers], blocks: {} };
   log(state, 'attack', { player: playerIndex, attackers: [...attackers] });
 
@@ -357,6 +390,8 @@ function declareBlocks(state, playerIndex, { blocks = [] }) {
     const b = defBoard.find((x) => x.uid === blocker);
     if (!b) return fail('自分のクリーチャーではありません');
     if (!canBlock(state, b)) return fail(`${b.name} はブロックできません`);
+    const atk = state.players[state.activePlayer].board.find((x) => x.uid === attacker);
+    if (!canBlockAttacker(state, b, atk)) return fail(`${atk.name} は飛行を持つため、飛行でしかブロックできません`);
     if (usedBlockers.has(blocker)) return fail('1体のクリーチャーは1回しかブロックできません');
     if (blockedAttackers.has(attacker)) return fail('1体の攻撃に対するブロッカーは1体までです');
     usedBlockers.add(blocker);
@@ -379,29 +414,31 @@ function declareBlocks(state, playerIndex, { blocks = [] }) {
 function resolveCombat(state) {
   const atkPlayer = state.activePlayer;
   const defPlayer = opponentOf(atkPlayer);
-  const atkBoard = state.players[atkPlayer].board;
-  const defBoard = state.players[defPlayer].board;
+  const onBoard = (pi, uid) => state.players[pi].board.find((x) => x.uid === uid) ?? null;
+  const firstStrike = (c) => hasKeyword(getCard(c.cardId), 'firstStrike');
+  const pairs = state.combat.attackers.map((uid) => ({ a: uid, b: state.combat.blocks[uid] }));
 
-  // 全ダメージを先に計算してから同時に適用する
-  const pending = [];
-  for (const uid of state.combat.attackers) {
-    const a = atkBoard.find((x) => x.uid === uid);
-    if (!a) continue; // 将来、対応カードで除去された場合
-    const blockerUid = state.combat.blocks[uid];
-    const b = blockerUid !== undefined ? defBoard.find((x) => x.uid === blockerUid) : null;
-    if (b) {
-      pending.push(() => dealDamageToCreature(state, b, a.attack, a.uid));
-      pending.push(() => dealDamageToCreature(state, a, b.attack, b.uid));
-    } else if (blockerUid === undefined) {
-      pending.push(() => dealDamageToPlayer(state, defPlayer, a.attack, a.uid));
+  // 先制を持つクリーチャーが先にダメージを与え、その後に残りが与える。各段階の中では同時。
+  for (const isFirst of [true, false]) {
+    const pending = [];
+    for (const { a: aUid, b: bUid } of pairs) {
+      const a = onBoard(atkPlayer, aUid);
+      if (!a) continue; // 除去された攻撃クリーチャー
+      if (bUid === undefined) {
+        if (firstStrike(a) === isFirst) pending.push(() => dealDamageToPlayer(state, defPlayer, a.attack, a.uid));
+        continue;
+      }
+      const b = onBoard(defPlayer, bUid);
+      if (!b) continue; // ブロッカーが除去されても「ブロックされた」まま
+      if (firstStrike(a) === isFirst) pending.push(() => dealDamageToCreature(state, b, a.attack, a.uid));
+      if (firstStrike(b) === isFirst) pending.push(() => dealDamageToCreature(state, a, b.attack, b.uid));
     }
-    // ブロッカーが戦闘前に除去された場合は「ブロックされた」まま（プレイヤーへのダメージなし）
+    for (const fn of pending) fn();
+    if (checkStateBased(state)) return;
   }
-  for (const fn of pending) fn();
 
   state.combat = null;
-  if (checkStateBased(state)) return;
-  // バトルフェイズ後はエンドフェイズへ（仕様書§5のとおり、第2メインフェイズはなし）
+  // バトルフェイズ後はエンドフェイズへ（第2メインフェイズはなし）
   endTurn(state);
 }
 

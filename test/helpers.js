@@ -15,7 +15,7 @@ export function put(state, player, cardId, opts = {}) {
   const card = getCard(cardId);
   const c = {
     uid: state.nextUid++, cardId, owner: player, name: card.name,
-    attack: card.attack, hp: card.hp, damage: 0, exhausted: false, summoningSick: false, ...opts,
+    attack: card.attack, hp: card.hp, damage: 0, tempAttack: 0, tempHp: 0, exhausted: false, summoningSick: false, ...opts,
   };
   state.players[player].board.push(c);
   return c;

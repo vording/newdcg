@@ -1,6 +1,15 @@
 // ゲーム状態を操作する低レベルのヘルパー。
 // game.js（ルール進行）と effects.js（カード効果）の両方から使う。
 
+import { CARDS } from './cards.js';
+
+/** ダメージ等の発生源の表示名（クリーチャーのuid またはカードID） */
+function sourceName(state, source) {
+  if (typeof source === 'number') return findCreature(state, source)?.name ?? null;
+  if (typeof source === 'string') return CARDS[source]?.name ?? null;
+  return null;
+}
+
 export function opponentOf(playerIndex) {
   return playerIndex === 0 ? 1 : 0;
 }
@@ -25,13 +34,13 @@ export function remainingHp(creature) {
 export function dealDamageToCreature(state, creature, amount, source) {
   if (amount <= 0) return;
   creature.damage += amount;
-  log(state, 'damage', { target: creature.uid, targetName: creature.name, owner: creature.owner, amount, source });
+  log(state, 'damage', { target: creature.uid, targetName: creature.name, owner: creature.owner, amount, source, sourceName: sourceName(state, source) });
 }
 
 export function dealDamageToPlayer(state, playerIndex, amount, source) {
   if (amount <= 0) return;
   state.players[playerIndex].life -= amount;
-  log(state, 'playerDamage', { player: playerIndex, amount, source });
+  log(state, 'playerDamage', { player: playerIndex, amount, source, sourceName: sourceName(state, source) });
 }
 
 export function healCreature(state, creature, amount, source) {

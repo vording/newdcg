@@ -77,22 +77,76 @@ button:focus-visible, .card:focus-visible { outline: 2px solid var(--accent); ou
 @media (prefers-reduced-motion: reduce) { .card.exhausted { transform: none; } }
 @media (max-width: 480px) { .card { width: calc(33% - 6px); min-width: 0; } .card.back { width: 32px; } }
 
+/* --- v0.2 追加 --- */
+:root { --buff: #1f7a8c; --flash: rgba(184, 117, 0, .35); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --buff: #5cc3d6; --flash: rgba(224, 164, 58, .35); } }
+:root[data-theme="dark"] { --buff: #5cc3d6; --flash: rgba(224, 164, 58, .35); }
+header label { display: inline-flex; gap: 6px; align-items: center; }
+.prompt { flex-direction: column; align-items: stretch; }
+.prompt .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.hint { font-size: 12px; color: var(--muted); }
+.hint.danger { color: var(--danger); font-weight: bold; }
+.feed { margin: 0; padding: 6px 8px 6px 22px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); }
+.prompt.over { align-items: center; text-align: center; }
+.banner { padding: 8px; }
+.life.low { color: var(--danger); }
+.meta { color: var(--muted); font-size: 12px; }
+.empty { color: var(--muted); font-size: 12px; align-self: center; }
+.kws { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 2px; }
+.kw { font-size: 10px; padding: 0 4px; border-radius: 4px; border: 1px solid var(--line); color: var(--ink); }
+.kw-quick { border-color: var(--accent); color: var(--accent); }
+.kw-flying { border-color: var(--buff); color: var(--buff); }
+.kw-haste, .kw-firstStrike { border-color: var(--warn); color: var(--warn); }
+.card.spell { border-style: dashed; }
+.card .atk.buffed, .card .hp.buffed { color: var(--buff); }
+.tag { font-size: 11px; font-weight: bold; color: var(--accent); margin-top: 2px; }
+.card.assigned { box-shadow: 0 0 0 3px var(--buff); }
+.card.returning { opacity: .6; }
+.card.fresh { animation: flash 1.2s ease-out 1; }
+@keyframes flash { from { box-shadow: 0 0 0 6px var(--flash); } to { box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .card.fresh { animation: none; } }
+#help { margin-bottom: 8px; font-size: 12px; }
+#help summary { cursor: pointer; font-weight: bold; font-size: 13px; }
+#help ul { padding-left: 18px; margin: 6px 0; display: grid; gap: 4px; }
+#log li.turn { color: var(--muted); margin-top: 4px; }
+aside h3 { margin: 4px 0; font-size: 13px; }
+
 </style>
 </head>
 <body>
 <header>
     <strong>DCG プロトタイプ</strong> <small id="build" class="muted"></small>
-    <label>対戦形式
+    <label>対戦
       <select id="mode">
-        <option value="cpu">CPU対戦（あなた＝プレイヤー1）</option>
+        <option value="cpu">CPU対戦</option>
         <option value="hotseat">2人対戦（同じ画面）</option>
       </select>
     </label>
-    <button id="newGame">新しいゲーム</button>
+    <label>デッキ <select id="deck"></select></label>
+    <label>CPU
+      <select id="level">
+        <option value="normal">ふつう</option>
+        <option value="easy">やさしい</option>
+      </select>
+    </label>
+    <button id="newGame" type="button">新しいゲーム</button>
   </header>
   <main>
     <section id="table"><p id="boot">ゲームを読み込んでいます…（この表示が消えない場合は、ページを再読み込みしてください）</p></section>
     <aside>
+      <details id="help">
+        <summary>遊び方</summary>
+        <ul>
+          <li>相手のライフ（初期20）を0にすれば勝ち。デッキが尽きてドローできなくなっても負け。</li>
+          <li>マナは毎ターン1ずつ増え（最大10）、ターン開始時に全回復する。</li>
+          <li>クリーチャーは出したターンは攻撃できない（速攻を除く）。攻撃したクリーチャーは行動済みになり、相手ターンにブロックできない。</li>
+          <li>攻撃されたら、攻撃1体につき自分のクリーチャー1体でブロックできる。ブロックされると互いの攻撃力ぶんダメージを与え合う。</li>
+          <li>ダメージはターン終了時に回復する。そのターン中に倒し切ること。</li>
+          <li>「対応」カードは、相手の攻撃宣言後・ブロック前にも使える（1枚まで）。マナを残してターンを終えよう。</li>
+          <li>飛行＝飛行でしかブロックできない。先制＝戦闘で先にダメージを与える。警戒＝攻撃しても行動済みにならない。速攻＝出したターンに攻撃できる。</li>
+          <li>後攻は開始時に「マナの雫」（0コスト：このターンマナ+1、1枚引く）を受け取る。</li>
+        </ul>
+      </details>
       <h3>ログ</h3>
       <ol id="log"></ol>
     </aside>
@@ -139,6 +193,8 @@ const DEFAULT_CONFIG = Object.freeze({
 
   // クリーチャーのダメージ: true = 毎ターン終了時に全回復（MTG方式） / false = 蓄積する（仕様書v0.3 §8）
   damageResetsAtTurnEnd: true,
+  // 後攻がゲーム開始時（マリガン後）に受け取るカード（null = なし）。先攻有利の補正。
+  secondPlayerBonusCard: 's_coin',
   // Q9【決定】手札上限10枚。超えて引いたカードは墓地へ（null = 上限なし）
   handLimit: 10,
   // Q10【決定】ゲーム開始時に1回、好きな枚数を引き直せる
@@ -166,32 +222,78 @@ function makeConfig(overrides = {}) {
 
 const KEYWORDS = Object.freeze({
   haste: { name: '速攻', text: '召喚したターンから攻撃できる。' },
+  flying: { name: '飛行', text: '飛行を持つクリーチャーでしかブロックできない。' },
+  firstStrike: { name: '先制', text: '戦闘で、先制を持たないクリーチャーより先にダメージを与える。' },
+  vigilance: { name: '警戒', text: '攻撃しても行動済みにならない（相手のターンにブロックできる）。' },
   quick: { name: '対応', text: '相手の攻撃宣言後、ブロック宣言の前にも使える。' },
 });
 
+// effect.target を持つクリーチャーは「召喚時：対象を選んで効果」。対象がいなければ不発で召喚できる。
 const CARD_LIST = [
+  // --- クリーチャー ---
   { id: 'c_apprentice', name: '見習い剣士', type: 'creature', cost: 1, attack: 1, hp: 2 },
-  { id: 'c_scout', name: '森の斥候', type: 'creature', cost: 1, attack: 2, hp: 1 },
+  { id: 'c_scout', name: '森の斥候', type: 'creature', cost: 1, attack: 2, hp: 1, keywords: ['haste'] },
   { id: 'c_shield', name: '盾持ちの兵', type: 'creature', cost: 2, attack: 1, hp: 4 },
-  { id: 'c_wolf', name: '迅雷の狼', type: 'creature', cost: 2, attack: 2, hp: 1, keywords: ['haste'] },
+  { id: 'c_wolf', name: '迅雷の狼', type: 'creature', cost: 2, attack: 3, hp: 1, keywords: ['haste'] },
   {
-    id: 'c_messenger', name: '伝令の鳥', type: 'creature', cost: 2, attack: 1, hp: 1,
+    id: 'c_messenger', name: '伝令の鳥', type: 'creature', cost: 2, attack: 1, hp: 1, keywords: ['flying'],
     triggers: [{ on: 'summon', effect: { type: 'draw', amount: 1 } }],
     text: '召喚時：カードを1枚引く。',
   },
   { id: 'c_warrior', name: '鉄槌の戦士', type: 'creature', cost: 3, attack: 3, hp: 3 },
-  { id: 'c_golem', name: '岩の巨人', type: 'creature', cost: 4, attack: 3, hp: 6 },
-  { id: 'c_dragon', name: '古竜', type: 'creature', cost: 6, attack: 6, hp: 6 },
+  { id: 'c_rider', name: '疾風の騎手', type: 'creature', cost: 3, attack: 3, hp: 2, keywords: ['haste'] },
+  { id: 'c_pikeman', name: '槍衾の衛兵', type: 'creature', cost: 3, attack: 2, hp: 3, keywords: ['firstStrike'] },
+  { id: 'c_hawk', name: '嵐の鷹', type: 'creature', cost: 3, attack: 3, hp: 2, keywords: ['flying'] },
+  {
+    id: 'c_salamander', name: '火吹きトカゲ', type: 'creature', cost: 3, attack: 2, hp: 2,
+    effect: { type: 'damage', amount: 1, target: 'character' },
+    text: '召喚時：クリーチャー1体かプレイヤー1人に1ダメージ。',
+  },
+  { id: 'c_golem', name: '岩の巨人', type: 'creature', cost: 4, attack: 2, hp: 6 },
+  { id: 'c_knight', name: '番犬の騎士', type: 'creature', cost: 4, attack: 3, hp: 3, keywords: ['vigilance'] },
+  {
+    id: 'c_general', name: '戦場の将軍', type: 'creature', cost: 5, attack: 3, hp: 3,
+    triggers: [{ on: 'summon', effect: { type: 'buffOthers', attack: 1, hp: 1 } }],
+    text: '召喚時：自分の他のクリーチャーすべてに+1/+1。',
+  },
+  { id: 'c_dragon', name: '古竜', type: 'creature', cost: 7, attack: 6, hp: 6, keywords: ['flying'] },
+  // --- スペル ---
+  {
+    id: 's_arrow', name: '迎撃の矢', type: 'spell', cost: 1, keywords: ['quick'],
+    effect: { type: 'damage', amount: 2, target: 'attackingCreature' },
+    text: '攻撃している相手のクリーチャー1体に2ダメージを与える。',
+  },
+  {
+    id: 's_might', name: '剛力の薬', type: 'spell', cost: 1, keywords: ['quick'],
+    effect: { type: 'buffTemp', attack: 2, hp: 2, target: 'friendlyCreature' },
+    text: '自分のクリーチャー1体はターン終了時まで+2/+2。',
+  },
+  {
+    id: 's_rally', name: '鬨の声', type: 'spell', cost: 2,
+    effect: { type: 'buffTempAll', attack: 2, hp: 0 },
+    text: '自分のクリーチャーすべてはターン終了時まで+2/+0。',
+  },
   {
     id: 's_fireball', name: '火球', type: 'spell', cost: 2,
     effect: { type: 'damage', amount: 3, target: 'character' },
     text: 'クリーチャー1体かプレイヤー1人に3ダメージを与える。',
   },
   {
-    id: 's_arrow', name: '迎撃の矢', type: 'spell', cost: 1, keywords: ['quick'],
-    effect: { type: 'damage', amount: 2, target: 'enemyCreature' },
-    text: '相手のクリーチャー1体に2ダメージを与える。',
+    id: 's_insight', name: '知識の泉', type: 'spell', cost: 3,
+    effect: { type: 'draw', amount: 2 },
+    text: 'カードを2枚引く。',
   },
+  {
+    id: 's_wave', name: '炎の波', type: 'spell', cost: 4,
+    effect: { type: 'damageAllEnemies', amount: 2 },
+    text: '相手のクリーチャーすべてに2ダメージを与える。',
+  },
+  {
+    id: 's_coin', name: 'マナの雫', type: 'spell', cost: 0, token: true,
+    effect: { type: 'gainMana', amount: 1, draw: 1 },
+    text: 'このターン、マナを1得る。カードを1枚引く。（後攻がゲーム開始時に1枚受け取る。デッキには入れられない）',
+  },
+  // 旧テストカード（デッキには入れていない。テスト用に残す）
   {
     id: 's_mend', name: '癒しの光', type: 'spell', cost: 1, keywords: ['quick'],
     effect: { type: 'healAll', target: 'friendlyCreature' },
@@ -211,13 +313,44 @@ function hasKeyword(card, kw) {
   return Array.isArray(card.keywords) && card.keywords.includes(kw);
 }
 
-/** 30枚のテストデッキ */
-const TEST_DECK_COUNTS = {
-  c_apprentice: 2, c_scout: 2, c_shield: 3, c_wolf: 3, c_messenger: 2, c_warrior: 3,
-  c_golem: 3, c_dragon: 3, s_fireball: 3, s_arrow: 3, s_mend: 3,
-};
+/** 構築済みデッキ（各30枚） */
+const DECKS = Object.freeze({
+  swift: {
+    name: '疾風（速攻型）',
+    text: '低コストのクリーチャーと速攻・飛行で一気にライフを削る。',
+    counts: {
+      c_rider: 3, c_scout: 3, c_wolf: 3, c_messenger: 2, c_warrior: 3, c_hawk: 3,
+      c_pikeman: 1, c_salamander: 2, c_general: 2, s_fireball: 3, s_might: 3, s_rally: 2,
+    },
+  },
+  fortress: {
+    name: '城塞（防御型）',
+    text: '硬いクリーチャーと除去で耐え、古竜で決める。',
+    counts: {
+      c_shield: 3, c_pikeman: 3, c_messenger: 2, c_golem: 3, c_knight: 3, c_dragon: 3,
+      c_salamander: 3, s_arrow: 3, s_insight: 2, s_wave: 2, s_fireball: 3,
+    },
+  },
+  balance: {
+    name: '均衡（標準型）',
+    text: '序盤から終盤まで満遍なく戦える。',
+    counts: {
+      c_apprentice: 3, c_wolf: 2, c_messenger: 2, c_warrior: 3, c_pikeman: 2, c_hawk: 2,
+      c_salamander: 2, c_golem: 2, c_knight: 2, c_general: 2, c_dragon: 1,
+      s_fireball: 3, s_arrow: 2, s_might: 2,
+    },
+  },
+});
+
+function deckList(deckId) {
+  const d = DECKS[deckId];
+  if (!d) throw new Error(`Unknown deck: ${deckId}`);
+  return Object.entries(d.counts).flatMap(([id, n]) => Array(n).fill(id));
+}
+
+/** テスト用の標準デッキ */
 function testDeck() {
-  return Object.entries(TEST_DECK_COUNTS).flatMap(([id, n]) => Array(n).fill(id));
+  return deckList('balance');
 }
 
 /** デッキ構築ルールの検証。問題があればエラーメッセージの配列を返す。 */
@@ -229,6 +362,7 @@ function validateDeck(deck, config) {
   const counts = {};
   for (const id of deck) {
     if (!CARDS[id]) errors.push(`存在しないカード: ${id}`);
+    else if (CARDS[id].token) errors.push(`${CARDS[id].name} はデッキに入れられません`);
     counts[id] = (counts[id] || 0) + 1;
   }
   for (const [id, n] of Object.entries(counts)) {
@@ -242,6 +376,14 @@ function validateDeck(deck, config) {
 // ---- src/engine/state.js ----
 // ゲーム状態を操作する低レベルのヘルパー。
 // game.js（ルール進行）と effects.js（カード効果）の両方から使う。
+
+
+/** ダメージ等の発生源の表示名（クリーチャーのuid またはカードID） */
+function sourceName(state, source) {
+  if (typeof source === 'number') return findCreature(state, source)?.name ?? null;
+  if (typeof source === 'string') return CARDS[source]?.name ?? null;
+  return null;
+}
 
 function opponentOf(playerIndex) {
   return playerIndex === 0 ? 1 : 0;
@@ -267,13 +409,13 @@ function remainingHp(creature) {
 function dealDamageToCreature(state, creature, amount, source) {
   if (amount <= 0) return;
   creature.damage += amount;
-  log(state, 'damage', { target: creature.uid, targetName: creature.name, owner: creature.owner, amount, source });
+  log(state, 'damage', { target: creature.uid, targetName: creature.name, owner: creature.owner, amount, source, sourceName: sourceName(state, source) });
 }
 
 function dealDamageToPlayer(state, playerIndex, amount, source) {
   if (amount <= 0) return;
   state.players[playerIndex].life -= amount;
-  log(state, 'playerDamage', { player: playerIndex, amount, source });
+  log(state, 'playerDamage', { player: playerIndex, amount, source, sourceName: sourceName(state, source) });
 }
 
 function healCreature(state, creature, amount, source) {
@@ -354,6 +496,47 @@ const EFFECTS = {
       healCreature(state, c, c.damage, source);
     },
   },
+  damageAllEnemies: {
+    resolve(state, playerIndex, params, target, source) {
+      for (const c of [...state.players[1 - playerIndex].board]) dealDamageToCreature(state, c, params.amount, source);
+    },
+  },
+  /** ターン終了時まで +X/+Y */
+  buffTemp: {
+    resolve(state, playerIndex, params, target, source) {
+      const c = findCreature(state, target.uid);
+      c.attack += params.attack; c.hp += params.hp;
+      c.tempAttack += params.attack; c.tempHp += params.hp;
+      log(state, 'buff', { target: c.uid, targetName: c.name, owner: c.owner, attack: params.attack, hp: params.hp, temporary: true });
+    },
+  },
+  /** 自分のクリーチャーすべてにターン終了時まで +X/+Y */
+  buffTempAll: {
+    resolve(state, playerIndex, params, target, source) {
+      for (const c of state.players[playerIndex].board) {
+        c.attack += params.attack; c.hp += params.hp;
+        c.tempAttack += params.attack; c.tempHp += params.hp;
+      }
+      log(state, 'buffAll', { player: playerIndex, attack: params.attack, hp: params.hp });
+    },
+  },
+  /** 自分の他のクリーチャーすべてに永続 +X/+Y */
+  buffOthers: {
+    resolve(state, playerIndex, params, target, source) {
+      for (const c of state.players[playerIndex].board) {
+        if (c.uid === source) continue;
+        c.attack += params.attack; c.hp += params.hp;
+        log(state, 'buff', { target: c.uid, targetName: c.name, owner: c.owner, attack: params.attack, hp: params.hp, temporary: false });
+      }
+    },
+  },
+  gainMana: {
+    resolve(state, playerIndex, params) {
+      state.players[playerIndex].mana += params.amount;
+      log(state, 'gainMana', { player: playerIndex, amount: params.amount });
+      if (params.draw) drawCards(state, playerIndex, params.draw);
+    },
+  },
   draw: {
     resolve(state, playerIndex, params, target, source) {
       drawCards(state, playerIndex, params.amount);
@@ -369,6 +552,7 @@ const EFFECTS = {
  *   'creature'         : 任意のクリーチャー
  *   'friendlyCreature' : 自分のクリーチャー
  *   'enemyCreature'    : 相手のクリーチャー
+ *   'attackingCreature': 攻撃している相手のクリーチャー（戦闘中のみ）
  */
 function legalTargets(state, playerIndex, effect) {
   const kind = effect.target;
@@ -385,6 +569,8 @@ function legalTargets(state, playerIndex, effect) {
     case 'creature': return [...mine, ...theirs].map(asTarget);
     case 'friendlyCreature': return mine.map(asTarget);
     case 'enemyCreature': return theirs.map(asTarget);
+    case 'attackingCreature':
+      return theirs.filter((c) => state.combat?.attackers.includes(c.uid)).map(asTarget);
     default: throw new Error(`Unknown target kind: ${kind}`);
   }
 }
@@ -470,8 +656,18 @@ function createGame({ decks, seed = Date.now(), firstPlayer = null, config = {},
   log(state, 'gameStart', { firstPlayer: first });
 
   if (cfg.mulligan) state.awaiting = { player: first, step: 'mulligan' };
-  else startTurn(state, first);
+  else beginFirstTurn(state);
   return state;
+}
+
+function beginFirstTurn(state) {
+  const bonus = state.config.secondPlayerBonusCard;
+  if (bonus) {
+    const second = opponentOf(state.firstPlayer);
+    state.players[second].hand.push(bonus);
+    log(state, 'bonusCard', { player: second, cardId: bonus });
+  }
+  startTurn(state, state.firstPlayer);
 }
 
 function mulligan(state, playerIndex, { handIndices = [] }) {
@@ -489,7 +685,7 @@ function mulligan(state, playerIndex, { handIndices = [] }) {
 
   const other = opponentOf(playerIndex);
   if (!state.players[other].mulliganDone) state.awaiting = { player: other, step: 'mulligan' };
-  else startTurn(state, state.firstPlayer);
+  else beginFirstTurn(state);
   return { ok: true };
 }
 
@@ -530,9 +726,15 @@ function endTurn(state) {
   // 5. エンドフェイズ
   runTriggers(state, playerIndex, 'turnEnd');
   if (checkStateBased(state)) return;
-  if (state.config.damageResetsAtTurnEnd) {
-    for (const p of state.players) for (const c of p.board) c.damage = 0;
+  for (const p of state.players) {
+    for (const c of p.board) {
+      // 「ターン終了時まで」の修整を戻す
+      c.attack -= c.tempAttack; c.hp -= c.tempHp;
+      c.tempAttack = 0; c.tempHp = 0;
+      if (state.config.damageResetsAtTurnEnd) c.damage = 0;
+    }
   }
+  if (checkStateBased(state)) return;
   log(state, 'turnEnd', { player: playerIndex });
   startTurn(state, opponentOf(playerIndex));
 }
@@ -588,6 +790,13 @@ function canBlock(state, creature) {
     && (state.config.exhaustedCanBlock || !creature.exhausted);
 }
 
+/** blocker が attacker をブロックできるか（飛行は飛行でしかブロックできない） */
+function canBlockAttacker(state, blocker, attacker) {
+  if (!canBlock(state, blocker)) return false;
+  if (hasKeyword(getCard(attacker.cardId), 'flying') && !hasKeyword(getCard(blocker.cardId), 'flying')) return false;
+  return true;
+}
+
 /** 手札のカードが今プレイ可能か。不可なら理由を返す。 */
 function playability(state, playerIndex, handIndex) {
   const p = state.players[playerIndex];
@@ -613,10 +822,16 @@ function playability(state, playerIndex, handIndex) {
   return { ok: true };
 }
 
+/**
+ * 手札のカードを使うときに選べる対象。[null] は「対象なし」。
+ * クリーチャーの召喚時効果は、対象がいなければ対象なしで召喚できる（効果は不発）。
+ */
 function targetsForHandCard(state, playerIndex, handIndex) {
   const card = getCard(state.players[playerIndex].hand[handIndex]);
-  if (card.type !== 'spell') return [null];
-  return legalTargets(state, playerIndex, card.effect);
+  if (!card.effect) return [null];
+  const targets = legalTargets(state, playerIndex, card.effect);
+  if (card.type === 'creature' && targets.length === 0) return [null];
+  return targets;
 }
 
 // ---------------------------------------------------------------------------
@@ -664,10 +879,8 @@ function playCard(state, playerIndex, { handIndex, target = null }) {
   const cardId = p.hand[handIndex];
   const card = getCard(cardId);
 
-  if (card.type === 'spell') {
-    const targets = legalTargets(state, playerIndex, card.effect);
-    if (!targets.some((t) => sameTarget(t, target))) return fail('その対象は選べません');
-  }
+  const targets = targetsForHandCard(state, playerIndex, handIndex);
+  if (!targets.some((t) => sameTarget(t, target))) return fail('その対象は選べません');
 
   p.mana -= card.cost;
   p.hand.splice(handIndex, 1);
@@ -681,11 +894,14 @@ function playCard(state, playerIndex, { handIndex, target = null }) {
       attack: card.attack,
       hp: card.hp,
       damage: 0,
+      tempAttack: 0,
+      tempHp: 0,
       exhausted: false,
       summoningSick: true,
     };
     p.board.push(creature);
     log(state, 'summon', { player: playerIndex, uid: creature.uid, name: card.name });
+    if (card.effect && target) resolveEffect(state, playerIndex, card.effect, target, creature.uid);
     for (const t of card.triggers ?? []) {
       if (t.on === 'summon') resolveEffect(state, playerIndex, t.effect, null, creature.uid);
     }
@@ -707,7 +923,10 @@ function declareAttack(state, playerIndex, { attackers }) {
     if (!c) return fail('自分のクリーチャーではありません');
     if (!canAttack(state, c)) return fail(`${c.name} は攻撃できません`);
   }
-  for (const uid of attackers) board.find((x) => x.uid === uid).exhausted = true;
+  for (const uid of attackers) {
+    const c = board.find((x) => x.uid === uid);
+    if (!hasKeyword(getCard(c.cardId), 'vigilance')) c.exhausted = true; // 警戒は行動済みにならない
+  }
   state.combat = { attackers: [...attackers], blocks: {} };
   log(state, 'attack', { player: playerIndex, attackers: [...attackers] });
 
@@ -758,6 +977,8 @@ function declareBlocks(state, playerIndex, { blocks = [] }) {
     const b = defBoard.find((x) => x.uid === blocker);
     if (!b) return fail('自分のクリーチャーではありません');
     if (!canBlock(state, b)) return fail(`${b.name} はブロックできません`);
+    const atk = state.players[state.activePlayer].board.find((x) => x.uid === attacker);
+    if (!canBlockAttacker(state, b, atk)) return fail(`${atk.name} は飛行を持つため、飛行でしかブロックできません`);
     if (usedBlockers.has(blocker)) return fail('1体のクリーチャーは1回しかブロックできません');
     if (blockedAttackers.has(attacker)) return fail('1体の攻撃に対するブロッカーは1体までです');
     usedBlockers.add(blocker);
@@ -780,29 +1001,31 @@ function declareBlocks(state, playerIndex, { blocks = [] }) {
 function resolveCombat(state) {
   const atkPlayer = state.activePlayer;
   const defPlayer = opponentOf(atkPlayer);
-  const atkBoard = state.players[atkPlayer].board;
-  const defBoard = state.players[defPlayer].board;
+  const onBoard = (pi, uid) => state.players[pi].board.find((x) => x.uid === uid) ?? null;
+  const firstStrike = (c) => hasKeyword(getCard(c.cardId), 'firstStrike');
+  const pairs = state.combat.attackers.map((uid) => ({ a: uid, b: state.combat.blocks[uid] }));
 
-  // 全ダメージを先に計算してから同時に適用する
-  const pending = [];
-  for (const uid of state.combat.attackers) {
-    const a = atkBoard.find((x) => x.uid === uid);
-    if (!a) continue; // 将来、対応カードで除去された場合
-    const blockerUid = state.combat.blocks[uid];
-    const b = blockerUid !== undefined ? defBoard.find((x) => x.uid === blockerUid) : null;
-    if (b) {
-      pending.push(() => dealDamageToCreature(state, b, a.attack, a.uid));
-      pending.push(() => dealDamageToCreature(state, a, b.attack, b.uid));
-    } else if (blockerUid === undefined) {
-      pending.push(() => dealDamageToPlayer(state, defPlayer, a.attack, a.uid));
+  // 先制を持つクリーチャーが先にダメージを与え、その後に残りが与える。各段階の中では同時。
+  for (const isFirst of [true, false]) {
+    const pending = [];
+    for (const { a: aUid, b: bUid } of pairs) {
+      const a = onBoard(atkPlayer, aUid);
+      if (!a) continue; // 除去された攻撃クリーチャー
+      if (bUid === undefined) {
+        if (firstStrike(a) === isFirst) pending.push(() => dealDamageToPlayer(state, defPlayer, a.attack, a.uid));
+        continue;
+      }
+      const b = onBoard(defPlayer, bUid);
+      if (!b) continue; // ブロッカーが除去されても「ブロックされた」まま
+      if (firstStrike(a) === isFirst) pending.push(() => dealDamageToCreature(state, b, a.attack, a.uid));
+      if (firstStrike(b) === isFirst) pending.push(() => dealDamageToCreature(state, a, b.attack, b.uid));
     }
-    // ブロッカーが戦闘前に除去された場合は「ブロックされた」まま（プレイヤーへのダメージなし）
+    for (const fn of pending) fn();
+    if (checkStateBased(state)) return;
   }
-  for (const fn of pending) fn();
 
   state.combat = null;
-  if (checkStateBased(state)) return;
-  // バトルフェイズ後はエンドフェイズへ（仕様書§5のとおり、第2メインフェイズはなし）
+  // バトルフェイズ後はエンドフェイズへ（第2メインフェイズはなし）
   endTurn(state);
 }
 
@@ -822,22 +1045,88 @@ function viewFor(state, playerIndex) {
 }
 
 // ---- src/ai/simple-ai.js ----
-// 動作確認・バランス計測用の単純な貪欲AI。強さよりも「ルールを一通り使うこと」を目的とする。
+// CPU / 自動対戦用AI。
+// 盤面評価関数 + 1手先読み（候補アクションを複製した状態に適用して評価する）。
+// 相手の手札は見ない（複製時に相手の手札を空にする）。
 
 
-/** awaiting.player の次の1アクションを決めて返す（適用はしない） */
-function chooseAction(state) {
+// 評価の重み（scripts/simulate.js で調整）
+const WEIGHTS = {
+  life: 1.0, // ライフ1点
+  lifeLow: 1.0, // ライフが10以下のときの追加の重み
+  attack: 1.3,
+  hp: 0.9,
+  flying: 1.5,
+  firstStrike: 1.0,
+  vigilance: 0.6,
+  hand: 1.6, // 手札1枚
+  quickHoldBonus: 1.2, // 対応カードを手札に持っていることの価値（相手ターンに使える）
+};
+
+// ---------------------------------------------------------------------------
+// 評価
+// ---------------------------------------------------------------------------
+
+function lifeValue(life) {
+  if (life <= 0) return -1000;
+  return WEIGHTS.life * life + WEIGHTS.lifeLow * Math.min(0, life - 10);
+}
+
+function creatureValue(c) {
+  const card = getCard(c.cardId);
+  const atk = c.attack - (c.tempAttack || 0);
+  const hp = c.hp - (c.tempHp || 0) - (c.damage || 0);
+  let v = WEIGHTS.attack * atk + WEIGHTS.hp * Math.max(hp, 0);
+  if (hasKeyword(card, 'flying')) v += WEIGHTS.flying * Math.min(atk, 3) / 2;
+  if (hasKeyword(card, 'firstStrike')) v += WEIGHTS.firstStrike;
+  if (hasKeyword(card, 'vigilance')) v += WEIGHTS.vigilance;
+  return v;
+}
+
+function handValue(hand) {
+  return hand.reduce((s, id) => s + WEIGHTS.hand + (hasKeyword(getCard(id), 'quick') ? WEIGHTS.quickHoldBonus : 0), 0);
+}
+
+function evaluate(state, me) {
+  if (state.winner === me) return 100000;
+  if (state.winner === 'draw') return 0;
+  if (state.winner !== null) return -100000;
+  const side = (p) => lifeValue(p.life) + p.board.reduce((s, c) => s + creatureValue(c), 0) + handValue(p.hand);
+  return side(state.players[me]) - side(state.players[1 - me]);
+}
+
+/** 先読み用の複製。ログを捨て、相手の手札は見えないので空にする。 */
+function simClone(state, me) {
+  const s = structuredClone({ ...state, log: [] });
+  s.players[1 - me].hand = [];
+  return s;
+}
+
+function tryAction(state, me, actor, action) {
+  const s = simClone(state, me);
+  const res = applyAction(s, actor, action);
+  return res.ok ? s : null;
+}
+
+// ---------------------------------------------------------------------------
+// 意思決定
+// ---------------------------------------------------------------------------
+
+/**
+ * awaiting.player の次の1アクションを決めて返す（適用はしない）
+ * @param {{level?: 'normal'|'easy', random?: () => number}} opts
+ *   easy: 対応を見逃しやすく、ブロックは簡易判断、攻撃は上位候補からランダムに選ぶ
+ */
+function chooseAction(state, opts = {}) {
   const me = state.awaiting.player;
-  const stepName = state.awaiting.step;
-  if (stepName === 'mulligan') return { type: 'mulligan', handIndices: chooseMulligan(state, me) };
-  if (stepName === 'response') return chooseResponse(state, me) ?? { type: 'pass' };
-  if (stepName === 'block') return { type: 'declareBlocks', blocks: chooseBlocks(state, me) };
-
-  const play = choosePlay(state, me);
-  if (play) return play;
-  const attackers = chooseAttackers(state, me);
-  if (attackers.length) return { type: 'attack', attackers };
-  return { type: 'endTurn' };
+  const easy = opts.level === 'easy';
+  const rnd = opts.random ?? Math.random;
+  switch (state.awaiting.step) {
+    case 'mulligan': return { type: 'mulligan', handIndices: chooseMulligan(state, me) };
+    case 'response': return easy && rnd() < 0.5 ? { type: 'pass' } : chooseResponse(state, me);
+    case 'block': return { type: 'declareBlocks', blocks: easy ? quickBlocks(state, me) : chooseBlocks(state, me) };
+    default: return choosePlay(state, me) ?? chooseAttack(state, me, easy ? rnd : null);
+  }
 }
 
 /** 1手進める。不正アクションを選んだ場合は例外にする（AI・エンジンのバグ検出用） */
@@ -849,114 +1138,180 @@ function step(state) {
   return action;
 }
 
-/** コスト5以上のカードを引き直す */
 function chooseMulligan(state, me) {
-  return state.players[me].hand.map((id, i) => (getCard(id).cost >= 5 ? i : -1)).filter((i) => i >= 0);
+  const hand = state.players[me].hand.map(getCard);
+  const cheap = hand.filter((c) => c.cost <= 3).length;
+  // 序盤に出せるカードが少なければ重いカードを戻す
+  return hand.map((c, i) => ((c.cost >= 5 || (cheap < 2 && c.cost >= 4)) ? i : -1)).filter((i) => i >= 0);
 }
 
-/** 対応: 倒せる攻撃クリーチャーがいれば迎撃する（攻撃力の高い順） */
-function chooseResponse(state, me) {
-  const p = state.players[me];
-  for (let i = 0; i < p.hand.length; i++) {
-    const card = getCard(p.hand[i]);
-    if (card.effect?.type !== 'damage' || !playability(state, me, i).ok) continue;
-    const best = targetsForHandCard(state, me, i)
-      .filter((t) => t.kind === 'creature' && state.combat.attackers.includes(t.uid))
-      .map((t) => ({ t, c: state.players[1 - me].board.find((x) => x.uid === t.uid) }))
-      .filter(({ c }) => c && remainingHp(c) <= card.effect.amount)
-      .sort((a, b) => b.c.attack - a.c.attack)[0];
-    if (best) return { type: 'playCard', handIndex: i, target: best.t };
-  }
-  return null;
+function playCandidates(state, me) {
+  const out = [];
+  state.players[me].hand.forEach((id, i) => {
+    if (!playability(state, me, i).ok) return;
+    for (const target of targetsForHandCard(state, me, i)) out.push({ type: 'playCard', handIndex: i, target });
+  });
+  return out;
 }
 
+/** メインフェイズ: 評価が上がるカードを1枚使う。なければ null */
 function choosePlay(state, me) {
-  const p = state.players[me];
-  const order = p.hand
-    .map((id, i) => ({ i, card: getCard(id) }))
-    .filter(({ i }) => playability(state, me, i).ok)
-    .sort((a, b) => b.card.cost - a.card.cost);
-  for (const { i, card } of order) {
-    if (card.type === 'creature') return { type: 'playCard', handIndex: i };
-    const target = chooseSpellTarget(state, me, i, card);
-    if (target !== undefined) return { type: 'playCard', handIndex: i, target };
-  }
-  return null;
+  return bestPlay(state, me, true)?.action ?? null;
 }
 
-function chooseSpellTarget(state, me, handIndex, card) {
-  const targets = targetsForHandCard(state, me, handIndex);
-  const creatureOf = (t) => state.players.flatMap((p) => p.board).find((c) => c.uid === t.uid);
-  const opp = 1 - me;
-  if (card.effect.type === 'damage') {
-    const amount = card.effect.amount;
-    const face = targets.find((t) => t.kind === 'player' && t.player === opp);
-    if (face && state.players[opp].life <= amount) return face;
-    const kills = targets
-      .filter((t) => t.kind === 'creature')
-      .map((t) => ({ t, c: creatureOf(t) }))
-      .filter(({ c }) => c.owner === opp && remainingHp(c) <= amount)
-      .sort((a, b) => b.c.attack - a.c.attack);
-    if (kills.length) return kills[0].t;
-    return undefined; // 有効な使い道がなければ温存
+function bestPlay(state, me, allowManaCombo) {
+  const base = evaluate(simClone(state, me), me);
+  let best = null;
+  let bestGain = 0.01;
+  for (const action of playCandidates(state, me)) {
+    const s = tryAction(state, me, me, action);
+    if (!s) continue;
+    const card = getCard(state.players[me].hand[action.handIndex]);
+    let gain;
+    if (card.effect?.type === 'gainMana') {
+      // マナを得るカードは、それで出せるようになる次の1枚と合わせて評価する
+      if (!allowManaCombo) continue;
+      const next = bestPlay(s, me, false);
+      if (!next) continue;
+      const s2 = tryAction(s, me, me, next.action);
+      gain = evaluate(s2, me) - base + 0.15 * getCard(s.players[me].hand[next.action.handIndex]).cost;
+      // 同じカードがマナなしでも出せるなら使う意味はない
+      if (playability(state, me, state.players[me].hand.indexOf(s.players[me].hand[next.action.handIndex])).ok) continue;
+    } else {
+      // マナを使い切ることにも少し価値を置く（テンポ）
+      gain = evaluate(s, me) - base + 0.15 * card.cost;
+    }
+    if (gain > bestGain) { bestGain = gain; best = action; }
   }
-  if (card.effect.type === 'healAll') {
-    const hurt = targets
-      .map((t) => ({ t, c: creatureOf(t) }))
-      .filter(({ c }) => c.damage >= 2)
-      .sort((a, b) => b.c.damage - a.c.damage);
-    return hurt.length ? hurt[0].t : undefined;
-  }
-  return targets[0];
+  return best ? { action: best, gain: bestGain } : null;
 }
 
-function chooseAttackers(state, me) {
-  const opp = state.players[1 - me];
-  const blockers = opp.board.filter((c) => state.config.exhaustedCanBlock || !c.exhausted);
-  const mine = state.players[me].board.filter((c) => canAttack(state, c));
-  const totalPower = mine.reduce((s, c) => s + c.attack, 0);
-  if (blockers.length === 0 || totalPower >= opp.life + sumTopAttack(blockers, mine)) return mine.map((c) => c.uid);
-  // 一方的に倒される（相手が無傷で生き残り、自分だけ死ぬ）ブロッカーがいる場合は攻撃しない
-  return mine
-    .filter((a) => !blockers.some((b) => b.attack >= remainingHp(a) && a.attack < remainingHp(b)))
-    .map((c) => c.uid);
+/** 攻撃: 攻撃可能なクリーチャーの全組み合わせを、相手の予想ブロック込みで評価する */
+function chooseAttack(state, me, rnd = null) {
+  const ready = state.players[me].board.filter((c) => canAttack(state, c)).map((c) => c.uid);
+  const scored = [{ action: { type: 'endTurn' }, score: scoreAfterCombat(tryAction(state, me, me, { type: 'endTurn' }), me) }];
+  const n = Math.min(ready.length, 6);
+  for (let mask = 1; mask < (1 << n); mask++) {
+    const attackers = ready.filter((_, i) => mask & (1 << i));
+    const s = tryAction(state, me, me, { type: 'attack', attackers });
+    if (s) scored.push({ action: { type: 'attack', attackers }, score: scoreAfterCombat(s, me) });
+  }
+  scored.sort((a, b) => b.score - a.score);
+  if (rnd && scored[0].score < 50000) return scored[Math.floor(rnd() * Math.min(3, scored.length))].action;
+  return scored[0].action;
 }
 
-function sumTopAttack(blockers, attackers) {
-  // 粗い見積もり: ブロッカーの数だけ大きい攻撃が止められる
-  return attackers.map((c) => c.attack).sort((a, b) => b - a).slice(0, blockers.length).reduce((s, x) => s + x, 0);
+/** 相手の対応なし・相手は簡易ブロックを行うと仮定して戦闘を最後まで進めて評価 */
+function scoreAfterCombat(s, me) {
+  let guard = 10;
+  while (s.winner === null && s.awaiting && s.awaiting.player !== s.activePlayer && guard--) {
+    const p = s.awaiting.player;
+    const action = s.awaiting.step === 'block'
+      ? { type: 'declareBlocks', blocks: quickBlocks(s, p) }
+      : { type: 'pass' };
+    applyAction(s, p, action);
+  }
+  return evaluate(s, me);
+}
+
+/** 対応: 使わない場合と、使える対応カード×対象のすべてを比較 */
+function chooseResponse(state, me) {
+  let best = { type: 'pass' };
+  let bestScore = afterResponseScore(tryAction(state, me, me, best), me);
+  state.players[me].hand.forEach((id, i) => {
+    if (!playability(state, me, i).ok) return;
+    for (const target of targetsForHandCard(state, me, i)) {
+      const action = { type: 'playCard', handIndex: i, target };
+      const s = tryAction(state, me, me, action);
+      if (!s) continue;
+      const score = afterResponseScore(s, me) - 0.3; // 手札を使うことへの小さなコスト
+      if (score > bestScore) { bestScore = score; best = action; }
+    }
+  });
+  return best;
+}
+
+function afterResponseScore(s, me) {
+  if (s.awaiting?.step === 'block' && s.awaiting.player === me) {
+    applyAction(s, me, { type: 'declareBlocks', blocks: searchBlocks(s, me) });
+  }
+  return evaluate(s, me);
 }
 
 function chooseBlocks(state, me) {
+  return searchBlocks(state, me);
+}
+
+/** ブロックの割り当てを全探索（多すぎる場合は簡易ブロックで打ち切り） */
+function searchBlocks(state, me) {
+  const atkBoard = state.players[state.activePlayer].board;
+  const attackers = state.combat.attackers.map((uid) => atkBoard.find((c) => c.uid === uid)).filter(Boolean);
+  const blockers = state.players[me].board;
+  const options = attackers.map((a) => [null, ...blockers.filter((b) => canBlockAttacker(state, b, a)).map((b) => b.uid)]);
+  const total = options.reduce((x, o) => x * o.length, 1);
+  if (total > 4000) return quickBlocks(state, me);
+
+  let best = null;
+  let bestScore = -Infinity;
+  const pick = new Array(attackers.length);
+  const rec = (i, used) => {
+    if (i === attackers.length) {
+      const blocks = [];
+      pick.forEach((b, k) => { if (b !== null) blocks.push({ attacker: attackers[k].uid, blocker: b }); });
+      const s = tryAction(state, me, me, { type: 'declareBlocks', blocks });
+      if (!s) return;
+      const score = evaluate(s, me);
+      if (score > bestScore) { bestScore = score; best = blocks; }
+      return;
+    }
+    for (const b of options[i]) {
+      if (b !== null && used.has(b)) continue;
+      pick[i] = b;
+      if (b !== null) used.add(b);
+      rec(i + 1, used);
+      if (b !== null) used.delete(b);
+    }
+  };
+  rec(0, new Set());
+  return best ?? [];
+}
+
+/** 戦闘1対1の結果予測（先制考慮） */
+function fight(a, b) {
+  const fa = hasKeyword(getCard(a.cardId), 'firstStrike');
+  const fb = hasKeyword(getCard(b.cardId), 'firstStrike');
+  const aHp = a.hp - a.damage;
+  const bHp = b.hp - b.damage;
+  const bDies = a.attack >= bHp;
+  const aDies = b.attack >= aHp;
+  if (fa && !fb && bDies) return { aDies: false, bDies: true };
+  if (fb && !fa && aDies) return { aDies: true, bDies: false };
+  return { aDies, bDies };
+}
+
+/** 高速な簡易ブロック（攻撃側の予測用） */
+function quickBlocks(state, me) {
   const atkBoard = state.players[state.activePlayer].board;
   const attackers = state.combat.attackers
-    .map((uid) => atkBoard.find((c) => c.uid === uid))
-    .filter(Boolean)
-    .sort((a, b) => b.attack - a.attack);
-  const available = state.players[me].board.filter((c) => canBlock(state, c));
+    .map((uid) => atkBoard.find((c) => c.uid === uid)).filter(Boolean)
+    .sort((x, y) => y.attack - x.attack);
+  const available = [...state.players[me].board];
   const blocks = [];
   let incoming = attackers.reduce((s, a) => s + a.attack, 0);
   const take = (b) => available.splice(available.indexOf(b), 1);
-
   for (const a of attackers) {
-    // 生き残って倒せる → 生き残る → 相打ち（相手のほうが高コスト）の順で選ぶ
-    const good = available.find((b) => b.attack >= remainingHp(a) && a.attack < remainingHp(b))
-      ?? available.find((b) => a.attack < remainingHp(b))
-      ?? available.find((b) => b.attack >= remainingHp(a) && getCard(a.cardId).cost >= getCard(b.cardId).cost);
-    if (good) {
-      blocks.push({ attacker: a.uid, blocker: good.uid });
-      take(good);
-      incoming -= a.attack;
-    }
+    const legal = available.filter((b) => canBlockAttacker(state, b, a));
+    const good = legal.find((b) => { const r = fight(a, b); return r.aDies && !r.bDies; })
+      ?? legal.find((b) => !fight(a, b).bDies)
+      ?? legal.find((b) => { const r = fight(a, b); return r.aDies && creatureValue(a) >= creatureValue(b); });
+    if (good) { blocks.push({ attacker: a.uid, blocker: good.uid }); take(good); incoming -= a.attack; }
   }
-  // 致死ダメージなら残りのクリーチャーでチャンプブロック
   for (const a of attackers) {
     if (incoming < state.players[me].life) break;
-    if (blocks.some((x) => x.attacker === a.uid) || available.length === 0) continue;
-    const chump = available.sort((x, y) => x.attack - y.attack)[0];
-    blocks.push({ attacker: a.uid, blocker: chump.uid });
-    take(chump);
-    incoming -= a.attack;
+    if (blocks.some((x) => x.attacker === a.uid)) continue;
+    const chump = available.filter((b) => canBlockAttacker(state, b, a)).sort((x, y) => creatureValue(x) - creatureValue(y))[0];
+    if (!chump) continue;
+    blocks.push({ attacker: a.uid, blocker: chump.uid }); take(chump); incoming -= a.attack;
   }
   return blocks;
 }
@@ -975,19 +1330,34 @@ const el = (tag, cls, text) => {
 
 let game;
 let mode = 'cpu';
+let deckNames = ['', ''];
 let ui; // 画面上の一時的な選択状態
+let seenLog = 0; // 人間が最後に見たログ位置（それ以降の出来事を「直前の出来事」として表示）
+let feed = []; // 直前の出来事
+let fresh = new Set(); // 直前にダメージや召喚があったクリーチャー
 
 function resetUi() {
-  ui = { attackers: new Set(), spellHand: null, blocker: null, blocks: new Map(), mulligan: new Set(), error: '' };
+  ui = { attackers: new Set(), targeting: null, blocker: null, blocks: new Map(), mulligan: new Set(), error: '' };
+}
+
+function pickDeck(value) {
+  const ids = Object.keys(DECKS);
+  return value === 'random' ? ids[Math.floor(Math.random() * ids.length)] : value;
 }
 
 function newGame() {
   mode = $('#mode').value;
+  const mine = pickDeck($('#deck').value);
+  const theirs = mode === 'cpu' ? pickDeck('random') : pickDeck($('#deck2')?.value ?? 'random');
+  deckNames = [DECKS[mine].name, DECKS[theirs].name];
   game = createGame({
-    decks: [testDeck(), testDeck()],
+    decks: [deckList(mine), deckList(theirs)],
     seed: Date.now(),
     names: mode === 'cpu' ? ['あなた', 'CPU'] : ['プレイヤー1', 'プレイヤー2'],
   });
+  seenLog = 0;
+  feed = [];
+  fresh = new Set();
   resetUi();
   render();
 }
@@ -1014,22 +1384,36 @@ function act(action) {
 // ---------------------------------------------------------------------------
 
 function render() {
+  updateFeed();
   const me = viewer();
   const opp = 1 - me;
   const table = $('#table');
   table.textContent = '';
-
-  if (game.winner !== null) {
-    const msg = game.winner === 'draw' ? '引き分け' : `${game.players[game.winner].name} の勝利！`;
-    table.append(el('div', 'banner', msg));
-  } else {
-    table.append(renderPrompt(me));
-  }
-
+  table.append(game.winner !== null ? renderGameOver() : renderPrompt(me));
   table.append(renderSide(opp, false));
   table.append(renderSide(me, true));
   renderLog();
   scheduleCpu();
+}
+
+/** 人間が操作する番になったら、前回からの出来事をまとめて表示する */
+function updateFeed() {
+  if (!isHumanTurn() && game.winner === null) return;
+  const entries = game.log.slice(seenLog);
+  if (entries.length === 0) return;
+  seenLog = game.log.length;
+  feed = entries.map(describe).filter(Boolean).filter((t) => !t.startsWith('――')).slice(-6);
+  fresh = new Set(entries.filter((e) => e.type === 'damage' || e.type === 'summon' || e.type === 'buff').map((e) => e.target ?? e.uid));
+}
+
+function renderGameOver() {
+  const box = el('div', 'prompt over');
+  const won = game.winner === 0 && mode === 'cpu';
+  const msg = game.winner === 'draw' ? '引き分け' : (mode === 'cpu' ? (won ? 'あなたの勝利！' : 'CPU の勝利') : `${game.players[game.winner].name} の勝利！`);
+  box.append(el('div', 'banner', msg));
+  box.append(el('div', 'msg', `${Math.ceil(game.turn / 2)}ターンで決着。あなた：${deckNames[0]} / 相手：${deckNames[1]}`));
+  box.append(button('もう一度遊ぶ', newGame, 'primary'));
+  return box;
 }
 
 function renderPrompt(me) {
@@ -1041,85 +1425,102 @@ function renderPrompt(me) {
     msg.textContent = `${game.players[aw.player].name} が考えています…`;
     return box;
   }
-  const name = game.players[aw.player].name;
-  if (aw.step === 'mulligan') {
-    msg.textContent = `${name} の手札の引き直し（1回だけ）：戻したいカードをクリックで選んでください。`;
+  const name = mode === 'cpu' ? 'あなた' : game.players[aw.player].name;
+  const actions = el('div', 'actions');
+  box.append(actions);
+
+  if (ui.targeting !== null) {
+    msg.textContent = `${getCard(game.players[me].hand[ui.targeting]).name} の対象を選んでください（オレンジ枠）`;
+    actions.append(button('キャンセル', () => { ui.targeting = null; render(); }));
+  } else if (aw.step === 'mulligan') {
+    msg.textContent = `${name}の最初の手札です。引き直したいカードを選んでください（1回だけ）。`
+      + (game.firstPlayer === aw.player ? ' あなたが先攻です。' : ' あなたは後攻です。開始時に「マナの雫」を受け取ります。');
     const n = ui.mulligan.size;
-    box.append(button(n ? `${n}枚引き直す` : 'このまま始める', () => act({ type: 'mulligan', handIndices: [...ui.mulligan] }), 'primary'));
+    actions.append(button(n ? `${n}枚引き直す` : 'このまま始める', () => act({ type: 'mulligan', handIndices: [...ui.mulligan] }), 'primary'));
   } else if (aw.step === 'response') {
-    const attackers = game.combat.attackers.length;
-    if (ui.spellHand !== null) {
-      msg.textContent = `${getCard(game.players[me].hand[ui.spellHand]).name} の対象を選んでください（オレンジ枠）`;
-      box.append(button('キャンセル', () => { ui.spellHand = null; render(); }));
-    } else {
-      msg.textContent = `${game.players[game.activePlayer].name} が ${attackers}体で攻撃してきました。ブロックの前に「対応」カードを1枚使えます（緑枠）。`;
-      box.append(button('対応しない', () => act({ type: 'pass' }), 'primary'));
-    }
+    const n = game.combat.attackers.length;
+    msg.textContent = `${game.players[game.activePlayer].name}が ${n}体で攻撃してきました（赤枠）。ブロックの前に「対応」カードを1枚使えます。`;
+    actions.append(button('対応しない', () => act({ type: 'pass' }), 'primary'));
   } else if (aw.step === 'main') {
-    if (ui.spellHand !== null) {
-      msg.textContent = `${getCard(game.players[me].hand[ui.spellHand]).name} の対象を選んでください（オレンジ枠）`;
-      box.append(button('キャンセル', () => { ui.spellHand = null; render(); }));
-    } else {
-      msg.textContent = `${name} のメインフェイズ：手札（緑枠）をクリックで使用。攻撃するクリーチャーをクリックで選択してから「攻撃」。`;
-      const atk = button(`攻撃（${ui.attackers.size}体）`, () => act({ type: 'attack', attackers: [...ui.attackers] }), 'primary');
-      atk.disabled = ui.attackers.size === 0;
-      box.append(atk, button('ターン終了', () => act({ type: 'endTurn' })));
+    msg.textContent = `${name}のターン：緑枠の手札を使う／攻撃させるクリーチャーを選んで「攻撃」。`;
+    const atk = button(ui.attackers.size ? `${ui.attackers.size}体で攻撃` : '攻撃（未選択）', () => act({ type: 'attack', attackers: [...ui.attackers] }), 'primary');
+    atk.disabled = ui.attackers.size === 0;
+    const ready = game.players[aw.player].board.filter((c) => canAttack(game, c));
+    const all = button('全員選択', () => { ready.forEach((c) => ui.attackers.add(c.uid)); render(); });
+    all.disabled = ready.length === 0 || ui.attackers.size === ready.length;
+    actions.append(atk, all, button('ターン終了', () => act({ type: 'endTurn' })));
+    const p = game.players[aw.player];
+    if (p.hand.some((id) => hasKeyword(getCard(id), 'quick') && getCard(id).id !== 's_coin')) {
+      box.append(el('div', 'hint', 'ヒント：「対応」カードは、マナを残してターンを終えると相手の攻撃時に使えます。'));
     }
   } else if (aw.step === 'block') {
     msg.textContent = ui.blocker === null
-      ? `${name} のブロック宣言：ブロックに使う自分のクリーチャーを選び、次に止めたい攻撃クリーチャー（赤枠）を選んでください。`
-      : 'ブロックする攻撃クリーチャー（オレンジ枠）を選んでください。';
+      ? `ブロック：自分のクリーチャーを選び、止めたい攻撃クリーチャー（赤枠）をクリック。飛行は飛行でしか止められません。`
+      : 'このクリーチャーで止める攻撃クリーチャー（オレンジ枠）を選んでください。';
     const blocks = [...ui.blocks].map(([attacker, blocker]) => ({ attacker, blocker }));
-    box.append(
-      button(blocks.length ? `ブロック確定（${blocks.length}）` : 'ブロックしない', () => act({ type: 'declareBlocks', blocks }), 'primary'),
+    const incoming = game.combat.attackers
+      .filter((uid) => !ui.blocks.has(uid))
+      .reduce((s, uid) => s + (creatureByUid(uid)?.attack ?? 0), 0);
+    actions.append(
+      button(blocks.length ? `ブロック確定（${blocks.length}体）` : 'ブロックしない', () => act({ type: 'declareBlocks', blocks }), 'primary'),
       button('選び直す', () => { ui.blocks.clear(); ui.blocker = null; render(); }),
     );
+    box.append(el('div', incoming >= game.players[aw.player].life ? 'hint danger' : 'hint',
+      `このままだと受けるダメージ：${incoming}（ライフ ${game.players[aw.player].life}）`));
   }
   if (ui.error) box.append(el('div', 'error', ui.error));
+  if (feed.length) {
+    const f = el('ul', 'feed');
+    f.setAttribute('aria-label', '直前の出来事');
+    for (const t of feed) f.append(el('li', '', t));
+    box.append(f);
+  }
   return box;
 }
 
 function button(label, onClick, cls) {
   const b = el('button', cls, label);
+  b.type = 'button';
   b.addEventListener('click', onClick);
   return b;
 }
 
+function creatureByUid(uid) {
+  return game.players.flatMap((p) => p.board).find((c) => c.uid === uid);
+}
+
 function renderSide(pi, isFront) {
   const p = game.players[pi];
-  const side = el('div', `side${game.activePlayer === pi ? ' active' : ''}`);
+  const side = el('div', `side${game.activePlayer === pi && game.turn > 0 ? ' active' : ''}`);
 
   const status = el('div', 'status');
-  const life = el('span', 'life', `♥ ${p.life}`);
+  const life = el('span', `life${p.life <= 5 ? ' low' : ''}`, `♥ ${p.life}`);
   const playerTarget = { kind: 'player', player: pi };
   if (isTargetable(playerTarget)) {
     life.classList.add('targetable');
-    life.addEventListener('click', () => castSpellAt(playerTarget));
+    life.title = 'クリックして対象に選ぶ';
+    life.addEventListener('click', () => playAt(playerTarget));
   }
   const mana = el('span', 'mana');
-  for (let i = 0; i < game.config.maxMana; i++) {
+  mana.title = '現在マナ / 最大マナ';
+  for (let i = 0; i < Math.max(p.maxMana, p.mana); i++) {
     const full = i < p.mana;
-    const exists = i < p.maxMana;
-    if (!exists) continue;
     mana.append(el('span', full ? 'full' : 'empty', full ? '◆' : '◇'));
   }
   mana.append(` ${p.mana}/${p.maxMana}`);
   status.append(
-    el('strong', '', p.name + (game.activePlayer === pi ? '（手番）' : '')),
+    el('strong', '', p.name + (game.activePlayer === pi && game.turn > 0 ? '（手番）' : '')),
     life, mana,
-    el('span', '', `デッキ ${p.deck.length}`),
-    el('span', '', `手札 ${p.hand.length}`),
-    el('span', '', `墓地 ${p.graveyard.length}`),
+    el('span', 'meta', `デッキ ${p.deck.length}・手札 ${p.hand.length}・墓地 ${p.graveyard.length}`),
   );
 
-  const board = el('div', 'row');
+  const board = el('div', 'row board');
+  if (p.board.length === 0) board.append(el('div', 'empty', 'クリーチャーなし'));
   for (const c of p.board) board.append(renderCreature(c));
 
-  const hand = el('div', 'hand');
-  const handRow = el('div', 'row');
+  const hand = el('div', 'row hand');
   const showHand = isFront && (mode === 'hotseat' || pi === 0);
-  p.hand.forEach((id, i) => handRow.append(showHand ? renderHandCard(pi, id, i) : el('div', 'card back')));
-  hand.append(handRow);
+  p.hand.forEach((id, i) => hand.append(showHand ? renderHandCard(pi, id, i) : el('div', 'card back')));
 
   if (isFront) side.append(board, status, hand);
   else side.append(hand, status, board);
@@ -1128,14 +1529,20 @@ function renderSide(pi, isFront) {
 
 function cardBody(card, node) {
   node.append(el('div', 'cost', String(card.cost)), el('div', 'name', card.name));
-  const texts = (card.keywords ?? []).map((k) => KEYWORDS[k].name);
-  if (card.text) texts.push(card.text);
-  if (texts.length) node.append(el('div', 'text', texts.join(' ')));
+  const kws = el('div', 'kws');
+  for (const k of card.keywords ?? []) {
+    const chip = el('span', `kw kw-${k}`, KEYWORDS[k].name);
+    chip.title = KEYWORDS[k].text;
+    kws.append(chip);
+  }
+  if (card.keywords?.length) node.append(kws);
+  if (card.text) node.append(el('div', 'text', card.text));
+  node.title = [card.name, ...(card.keywords ?? []).map((k) => `${KEYWORDS[k].name}：${KEYWORDS[k].text}`), card.text].filter(Boolean).join('\n');
 }
 
 function renderHandCard(pi, cardId, handIndex) {
   const card = getCard(cardId);
-  const node = el('div', 'card');
+  const node = el('div', `card ${card.type}`);
   cardBody(card, node);
   if (card.type === 'creature') {
     const stats = el('div', 'stats');
@@ -1146,7 +1553,7 @@ function renderHandCard(pi, cardId, handIndex) {
   }
   if (isHumanTurn() && game.awaiting.step === 'mulligan') {
     node.classList.add('selectable');
-    if (ui.mulligan.has(handIndex)) { node.classList.add('selected'); node.append(el('div', 'blocklink', '引き直す')); }
+    if (ui.mulligan.has(handIndex)) { node.classList.add('selected', 'returning'); node.append(el('div', 'tag', '引き直す')); }
     node.addEventListener('click', () => {
       ui.mulligan.has(handIndex) ? ui.mulligan.delete(handIndex) : ui.mulligan.add(handIndex);
       render();
@@ -1154,37 +1561,44 @@ function renderHandCard(pi, cardId, handIndex) {
     return node;
   }
   const check = playability(game, pi, handIndex);
-  if (isHumanTurn() && check.ok && ui.spellHand === null) {
+  if (isHumanTurn() && check.ok && ui.targeting === null) {
     node.classList.add('playable');
-    node.addEventListener('click', () => {
-      if (card.type === 'spell') { ui.spellHand = handIndex; ui.attackers.clear(); render(); }
-      else act({ type: 'playCard', handIndex });
-    });
+    node.tabIndex = 0;
+    const use = () => {
+      const targets = targetsForHandCard(game, pi, handIndex);
+      if (targets.length === 1 && targets[0] === null) act({ type: 'playCard', handIndex });
+      else { ui.targeting = handIndex; ui.attackers.clear(); render(); }
+    };
+    node.addEventListener('click', use);
+    node.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); use(); } });
   } else {
     node.classList.add('unplayable');
-    if (!check.ok) node.title = check.reason;
+    if (!check.ok) node.title += `\n（${check.reason}）`;
   }
-  if (ui.spellHand === handIndex) node.classList.add('selected');
+  if (ui.targeting === handIndex) node.classList.add('selected');
   return node;
 }
 
 function renderCreature(c) {
   const card = getCard(c.cardId);
-  const node = el('div', 'card');
+  const node = el('div', 'card creature');
+  if (fresh.has(c.uid)) node.classList.add('fresh');
   cardBody(card, node);
   const left = c.hp - c.damage;
   const stats = el('div', 'stats');
-  stats.append(el('span', 'atk', `⚔${c.attack}`), el('span', `hp${c.damage ? ' damaged' : ''}`, `♥${left}/${c.hp}`));
+  const atkCls = c.attack > card.attack ? 'atk buffed' : 'atk';
+  const hpCls = c.damage ? 'hp damaged' : (c.hp > card.hp ? 'hp buffed' : 'hp');
+  stats.append(el('span', atkCls, `⚔${c.attack}`), el('span', hpCls, `♥${left}/${c.hp}`));
   const bar = el('div', 'hpbar');
   const fill = el('div', left / c.hp <= 0.34 ? 'low' : '');
-  fill.style.width = `${(left / c.hp) * 100}%`;
+  fill.style.width = `${Math.max(0, (left / c.hp) * 100)}%`;
   bar.append(fill);
   node.append(stats, bar);
-  node.append(el('div', 'dmg', c.damage ? `ダメージ ${c.damage}` : ''));
   const badges = [];
+  if (c.tempAttack || c.tempHp) badges.push(`このターン+${c.tempAttack}/+${c.tempHp}`);
   if (c.exhausted) badges.push('行動済み');
-  if (c.summoningSick && c.owner === game.activePlayer && !card.keywords?.includes('haste')) badges.push('召喚酔い');
-  node.append(el('div', 'badges', badges.join(' / ')));
+  if (c.summoningSick && c.owner === game.activePlayer && !hasKeyword(card, 'haste')) badges.push('召喚酔い');
+  node.append(el('div', 'badges', badges.join('・')));
   if (c.exhausted) node.classList.add('exhausted');
 
   const aw = game.awaiting;
@@ -1192,17 +1606,18 @@ function renderCreature(c) {
   if (game.combat?.attackers.includes(c.uid)) {
     node.classList.add('attacking');
     const blockedBy = ui.blocks.get(c.uid);
-    if (blockedBy !== undefined) node.append(el('div', 'blocklink', `← ${nameOf(blockedBy)} がブロック`));
+    if (blockedBy !== undefined) node.append(el('div', 'tag', `${nameOf(blockedBy)}がブロック`));
   }
+  if (aw?.step === 'block' && [...ui.blocks.values()].includes(c.uid)) node.classList.add('assigned');
 
   if (!isHumanTurn()) return node;
 
   if (isTargetable(target)) {
     node.classList.add('targetable');
-    node.addEventListener('click', () => castSpellAt(target));
-  } else if (aw.step === 'main' && ui.spellHand === null && c.owner === aw.player && canAttack(game, c)) {
+    node.addEventListener('click', () => playAt(target));
+  } else if (aw.step === 'main' && ui.targeting === null && c.owner === aw.player && canAttack(game, c)) {
     node.classList.add('selectable');
-    if (ui.attackers.has(c.uid)) node.classList.add('selected');
+    if (ui.attackers.has(c.uid)) { node.classList.add('selected'); node.append(el('div', 'tag', '攻撃する')); }
     node.addEventListener('click', () => {
       ui.attackers.has(c.uid) ? ui.attackers.delete(c.uid) : ui.attackers.add(c.uid);
       ui.error = '';
@@ -1210,11 +1625,13 @@ function renderCreature(c) {
     });
   } else if (aw.step === 'block') {
     const assigned = [...ui.blocks.values()].includes(c.uid);
-    if (c.owner === aw.player && canBlock(game, c) && !assigned) {
+    const openAttackers = game.combat.attackers.filter((uid) => !ui.blocks.has(uid)).map(creatureByUid).filter(Boolean);
+    if (c.owner === aw.player && canBlock(game, c) && !assigned && openAttackers.some((a) => canBlockAttacker(game, c, a))) {
       node.classList.add('selectable');
       if (ui.blocker === c.uid) node.classList.add('selected');
       node.addEventListener('click', () => { ui.blocker = ui.blocker === c.uid ? null : c.uid; render(); });
-    } else if (ui.blocker !== null && game.combat.attackers.includes(c.uid) && !ui.blocks.has(c.uid)) {
+    } else if (ui.blocker !== null && game.combat.attackers.includes(c.uid) && !ui.blocks.has(c.uid)
+      && canBlockAttacker(game, creatureByUid(ui.blocker), c)) {
       node.classList.add('targetable');
       node.addEventListener('click', () => { ui.blocks.set(c.uid, ui.blocker); ui.blocker = null; render(); });
     }
@@ -1223,16 +1640,16 @@ function renderCreature(c) {
 }
 
 function nameOf(uid) {
-  return game.players.flatMap((p) => p.board).find((c) => c.uid === uid)?.name ?? '?';
+  return creatureByUid(uid)?.name ?? '?';
 }
 
 function isTargetable(target) {
-  if (ui.spellHand === null || !isHumanTurn()) return false;
-  return targetsForHandCard(game, game.awaiting.player, ui.spellHand).some((t) => sameTarget(t, target));
+  if (ui.targeting === null || !isHumanTurn()) return false;
+  return targetsForHandCard(game, game.awaiting.player, ui.targeting).some((t) => sameTarget(t, target));
 }
 
-function castSpellAt(target) {
-  act({ type: 'playCard', handIndex: ui.spellHand, target });
+function playAt(target) {
+  act({ type: 'playCard', handIndex: ui.targeting, target });
 }
 
 // ---------------------------------------------------------------------------
@@ -1241,23 +1658,28 @@ function castSpellAt(target) {
 
 function describe(e) {
   const pn = (i) => game.players[i].name;
+  const nm = (i) => (mode === 'cpu' ? (i === 0 ? 'あなた' : 'CPU') : pn(i));
   switch (e.type) {
-    case 'gameStart': return `ゲーム開始。先攻は ${pn(e.firstPlayer)}`;
-    case 'turnStart': return `―― ${pn(e.player)} のターン（${e.turnOfPlayer}ターン目） ――`;
-    case 'summon': return `${pn(e.player)} が ${e.name} を召喚`;
-    case 'castSpell': return `${pn(e.player)} が ${e.name} を使用${e.response ? '（対応）' : ''}`;
-    case 'attack': return `${pn(e.player)} が ${e.attackers.length}体で攻撃`;
-    case 'blocks': return e.blocks.length ? `${pn(e.player)} が ${e.blocks.length}体でブロック` : `${pn(e.player)} はブロックしない`;
-    case 'damage': return `${pn(e.owner)}の ${e.targetName} に ${e.amount} ダメージ`;
-    case 'playerDamage': return `${pn(e.player)} に ${e.amount} ダメージ`;
-    case 'heal': return `${pn(e.owner)}の ${e.targetName} のダメージを ${e.amount} 回復`;
-    case 'destroyed': return `${pn(e.owner)}の ${e.name} は破壊された`;
-    case 'mulligan': return e.count ? `${pn(e.player)} が ${e.count}枚引き直した` : `${pn(e.player)} は手札をそのままにした`;
-    case 'pass': return `${pn(e.player)} は対応しない`;
+    case 'gameStart': return `ゲーム開始。先攻は ${nm(e.firstPlayer)}`;
+    case 'turnStart': return `―― ${nm(e.player)} のターン（${e.turnOfPlayer}ターン目） ――`;
+    case 'summon': return `${nm(e.player)}：${e.name} を召喚`;
+    case 'castSpell': return `${nm(e.player)}：${e.name} を使用${e.response ? '（対応）' : ''}`;
+    case 'attack': return `${nm(e.player)}：${e.attackers.length}体で攻撃`;
+    case 'blocks': return e.blocks.length ? `${nm(e.player)}：${e.blocks.length}体でブロック` : `${nm(e.player)}：ブロックしない`;
+    case 'damage': return `${e.sourceName ? `${e.sourceName}→` : ''}${nm(e.owner)}の${e.targetName}に${e.amount}ダメージ`;
+    case 'playerDamage': return `${e.sourceName ? `${e.sourceName}→` : ''}${nm(e.player)}に${e.amount}ダメージ`;
+    case 'heal': return `${nm(e.owner)}の${e.targetName}のダメージを${e.amount}回復`;
+    case 'buff': return `${nm(e.owner)}の${e.targetName}が+${e.attack}/+${e.hp}${e.temporary ? '（このターン）' : ''}`;
+    case 'buffAll': return `${nm(e.player)}のクリーチャーすべてが+${e.attack}/+${e.hp}（このターン）`;
+    case 'gainMana': return `${nm(e.player)}：マナを${e.amount}得た`;
+    case 'bonusCard': return `${nm(e.player)}は後攻なので「マナの雫」を受け取った`;
+    case 'destroyed': return `${nm(e.owner)}の${e.name}は破壊された`;
+    case 'mulligan': return e.count ? `${nm(e.player)}：${e.count}枚引き直した` : `${nm(e.player)}：手札をそのままにした`;
+    case 'pass': return `${nm(e.player)}：対応しない`;
     case 'combatCancelled': return '攻撃クリーチャーがいなくなり、戦闘は終了';
-    case 'burn': return `${pn(e.player)} は手札がいっぱいで、引いたカードが墓地へ`;
-    case 'deckOut': return `${pn(e.player)} はデッキ切れでドローできない`;
-    case 'gameOver': return e.winner === 'draw' ? '引き分け' : `${pn(e.winner)} の勝利`;
+    case 'burn': return `${nm(e.player)}は手札がいっぱいで、引いたカードが墓地へ`;
+    case 'deckOut': return `${nm(e.player)}はデッキ切れでドローできない`;
+    case 'gameOver': return e.winner === 'draw' ? '引き分け' : `${nm(e.winner)}の勝利`;
     default: return null;
   }
 }
@@ -1267,7 +1689,7 @@ function renderLog() {
   ol.textContent = '';
   for (const e of game.log) {
     const text = describe(e);
-    if (text) ol.append(el('li', '', text));
+    if (text) ol.append(el('li', e.type === 'turnStart' ? 'turn' : '', text));
   }
   ol.parentElement.scrollTop = ol.parentElement.scrollHeight;
 }
@@ -1277,15 +1699,27 @@ function scheduleCpu() {
   clearTimeout(cpuTimer);
   if (mode !== 'cpu' || !game.awaiting || game.awaiting.player !== 1) return;
   cpuTimer = setTimeout(() => {
-    applyAction(game, 1, chooseAction(game));
+    applyAction(game, 1, chooseAction(game, { level: $('#level').value }));
     render();
-  }, 600);
+  }, 550);
 }
 
+// デッキ選択肢を作る
+for (const sel of [$('#deck')]) {
+  for (const [id, d] of Object.entries(DECKS)) {
+    const o = el('option', '', `${d.name}`);
+    o.value = id;
+    o.title = d.text;
+    sel.append(o);
+  }
+  const r = el('option', '', 'ランダム');
+  r.value = 'random';
+  sel.append(r);
+}
 $('#newGame').addEventListener('click', newGame);
 newGame();
 
-document.getElementById('build').textContent = "v0.1 build 0e2dde9";
+document.getElementById('build').textContent = "v0.1 build cb91571";
 })();
 </script>
 </body>

@@ -9,17 +9,37 @@
 <body>
   <header>
     <strong>DCG プロトタイプ</strong> <small id="build" class="muted"></small>
-    <label>対戦形式
+    <label>対戦
       <select id="mode">
-        <option value="cpu">CPU対戦（あなた＝プレイヤー1）</option>
+        <option value="cpu">CPU対戦</option>
         <option value="hotseat">2人対戦（同じ画面）</option>
       </select>
     </label>
-    <button id="newGame">新しいゲーム</button>
+    <label>デッキ <select id="deck"></select></label>
+    <label>CPU
+      <select id="level">
+        <option value="normal">ふつう</option>
+        <option value="easy">やさしい</option>
+      </select>
+    </label>
+    <button id="newGame" type="button">新しいゲーム</button>
   </header>
   <main>
     <section id="table"><p id="boot">ゲームを読み込んでいます…（この表示が消えない場合は、ページを再読み込みしてください）</p></section>
     <aside>
+      <details id="help">
+        <summary>遊び方</summary>
+        <ul>
+          <li>相手のライフ（初期20）を0にすれば勝ち。デッキが尽きてドローできなくなっても負け。</li>
+          <li>マナは毎ターン1ずつ増え（最大10）、ターン開始時に全回復する。</li>
+          <li>クリーチャーは出したターンは攻撃できない（速攻を除く）。攻撃したクリーチャーは行動済みになり、相手ターンにブロックできない。</li>
+          <li>攻撃されたら、攻撃1体につき自分のクリーチャー1体でブロックできる。ブロックされると互いの攻撃力ぶんダメージを与え合う。</li>
+          <li>ダメージはターン終了時に回復する。そのターン中に倒し切ること。</li>
+          <li>「対応」カードは、相手の攻撃宣言後・ブロック前にも使える（1枚まで）。マナを残してターンを終えよう。</li>
+          <li>飛行＝飛行でしかブロックできない。先制＝戦闘で先にダメージを与える。警戒＝攻撃しても行動済みにならない。速攻＝出したターンに攻撃できる。</li>
+          <li>後攻は開始時に「マナの雫」（0コスト：このターンマナ+1、1枚引く）を受け取る。</li>
+        </ul>
+      </details>
       <h3>ログ</h3>
       <ol id="log"></ol>
     </aside>

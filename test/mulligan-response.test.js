@@ -77,10 +77,17 @@ test('対応: 攻撃クリーチャーが全滅したら戦闘は終わりター
   assert.equal(s.players[1].life, 20);
 });
 
-test('対応カードは自分のメインフェイズにも使える', () => {
+test('対応カードは自分のメインフェイズにも使える（剛力の薬）', () => {
   const s = newGame();
-  const e = put(s, 1, 'c_scout');
+  const mine = put(s, 0, 'c_scout');
+  setHand(s, 0, ['s_might']);
+  ok(applyAction(s, 0, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: mine.uid } }));
+  assert.equal(mine.attack, 4);
+});
+
+test('迎撃の矢は攻撃中のクリーチャーしか対象にできない（メインフェイズでは使えない）', () => {
+  const s = newGame();
+  put(s, 1, 'c_scout');
   setHand(s, 0, ['s_arrow']);
-  ok(applyAction(s, 0, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: e.uid } }));
-  assert.equal(s.players[1].board.length, 0);
+  assert.equal(applyAction(s, 0, { type: 'playCard', handIndex: 0, target: null }).ok, false);
 });
