@@ -8,7 +8,8 @@
     "test": "node --test test/*.test.js",
     "simulate": "node scripts/simulate.js",
     "serve": "node scripts/serve.js",
-    "build": "node scripts/build-standalone.js"
+    "build": "node scripts/build-standalone.js",
+    "build:pages": "node scripts/build-standalone.js --full"
   },
   "engines": { "node": ">=18" }
 }
