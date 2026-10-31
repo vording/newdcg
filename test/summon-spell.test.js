@@ -51,7 +51,7 @@ test('召喚時効果: 伝令の鳥で1枚引く', () => {
 test('スペル: 火球でクリーチャー・プレイヤーにダメージ。不正対象は拒否', () => {
   const s = newGame();
   const enemy = put(s, 1, 'c_golem');
-  s.players[0].mana = 4;
+  s.players[0].mana = 6;
   setHand(s, 0, ['s_fireball', 's_fireball']);
   assert.equal(applyAction(s, 0, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: 999 } }).ok, false);
   ok(applyAction(s, 0, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: enemy.uid } }));

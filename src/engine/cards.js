@@ -66,7 +66,7 @@ const CARD_LIST = [
     text: '自分のクリーチャーすべてはターン終了時まで+2/+0。',
   },
   {
-    id: 's_fireball', name: '火球', type: 'spell', cost: 2,
+    id: 's_fireball', name: '火球', type: 'spell', cost: 3,
     effect: { type: 'damage', amount: 3, target: 'character' },
     text: 'クリーチャー1体かプレイヤー1人に3ダメージを与える。',
   },

@@ -45,17 +45,22 @@ for (let i = 0; i < N; i++) {
 }
 console.log(`評価型AI vs ランダムAI（同デッキ）: 評価型の勝率 ${((smartWins / games) * 100).toFixed(1)}% (${games}戦)`);
 
-// ふつう vs やさしい
-let normalWins = 0;
-for (let i = 0; i < N; i++) {
-  const d = ids[i % ids.length];
-  const s = createGame({ decks: [deckList(d), deckList(d)], seed: i + 99 });
-  const normal = i % 2;
-  let n = 0;
-  while (s.winner === null && n++ < 3000) {
-    const pl = s.awaiting.player;
-    applyAction(s, pl, chooseAction(s, { level: pl === normal ? 'normal' : 'easy', random: rand }));
+// 難易度どうしの対戦
+function versus(a, b) {
+  let winsA = 0;
+  for (let i = 0; i < N; i++) {
+    const d = ids[i % ids.length];
+    const s = createGame({ decks: [deckList(d), deckList(d)], seed: i + 99 });
+    const pa = i % 2;
+    let n = 0;
+    while (s.winner === null && n++ < 3000) {
+      const pl = s.awaiting.player;
+      applyAction(s, pl, chooseAction(s, { level: pl === pa ? a : b, random: rand }));
+    }
+    if (s.winner === pa) winsA++;
   }
-  if (s.winner === normal) normalWins++;
+  console.log(`${a} vs ${b}（同デッキ）: ${a}の勝率 ${((winsA / N) * 100).toFixed(1)}% (${N}戦)`);
 }
-console.log(`ふつう vs やさしい（同デッキ）: ふつうの勝率 ${((normalWins / N) * 100).toFixed(1)}% (${N}戦)`);
+versus('hard', 'normal');
+versus('hard', 'easy');
+versus('normal', 'easy');

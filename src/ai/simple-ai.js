@@ -70,18 +70,32 @@ function tryAction(state, me, actor, action) {
 
 /**
  * awaiting.player の次の1アクションを決めて返す（適用はしない）
- * @param {{level?: 'normal'|'easy', random?: () => number}} opts
- *   easy: 対応を見逃しやすく、ブロックは簡易判断、攻撃は上位候補からランダムに選ぶ
+ * @param {{level?: 'hard'|'normal'|'easy', random?: () => number}} opts
+ *   hard  : 全力（評価＋先読み）
+ *   normal: 対応を半分見逃す、ブロックは簡易判断、攻撃は上位3候補からランダム
+ *   easy  : 対応しない、カードを出し渋ることがある、ブロックを見逃すことがある、攻撃は上位5候補からランダム
  */
 export function chooseAction(state, opts = {}) {
   const me = state.awaiting.player;
-  const easy = opts.level === 'easy';
+  const level = opts.level ?? 'hard';
   const rnd = opts.random ?? Math.random;
   switch (state.awaiting.step) {
-    case 'mulligan': return { type: 'mulligan', handIndices: chooseMulligan(state, me) };
-    case 'response': return easy && rnd() < 0.5 ? { type: 'pass' } : chooseResponse(state, me);
-    case 'block': return { type: 'declareBlocks', blocks: easy ? quickBlocks(state, me) : chooseBlocks(state, me) };
-    default: return choosePlay(state, me) ?? chooseAttack(state, me, easy ? rnd : null);
+    case 'mulligan': return { type: 'mulligan', handIndices: level === 'easy' ? [] : chooseMulligan(state, me) };
+    case 'response':
+      if (level === 'easy' || (level === 'normal' && rnd() < 0.5)) return { type: 'pass' };
+      return chooseResponse(state, me);
+    case 'block': {
+      if (level === 'hard') return { type: 'declareBlocks', blocks: chooseBlocks(state, me) };
+      let blocks = quickBlocks(state, me);
+      if (level === 'easy') blocks = blocks.filter(() => rnd() < 0.6);
+      return { type: 'declareBlocks', blocks };
+    }
+    default: {
+      const play = level === 'easy' && rnd() < 0.3 ? null : choosePlay(state, me);
+      if (play) return play;
+      const pool = { hard: 0, normal: 3, easy: 5 }[level];
+      return chooseAttack(state, me, pool ? rnd : null, pool);
+    }
   }
 }
 
@@ -143,7 +157,7 @@ function bestPlay(state, me, allowManaCombo) {
 }
 
 /** 攻撃: 攻撃可能なクリーチャーの全組み合わせを、相手の予想ブロック込みで評価する */
-function chooseAttack(state, me, rnd = null) {
+function chooseAttack(state, me, rnd = null, pool = 3) {
   const ready = state.players[me].board.filter((c) => canAttack(state, c)).map((c) => c.uid);
   const scored = [{ action: { type: 'endTurn' }, score: scoreAfterCombat(tryAction(state, me, me, { type: 'endTurn' }), me) }];
   const n = Math.min(ready.length, 6);
@@ -153,7 +167,7 @@ function chooseAttack(state, me, rnd = null) {
     if (s) scored.push({ action: { type: 'attack', attackers }, score: scoreAfterCombat(s, me) });
   }
   scored.sort((a, b) => b.score - a.score);
-  if (rnd && scored[0].score < 50000) return scored[Math.floor(rnd() * Math.min(3, scored.length))].action;
+  if (rnd && scored[0].score < 50000) return scored[Math.floor(rnd() * Math.min(pool, scored.length))].action;
   return scored[0].action;
 }
 
