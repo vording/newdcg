@@ -1,7 +1,7 @@
 // ブラウザUI（ゲーム名は未定）。ゲームロジックは src/engine のみが持ち、ここは表示と入力の変換だけを行う。
 import {
   applyAction, canAttack, canBlock, canBlockAttacker, createGame, DECKS, deckList, getCard, hasKeyword,
-  KEYWORDS, playability, sameTarget, targetsForHandCard,
+  KEYWORDS, RARITIES, CARDS, playability, sameTarget, targetsForHandCard,
 } from '../engine/index.js';
 import { chooseAction } from '../ai/simple-ai.js';
 
@@ -200,33 +200,74 @@ function renderHand(pi) {
 
 // --- カード ---
 
-function cardFace(card, node) {
-  node.append(el('div', 'cost', String(card.cost)));
-  const kind = card.token ? 't-token' : card.type === 'creature' ? 't-creature' : hasKeyword(card, 'quick') ? 't-quick' : 't-spell';
-  node.append(el('div', `art ${kind}`, GLYPH[card.id] ?? card.name[0]));
-  node.append(el('div', 'name', card.name));
+/** カード面を作る（参考デザイン準拠）。stats を渡すとクリーチャーの攻撃力・HPを差し替えて表示する */
+function buildCard(card, stats = null) {
+  const node = el('div', `card ${card.type} r-${card.rarity}`);
+  const art = el('div', 'c-art');
+  art.append(el('div', 'c-art-in', GLYPH[card.id] ?? ''));
+  const name = el('div', 'c-name');
+  const en = card.nameEn ?? card.name;
+  name.append(el('span', `en${en.length > 14 ? ' xlong' : en.length > 11 ? ' long' : ''}`, en), el('span', 'ja', card.name));
+  const body = el('div', 'c-body');
   if (card.keywords?.length) {
-    const kws = el('div', 'kws');
+    const kws = el('div', 'c-kws');
     for (const k of card.keywords) {
-      const chip = el('span', `kw kw-${k}`, KEYWORDS[k].name);
+      const chip = el('span', `c-kw kw-${k}`, KEYWORDS[k].name);
       chip.title = KEYWORDS[k].text;
       kws.append(chip);
     }
-    node.append(kws);
+    body.append(kws);
   }
-  node.append(el('div', 'text', card.text ?? ''));
-  node.title = [card.name, ...(card.keywords ?? []).map((k) => `${KEYWORDS[k].name}：${KEYWORDS[k].text}`), card.text].filter(Boolean).join('\n');
+  if (card.text) body.append(el('div', 'c-text', card.text));
+  node.append(art, name, body, el('div', 'c-foot', card.type === 'spell' ? 'SPELL' : ''));
+  node.append(el('div', 'gem cost', String(card.cost)));
+  if (card.type === 'creature') {
+    const s = stats ?? { atk: card.attack, hp: card.hp, atkCls: '', hpCls: '' };
+    const atk = el('div', `gem atk ${s.atkCls}`, String(s.atk));
+    const hp = el('div', `gem hp ${s.hpCls}`, String(s.hp));
+    atk.title = `攻撃力 ${s.atk}`;
+    hp.title = `HP ${s.hp}`;
+    node.append(atk, hp);
+  }
+  node.title = [`${card.nameEn ?? ''}（${card.name}）`, `${RARITIES[card.rarity].name}`, ...(card.keywords ?? []).map((k) => `${KEYWORDS[k].name}：${KEYWORDS[k].text}`), card.text].filter(Boolean).join('\n');
+  attachPreview(node, card, stats);
+  return node;
+}
+
+// --- カード詳細（PCはマウスオーバー、スマホは長押し） ---
+let previewTimer = null;
+let suppressClick = false;
+function showPreview(card, stats) {
+  const pv = $('#preview');
+  pv.textContent = '';
+  const big = buildCardStatic(card, stats);
+  pv.append(big, el('div', 'rar', `${RARITIES[card.rarity].name}・${card.type === 'creature' ? 'クリーチャー' : 'スペル'}`));
+  pv.hidden = false;
+}
+function hidePreview() { $('#preview').hidden = true; }
+function attachPreview(node, card, stats) {
+  if (previewDisabled) return;
+  node.addEventListener('mouseenter', () => { if (matchMedia('(hover: hover) and (min-width: 1000px)').matches) showPreview(card, stats); });
+  node.addEventListener('mouseleave', hidePreview);
+  node.addEventListener('touchstart', () => {
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(() => { suppressClick = true; showPreview(card, stats); }, 450);
+  }, { passive: true });
+  const end = () => { clearTimeout(previewTimer); if (suppressClick) setTimeout(hidePreview, 1200); };
+  node.addEventListener('touchend', end);
+  node.addEventListener('touchmove', () => clearTimeout(previewTimer), { passive: true });
+  node.addEventListener('click', (e) => { if (suppressClick) { e.stopImmediatePropagation(); e.preventDefault(); suppressClick = false; } }, true);
+}
+/** プレビュー・一覧用（詳細表示のイベントを付けない） */
+let previewDisabled = false;
+function buildCardStatic(card, stats = null) {
+  previewDisabled = true;
+  try { return buildCard(card, stats); } finally { previewDisabled = false; }
 }
 
 function renderHandCard(pi, cardId, handIndex) {
   const card = getCard(cardId);
-  const node = el('div', `card ${card.type}`);
-  cardFace(card, node);
-  if (card.type === 'creature') {
-    const stats = el('div', 'stats');
-    stats.append(el('span', 'stat atk', String(card.attack)), el('span', 'stat hp', String(card.hp)));
-    node.append(stats);
-  }
+  const node = buildCard(card);
   if (isHumanTurn() && game.awaiting.step === 'mulligan') {
     node.classList.add('selectable');
     node.tabIndex = 0;
@@ -257,17 +298,13 @@ function renderHandCard(pi, cardId, handIndex) {
 
 function renderCreature(c) {
   const card = getCard(c.cardId);
-  const node = el('div', 'card creature');
-  if (fresh.has(c.uid)) node.classList.add('fresh');
-  cardFace(card, node);
   const left = c.hp - c.damage;
-  const stats = el('div', 'stats');
-  const atk = el('span', `stat atk${c.attack > card.attack ? ' buffed' : ''}`, String(c.attack));
-  const hp = el('span', `stat hp${c.damage ? ' damaged' : ''}${c.hp > card.hp ? ' buffed' : ''}`, String(left));
-  atk.title = `攻撃力 ${c.attack}`;
-  hp.title = `HP ${left}/${c.hp}${c.damage ? `（このターン${c.damage}ダメージ）` : ''}`;
-  stats.append(atk, hp);
-  node.append(stats);
+  const node = buildCard(card, {
+    atk: c.attack, hp: left,
+    atkCls: c.attack > card.attack ? 'buffed' : '',
+    hpCls: `${c.damage ? 'damaged' : ''} ${c.hp > card.hp ? 'buffed' : ''}`,
+  });
+  if (fresh.has(c.uid)) node.classList.add('fresh');
 
   const status = [];
   if (c.tempAttack || c.tempHp) status.push(`+${c.tempAttack}/+${c.tempHp}`);
@@ -404,6 +441,7 @@ function renderCommand(me) {
 
 function renderOverlay() {
   const ov = $('#overlay');
+  ov.onclick = null;
   if (game.winner === null) { ov.hidden = true; return; }
   ov.textContent = '';
   const won = game.winner === 0;
@@ -475,7 +513,35 @@ function scheduleCpu() {
 // 起動
 // ---------------------------------------------------------------------------
 
+// --- カード一覧 ---
+function showGallery() {
+  const ov = $('#overlay');
+  ov.textContent = '';
+  const box = el('div', 'gallery');
+  const head = el('div', 'gallery-head');
+  head.append(el('h2', '', 'カード一覧'), button('閉じる', () => { ov.hidden = true; }));
+  box.append(head, el('p', 'hint', '枠の素材と色はレア度で変わります。強いカードほどレア度が高くなっています。（イラストは未作成）'));
+  const inDecks = new Set(Object.values(DECKS).flatMap((d) => Object.keys(d.counts)));
+  const all = Object.values(CARDS).filter((c) => inDecks.has(c.id) || c.token);
+  for (const r of Object.keys(RARITIES).sort((a, b) => RARITIES[b].order - RARITIES[a].order)) {
+    const cards = all.filter((c) => c.rarity === r).sort((a, b) => a.cost - b.cost);
+    if (!cards.length) continue;
+    box.append(el('h3', '', `${RARITIES[r].name}（${cards.length}）`));
+    const grid = el('div', 'gallery-grid');
+    for (const c of cards) {
+      const cell = el('div');
+      cell.append(buildCardStatic(c), el('div', 'meta', c.token ? '後攻が受け取る特別なカード' : ''));
+      grid.append(cell);
+    }
+    box.append(grid);
+  }
+  ov.append(box);
+  ov.hidden = false;
+  ov.onclick = (e) => { if (e.target === ov) ov.hidden = true; };
+}
+
 buildTitle();
+$('#galleryBtn').addEventListener('click', showGallery);
 $('#menuBtn').addEventListener('click', showTitle);
 $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logPanel').hidden; renderLog(); });
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });

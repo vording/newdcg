@@ -3,14 +3,23 @@
 //
 // フィールド:
 //   id        : 一意なカードID
-//   name      : 表示名
+//   name      : 日本語名
+//   nameEn    : 英語名（カード上では英語名を大きく、日本語名を小さく表示）
 //   type      : 'creature' | 'spell'
 //   cost      : マナコスト
 //   attack/hp : クリーチャーのみ
 //   keywords  : 能力キーワード（'haste' = 速攻, 'quick' = 対応）
 //   effect    : スペルの効果 { type, ...params }（effects.js のキー）
 //   triggers  : 誘発能力 [{ on: 'summon' | 'turnStart' | 'turnEnd', effect }]
+//   rarity    : レア度（表示用）'common' | 'rare' | 'epic' | 'legendary'。強いカードほど高い
 //   text      : ルールテキスト（表示用）
+
+export const RARITIES = Object.freeze({
+  common: { name: 'コモン', order: 0 },
+  rare: { name: 'レア', order: 1 },
+  epic: { name: 'エピック', order: 2 },
+  legendary: { name: 'レジェンド', order: 3 },
+});
 
 export const KEYWORDS = Object.freeze({
   haste: { name: '速攻', text: '召喚したターンから攻撃できる。' },
@@ -23,71 +32,71 @@ export const KEYWORDS = Object.freeze({
 // effect.target を持つクリーチャーは「召喚時：対象を選んで効果」。対象がいなければ不発で召喚できる。
 const CARD_LIST = [
   // --- クリーチャー ---
-  { id: 'c_apprentice', name: '見習い剣士', type: 'creature', cost: 1, attack: 1, hp: 2 },
-  { id: 'c_scout', name: '森の斥候', type: 'creature', cost: 1, attack: 2, hp: 1, keywords: ['haste'] },
-  { id: 'c_shield', name: '盾持ちの兵', type: 'creature', cost: 2, attack: 1, hp: 3 },
-  { id: 'c_wolf', name: '迅雷の狼', type: 'creature', cost: 2, attack: 3, hp: 1, keywords: ['haste'] },
+  { id: 'c_apprentice', name: '見習い剣士', nameEn: 'Squire', rarity: 'common', type: 'creature', cost: 1, attack: 1, hp: 2 },
+  { id: 'c_scout', name: '森の斥候', nameEn: 'Forest Scout', rarity: 'common', type: 'creature', cost: 1, attack: 2, hp: 1, keywords: ['haste'] },
+  { id: 'c_shield', name: '盾持ちの兵', nameEn: 'Shieldbearer', rarity: 'common', type: 'creature', cost: 2, attack: 1, hp: 3 },
+  { id: 'c_wolf', name: '迅雷の狼', nameEn: 'Thunder Wolf', rarity: 'common', type: 'creature', cost: 2, attack: 3, hp: 1, keywords: ['haste'] },
   {
-    id: 'c_messenger', name: '伝令の鳥', type: 'creature', cost: 2, attack: 1, hp: 1, keywords: ['flying'],
+    id: 'c_messenger', name: '伝令の鳥', nameEn: 'Herald Bird', rarity: 'rare', type: 'creature', cost: 2, attack: 1, hp: 1, keywords: ['flying'],
     triggers: [{ on: 'summon', effect: { type: 'draw', amount: 1 } }],
     text: '召喚時：カードを1枚引く。',
   },
-  { id: 'c_warrior', name: '鉄槌の戦士', type: 'creature', cost: 3, attack: 3, hp: 3 },
-  { id: 'c_rider', name: '疾風の騎手', type: 'creature', cost: 3, attack: 3, hp: 2, keywords: ['haste'] },
-  { id: 'c_pikeman', name: '槍衾の衛兵', type: 'creature', cost: 3, attack: 2, hp: 3, keywords: ['firstStrike'] },
-  { id: 'c_hawk', name: '嵐の鷹', type: 'creature', cost: 3, attack: 3, hp: 2, keywords: ['flying'] },
+  { id: 'c_warrior', name: '鉄槌の戦士', nameEn: 'Hammer Warrior', rarity: 'common', type: 'creature', cost: 3, attack: 3, hp: 3 },
+  { id: 'c_rider', name: '疾風の騎手', nameEn: 'Gale Rider', rarity: 'rare', type: 'creature', cost: 3, attack: 3, hp: 2, keywords: ['haste'] },
+  { id: 'c_pikeman', name: '槍衾の衛兵', nameEn: 'Pike Guard', rarity: 'rare', type: 'creature', cost: 3, attack: 2, hp: 3, keywords: ['firstStrike'] },
+  { id: 'c_hawk', name: '嵐の鷹', nameEn: 'Storm Hawk', rarity: 'rare', type: 'creature', cost: 3, attack: 3, hp: 2, keywords: ['flying'] },
   {
-    id: 'c_salamander', name: '火吹きトカゲ', type: 'creature', cost: 3, attack: 2, hp: 2,
+    id: 'c_salamander', name: '火吹きトカゲ', nameEn: 'Fire Salamander', rarity: 'rare', type: 'creature', cost: 3, attack: 2, hp: 2,
     effect: { type: 'damage', amount: 1, target: 'character' },
     text: '召喚時：クリーチャー1体かプレイヤー1人に1ダメージ。',
   },
-  { id: 'c_golem', name: '岩の巨人', type: 'creature', cost: 4, attack: 2, hp: 5 },
-  { id: 'c_knight', name: '番犬の騎士', type: 'creature', cost: 4, attack: 3, hp: 3, keywords: ['vigilance'] },
+  { id: 'c_golem', name: '岩の巨人', nameEn: 'Stone Giant', rarity: 'common', type: 'creature', cost: 4, attack: 2, hp: 5 },
+  { id: 'c_knight', name: '番犬の騎士', nameEn: 'Watchdog Knight', rarity: 'rare', type: 'creature', cost: 4, attack: 3, hp: 3, keywords: ['vigilance'] },
   {
-    id: 'c_general', name: '戦場の将軍', type: 'creature', cost: 5, attack: 3, hp: 3,
+    id: 'c_general', name: '戦場の将軍', nameEn: 'Field General', rarity: 'epic', type: 'creature', cost: 5, attack: 3, hp: 3,
     triggers: [{ on: 'summon', effect: { type: 'buffOthers', attack: 1, hp: 1 } }],
     text: '召喚時：自分の他のクリーチャーすべてに+1/+1。',
   },
-  { id: 'c_dragon', name: '古竜', type: 'creature', cost: 7, attack: 6, hp: 6, keywords: ['flying'] },
+  { id: 'c_dragon', name: '古竜', nameEn: 'Elder Dragon', rarity: 'legendary', type: 'creature', cost: 7, attack: 6, hp: 6, keywords: ['flying'] },
   // --- スペル ---
   {
-    id: 's_arrow', name: '迎撃の矢', type: 'spell', cost: 1, keywords: ['quick'],
+    id: 's_arrow', name: '迎撃の矢', nameEn: 'Intercept Arrow', rarity: 'rare', type: 'spell', cost: 1, keywords: ['quick'],
     effect: { type: 'damage', amount: 2, target: 'attackingCreature' },
     text: '攻撃している相手のクリーチャー1体に2ダメージを与える。',
   },
   {
-    id: 's_might', name: '剛力の薬', type: 'spell', cost: 1, keywords: ['quick'],
+    id: 's_might', name: '剛力の薬', nameEn: 'Potion of Might', rarity: 'rare', type: 'spell', cost: 1, keywords: ['quick'],
     effect: { type: 'buffTemp', attack: 2, hp: 2, target: 'friendlyCreature' },
     text: '自分のクリーチャー1体はターン終了時まで+2/+2。',
   },
   {
-    id: 's_rally', name: '鬨の声', type: 'spell', cost: 2,
+    id: 's_rally', name: '鬨の声', nameEn: 'War Cry', rarity: 'epic', type: 'spell', cost: 2,
     effect: { type: 'buffTempAll', attack: 2, hp: 0 },
     text: '自分のクリーチャーすべてはターン終了時まで+2/+0。',
   },
   {
-    id: 's_fireball', name: '火球', type: 'spell', cost: 3,
+    id: 's_fireball', name: '火球', nameEn: 'Fireball', rarity: 'epic', type: 'spell', cost: 3,
     effect: { type: 'damage', amount: 3, target: 'character' },
     text: 'クリーチャー1体かプレイヤー1人に3ダメージを与える。',
   },
   {
-    id: 's_insight', name: '知識の泉', type: 'spell', cost: 3,
+    id: 's_insight', name: '知識の泉', nameEn: 'Font of Insight', rarity: 'rare', type: 'spell', cost: 3,
     effect: { type: 'draw', amount: 2 },
     text: 'カードを2枚引く。',
   },
   {
-    id: 's_wave', name: '炎の波', type: 'spell', cost: 4,
+    id: 's_wave', name: '炎の波', nameEn: 'Wave of Flame', rarity: 'epic', type: 'spell', cost: 4,
     effect: { type: 'damageAllEnemies', amount: 2 },
     text: '相手のクリーチャーすべてに2ダメージを与える。',
   },
   {
-    id: 's_coin', name: 'マナの雫', type: 'spell', cost: 0, token: true,
+    id: 's_coin', name: 'マナの雫', nameEn: 'Mana Drop', rarity: 'common', type: 'spell', cost: 0, token: true,
     effect: { type: 'gainMana', amount: 1, draw: 1 },
     text: 'このターン、マナを1得る。カードを1枚引く。（後攻がゲーム開始時に1枚受け取る。デッキには入れられない）',
   },
   // 旧テストカード（デッキには入れていない。テスト用に残す）
   {
-    id: 's_mend', name: '癒しの光', type: 'spell', cost: 1, keywords: ['quick'],
+    id: 's_mend', name: '癒しの光', nameEn: 'Mending Light', rarity: 'common', type: 'spell', cost: 1, keywords: ['quick'],
     effect: { type: 'healAll', target: 'friendlyCreature' },
     text: '自分のクリーチャー1体のダメージをすべて回復する。',
   },

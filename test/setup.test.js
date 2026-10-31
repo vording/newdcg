@@ -42,3 +42,8 @@ test('同じシードなら同じ結果（再現性）', () => {
   assert.deepEqual(a.players.map((p) => p.hand), b.players.map((p) => p.hand));
   assert.equal(a.firstPlayer, b.firstPlayer);
 });
+
+test('すべてのカードにレア度が設定されている', async () => {
+  const { CARDS, RARITIES } = await import('../src/engine/index.js');
+  for (const c of Object.values(CARDS)) assert.ok(RARITIES[c.rarity], `${c.name} のレア度が不正: ${c.rarity}`);
+});
