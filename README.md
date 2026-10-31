@@ -13,6 +13,7 @@
 npm test                 # ルールエンジンのテスト
 npm run simulate         # AI同士で1000戦し、先攻/後攻の勝率を表示
 npm run serve            # http://localhost:8080/ でブラウザUIを起動
+npm run build            # dist/dcg.html（1ファイルで遊べる版）を生成
 ```
 
 シミュレーションは未確定ルールの設定を切り替えて比較できます。
