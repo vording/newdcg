@@ -25,7 +25,7 @@ const CARD_LIST = [
   // --- クリーチャー ---
   { id: 'c_apprentice', name: '見習い剣士', type: 'creature', cost: 1, attack: 1, hp: 2 },
   { id: 'c_scout', name: '森の斥候', type: 'creature', cost: 1, attack: 2, hp: 1, keywords: ['haste'] },
-  { id: 'c_shield', name: '盾持ちの兵', type: 'creature', cost: 2, attack: 1, hp: 4 },
+  { id: 'c_shield', name: '盾持ちの兵', type: 'creature', cost: 2, attack: 1, hp: 3 },
   { id: 'c_wolf', name: '迅雷の狼', type: 'creature', cost: 2, attack: 3, hp: 1, keywords: ['haste'] },
   {
     id: 'c_messenger', name: '伝令の鳥', type: 'creature', cost: 2, attack: 1, hp: 1, keywords: ['flying'],
@@ -41,7 +41,7 @@ const CARD_LIST = [
     effect: { type: 'damage', amount: 1, target: 'character' },
     text: '召喚時：クリーチャー1体かプレイヤー1人に1ダメージ。',
   },
-  { id: 'c_golem', name: '岩の巨人', type: 'creature', cost: 4, attack: 2, hp: 6 },
+  { id: 'c_golem', name: '岩の巨人', type: 'creature', cost: 4, attack: 2, hp: 5 },
   { id: 'c_knight', name: '番犬の騎士', type: 'creature', cost: 4, attack: 3, hp: 3, keywords: ['vigilance'] },
   {
     id: 'c_general', name: '戦場の将軍', type: 'creature', cost: 5, attack: 3, hp: 3,
