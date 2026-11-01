@@ -63,7 +63,7 @@ GitHub Pages はブランチ直下を公開する設定になっており、リ�
 
 ## カードイラストの追加
 
-1. 画像をカードIDの名前で `src/ui/art/` に置く（例：`src/ui/art/c_dragon.webp`）。形式は webp / png / jpg。
+1. 画像を `src/ui/art/` に置く。ファイル名はカードID・日本語名・英語名のどれでもよい（例：`c_dragon.webp`／`古竜.png`／`Elder Dragon.jpg`）。形式は webp / png / jpg。
 2. `npm run build:pages` と `npm run build` を実行してコミットする。
    画像は自動で `src/ui/art-data.js` に埋め込まれ、公開用の1ファイル版にも入る。
 
