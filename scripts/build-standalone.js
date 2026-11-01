@@ -20,7 +20,7 @@ buildArt();
 // 依存順。各モジュールの import / export を取り除いて1つのモジュールスコープに連結する。
 const modules = [
   'src/engine/config.js', 'src/engine/cards.js', 'src/engine/state.js', 'src/engine/effects.js',
-  'src/engine/game.js', 'src/ai/simple-ai.js', 'src/ui/art-data.js', 'src/ui/ui.js',
+  'src/engine/game.js', 'src/ai/simple-ai.js', 'src/ui/art-data.js', 'src/ui/sound.js', 'src/ui/ui.js',
 ];
 const strip = (src) => src
   .replace(/^import[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, '')

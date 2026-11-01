@@ -5,6 +5,7 @@ import {
 } from '../engine/index.js';
 import { chooseAction } from '../ai/simple-ai.js';
 import { ART } from './art-data.js';
+import { isSoundOn, setSoundOn, sfx, unlockAudio } from './sound.js';
 
 const $ = (sel) => document.querySelector(sel);
 const el = (tag, cls, text) => {
@@ -34,6 +35,7 @@ let level = 'easy';
 let deckNames = ['', ''];
 let ui;
 let seenLog = 0;
+let fxSeen = 0; // 演出・効果音を出し終えたログの位置
 let feed = [];
 let fresh = new Set();
 
@@ -48,7 +50,7 @@ function resetUi() {
 function buildTitle() {
   const box = $('#deckChoices');
   const choices = [...Object.entries(DECKS).map(([id, d]) => ({ id, name: d.name.replace(/（.*）/, ''), type: DECK_TYPE[id] ?? '', text: d.text })),
-    { id: 'random', name: 'おまかせ', type: 'ランダム', text: '3つのデッキからランダムに選ぶ。' }];
+    { id: 'random', name: 'おまかせ', type: 'ランダム', text: `${Object.keys(DECKS).length}つのデッキからランダムに選ぶ。` }];
   choices.forEach((c, i) => {
     const label = el('label', 'deck-choice');
     const input = el('input');
@@ -87,7 +89,7 @@ function startGame() {
     seed: Date.now(),
     names: mode === 'cpu' ? ['あなた', 'CPU'] : ['プレイヤー1', 'プレイヤー2'],
   });
-  seenLog = 0; feed = []; fresh = new Set();
+  seenLog = 0; fxSeen = 0; feed = []; fresh = new Set();
   resetUi();
   $('#title').hidden = true;
   $('#game').hidden = false;
@@ -136,6 +138,7 @@ function render() {
     renderSeat(me, true),
   );
   animateCards(table, before);
+  playEffects(table, before);
   $('#turnInfo').textContent = game.turn > 0 ? `ターン ${Math.ceil(game.turn / 2)}・${nm(game.activePlayer)}の番` : '準備中';
   renderLog();
   renderOverlay();
@@ -216,6 +219,159 @@ function animateCards(root, before) {
   lastPlayed = null;
 }
 
+// ---------------------------------------------------------------------------
+// 演出と効果音（新しく増えたログを見て、ダメージ数字・斬撃・ライフの増減などを出す）
+// ---------------------------------------------------------------------------
+
+function fxLayer() {
+  let layer = document.querySelector('.fx-layer');
+  if (!layer) { layer = el('div', 'fx-layer'); document.body.append(layer); }
+  return layer;
+}
+function centerOf(rect) { return rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : null; }
+function spawnFx(cls, text, pos, frames, opts) {
+  if (!pos) return;
+  const n = el('div', cls, text);
+  n.style.left = `${pos.x}px`; n.style.top = `${pos.y}px`;
+  fxLayer().append(n);
+  n.animate(frames, { fill: 'forwards', ...opts }).finished.then(() => n.remove(), () => n.remove());
+}
+function floatNumber(text, kind, pos, delay, big = false) {
+  spawnFx(`fx-num ${kind}${big ? ' big' : ''}`, text, pos, [
+    { opacity: 0, translate: '0 10px', scale: '.6' },
+    { opacity: 1, translate: '0 -6px', scale: '1.15', offset: 0.18 },
+    { opacity: 1, translate: '0 -22px', scale: '1', offset: 0.7 },
+    { opacity: 0, translate: '0 -40px', scale: '1' },
+  ], { duration: 1100, delay, easing: 'ease-out' });
+}
+function ring(kind, pos, delay) {
+  spawnFx(`fx-ring ${kind}`, undefined, pos, [
+    { opacity: 1, scale: '.4' }, { opacity: 0, scale: '3.2' },
+  ], { duration: 550, delay, easing: 'ease-out' });
+}
+function slash(from, to, delay) {
+  if (!from || !to) return;
+  const dx = to.x - from.x; const dy = to.y - from.y;
+  const len = Math.hypot(dx, dy);
+  const n = el('div', 'fx-slash');
+  Object.assign(n.style, { left: `${from.x}px`, top: `${from.y}px`, width: `${len}px`, rotate: `${Math.atan2(dy, dx)}rad` });
+  fxLayer().append(n);
+  n.animate([
+    { opacity: 0, scale: '0 1' }, { opacity: 1, scale: '1 1', offset: 0.5 }, { opacity: 0, scale: '1 1' },
+  ], { duration: 380, delay, fill: 'forwards', easing: 'ease-out' }).finished.then(() => n.remove(), () => n.remove());
+}
+function banner(text, delay) {
+  const t = $('#table')?.getBoundingClientRect();
+  spawnFx('fx-word', text, t ? { x: t.left + t.width / 2, y: t.top + t.height / 2 } : null, [
+    { opacity: 0, scale: '.8' }, { opacity: 1, scale: '1', offset: 0.15 }, { opacity: 1, scale: '1', offset: 0.75 }, { opacity: 0, scale: '1.05' },
+  ], { duration: 1000, delay, easing: 'ease-out' });
+}
+function pulse(node, cls, delay) {
+  if (!node) return;
+  setTimeout(() => { node.classList.remove(cls); void node.offsetWidth; node.classList.add(cls); }, delay);
+}
+
+function playEffects(root, before) {
+  const entries = game.log.slice(fxSeen);
+  fxSeen = game.log.length;
+  if (entries.length === 0) return;
+  const motion = !reduceMotion();
+  const me = viewer();
+  const creatureNode = (uid) => root.querySelector(`[data-key="u${uid}"]`);
+  const creaturePos = (uid) => centerOf(creatureNode(uid)?.getBoundingClientRect() ?? before.get(`u${uid}`)?.rect);
+  const lifeNode = (pi) => root.querySelector(`[data-life="${pi}"]`);
+  const lifePos = (pi) => centerOf(lifeNode(pi)?.getBoundingClientRect());
+  const sourcePos = (src) => (typeof src === 'number' ? creaturePos(src) : null);
+  let t = 0; // 演出を少しずつずらして、何が起きたか順に見えるようにする
+  const step = (ms) => { const d = t; t = Math.min(t + ms, 1400); return d; };
+
+  for (const e of entries) {
+    switch (e.type) {
+      case 'turnStart': { const d = step(0); sfx('turn', d); break; }
+      case 'draw': if (e.player === me) sfx('draw', step(0)); break;
+      case 'summon': { const d = step(120); sfx('summon', d); if (motion) ring('spell', creaturePos(e.uid), d + 200); break; }
+      case 'castSpell': { const d = step(160); sfx(e.response ? 'quick' : 'spell', d); if (motion && e.response) banner(`瞬発　${e.name}`, d); break; }
+      case 'attack': {
+        const d = step(200); sfx('attack', d);
+        if (motion) {
+          for (const uid of e.attackers) {
+            const n = creatureNode(uid);
+            const dir = Number(n?.dataset.owner) === me ? -1 : 1;
+            n?.animate([{ translate: '0 0' }, { translate: `0 ${dir * 26}px`, offset: 0.4 }, { translate: `0 ${dir * 10}px` }], { duration: 420, delay: d, easing: 'ease-out' });
+          }
+        }
+        break;
+      }
+      case 'blocks': {
+        if (!e.blocks.length) break;
+        const d = step(180); sfx('block', d);
+        if (motion) for (const b of e.blocks) slash(creaturePos(b.blocker), creaturePos(b.attacker), d);
+        break;
+      }
+      case 'damage': {
+        const d = step(110); sfx('hit', d);
+        const pos = creaturePos(e.target);
+        if (motion) {
+          slash(sourcePos(e.source), pos, Math.max(0, d - 80));
+          floatNumber(`-${e.amount}`, 'dmg', pos, d);
+          ring('', pos, d);
+          const n = creatureNode(e.target);
+          if (n) setTimeout(() => n.animate([{ translate: '0 0' }, { translate: '-5px 0' }, { translate: '5px 0' }, { translate: '-3px 0' }, { translate: '0 0' }], { duration: 300 }), d);
+        }
+        break;
+      }
+      case 'playerDamage': {
+        const d = step(140); sfx('playerHit', d);
+        const pos = lifePos(e.player);
+        if (motion) { slash(sourcePos(e.source), pos, Math.max(0, d - 80)); floatNumber(`-${e.amount}`, 'dmg', pos, d, true); ring('', pos, d); }
+        pulse(lifeNode(e.player), 'hit', d);
+        break;
+      }
+      case 'lifeGain': {
+        const d = step(120); sfx('heal', d);
+        if (motion) { floatNumber(`+${e.amount}`, 'heal', lifePos(e.player), d, true); ring('heal', lifePos(e.player), d); }
+        pulse(lifeNode(e.player), 'healed', d);
+        break;
+      }
+      case 'heal': { const d = step(100); sfx('heal', d); if (motion) floatNumber(`+${e.amount}`, 'heal', creaturePos(e.target), d); break; }
+      case 'buff': { const d = step(80); sfx('buff', d); if (motion) floatNumber(`+${e.attack}/+${e.hp}`, 'buff', creaturePos(e.target), d); break; }
+      case 'buffAll': {
+        const d = step(120); sfx('buff', d);
+        if (motion) for (const c of game.players[e.player].board) floatNumber(`+${e.attack}/+${e.hp}`, 'buff', creaturePos(c.uid), d);
+        break;
+      }
+      case 'shieldBroken': { const d = step(120); sfx('shield', d); if (motion) { ring('shield', creaturePos(e.target), d); floatNumber('防いだ', 'buff', creaturePos(e.target), d); } break; }
+      case 'shieldGranted': { const d = step(100); sfx('shield', d); if (motion) ring('shield', creaturePos(e.target), d); break; }
+      case 'deathtouch': { const d = step(100); if (motion) floatNumber('必殺', 'dmg', creaturePos(e.target), d); break; }
+      case 'destroyed': sfx('destroy', step(140)); break;
+      case 'destroyEffect': case 'exhausted': case 'bounced': { const d = step(100); sfx('spell', d); if (motion) ring('spell', creaturePos(e.target), d); break; }
+      case 'destroyAllEffect': { const d = step(200); sfx('destroy', d); if (motion) banner('断罪', d); break; }
+      case 'lastWill': { const d = step(160); if (motion) banner(`遺志　${e.name}`, d); break; }
+      case 'gainMana': { const d = step(80); sfx('mana', d); break; }
+      case 'gameOver': {
+        const d = step(300);
+        if (e.winner === 'draw') sfx('lose', d);
+        else sfx(mode === 'cpu' ? (e.winner === 0 ? 'win' : 'lose') : 'win', d);
+        break;
+      }
+      default: break;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// サウンドの切り替え
+// ---------------------------------------------------------------------------
+
+function soundLabel() { return isSoundOn() ? '♪ 音：入' : '♪ 音：切'; }
+function refreshSoundButtons() {
+  for (const b of document.querySelectorAll('.sound-toggle')) {
+    b.textContent = soundLabel();
+    b.setAttribute('aria-pressed', String(isSoundOn()));
+  }
+}
+function toggleSound() { setSoundOn(!isSoundOn()); refreshSoundButtons(); sfx('click'); }
+
 function updateFeed() {
   if (!isHumanTurn() && game.winner === null) return;
   const entries = game.log.slice(seenLog);
@@ -232,6 +388,7 @@ function renderSeat(pi, isFront) {
   if (game.activePlayer === pi && game.turn > 0 && game.winner === null) who.append(el('span', 'turn-badge', '手番'));
 
   const life = el('div', `life${p.life <= 5 ? ' low' : ''}`, String(Math.max(p.life, 0)));
+  life.dataset.life = String(pi);
   life.append(el('small', '', 'ライフ'));
   life.setAttribute('aria-label', `${nm(pi)}のライフ ${p.life}`);
   const target = { kind: 'player', player: pi };
@@ -449,12 +606,15 @@ function renderCreature(c) {
   if (c.damage) status.push(`-${c.damage}`);
 
   const aw = game.awaiting;
-  if (c.exhausted) node.classList.add('exhausted');
-  if (game.combat?.attackers.includes(c.uid)) {
+  const isAttacking = !!game.combat?.attackers.includes(c.uid);
+  if (c.exhausted && !isAttacking) node.classList.add('exhausted');
+  if (isAttacking) {
     node.classList.add('attacking');
+    const ex = status.indexOf('行動済み');
+    if (ex >= 0) status.splice(ex, 1);
     const by = ui.blocks.get(c.uid) ?? game.combat.blocks[c.uid];
     if (by !== undefined) status.unshift(`${creatureByUid(by)?.name ?? '?'}が防ぐ`);
-    else status.unshift('攻撃中');
+    else status.unshift('⚔ 攻撃中');
   }
   if (aw?.step === 'block' && [...ui.blocks.values()].includes(c.uid)) { node.classList.add('assigned'); status.unshift('ブロック'); }
   if (ui.attackers.has(c.uid)) status.unshift('攻撃する');
@@ -697,6 +857,14 @@ function showGallery() {
 
 buildTitle();
 $('#galleryBtn').addEventListener('click', showGallery);
+for (const b of document.querySelectorAll('.sound-toggle')) b.addEventListener('click', toggleSound);
+refreshSoundButtons();
+// 最初の操作で音を使えるようにし、ボタンには軽いクリック音を付ける
+for (const ev of ['pointerdown', 'keydown', 'touchstart']) document.addEventListener(ev, unlockAudio, { passive: true });
+document.addEventListener('click', (e) => { if (e.target.closest('button:not(.sound-toggle)')) sfx('click'); });
+// カードの長押しで画像保存などのメニューを出さない
+document.addEventListener('contextmenu', (e) => { if (e.target.closest('.card, .preview, .gallery')) e.preventDefault(); });
+document.addEventListener('dragstart', (e) => { if (e.target.closest('.card')) e.preventDefault(); });
 $('#menuBtn').addEventListener('click', showTitle);
 $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logPanel').hidden; renderLog(); });
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });

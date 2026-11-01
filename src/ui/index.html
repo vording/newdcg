@@ -10,11 +10,7 @@
   <!-- タイトル画面 -->
   <section id="title" class="screen title-screen">
     <div class="title-inner">
-      <div class="crest" aria-hidden="true">
-        <svg viewBox="0 0 120 80" width="120" height="80"><path d="M10 70 L18 22 L42 46 L60 8 L78 46 L102 22 L110 70 Z" fill="var(--gold)" stroke="var(--gold-deep)" stroke-width="3" stroke-linejoin="round"/><circle cx="18" cy="20" r="6" fill="var(--gold)"/><circle cx="60" cy="7" r="6" fill="var(--gold)"/><circle cx="102" cy="20" r="6" fill="var(--gold)"/><rect x="10" y="66" width="100" height="8" rx="2" fill="var(--gold-deep)"/></svg>
-      </div>
-      <h1 class="logo"><span class="logo-small">A Duel of Cards</span><span class="logo-big logo-tbd">タイトル未定</span></h1>
-      <p class="tagline">マナを溜め、軍勢を率い、相手のライフを削りきれ。</p>
+      <h1 class="logo"><span class="logo-big logo-tbd">タイトル未定</span></h1>
 
       <form id="setup" class="setup">
         <fieldset>
@@ -36,7 +32,10 @@
         </div>
         <button id="start" type="submit" class="btn btn-gold btn-big">対戦開始</button>
       </form>
-      <button id="galleryBtn" type="button" class="btn">カード一覧を見る</button>
+      <div class="title-tools">
+        <button id="galleryBtn" type="button" class="btn">カード一覧を見る</button>
+        <button id="soundBtnTitle" type="button" class="btn sound-toggle" aria-pressed="true">♪ 音：入</button>
+      </div>
 
       <details class="howto">
         <summary>遊び方</summary>
@@ -62,6 +61,7 @@
       <button id="menuBtn" type="button" class="btn btn-ghost">タイトルへ</button>
       <div class="topbar-title">タイトル未定</div>
       <div id="turnInfo" class="turn-info"></div>
+      <button id="soundBtn" type="button" class="btn btn-ghost sound-toggle" aria-pressed="true">♪ 音：入</button>
       <button id="logBtn" type="button" class="btn btn-ghost">記録</button>
     </header>
     <div id="table" class="table"><p id="boot">読み込み中…</p></div>

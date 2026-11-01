@@ -174,23 +174,23 @@ export const DECKS = Object.freeze({
     name: '疾風（速攻型）',
     text: '速攻と天翔、蹂躙で一気にライフを削る。',
     counts: {
-      c_scout: 3, c_wolf: 3, c_warrior: 2, c_rider: 3, c_hawk: 3, c_boar: 3,
-      c_assassin: 2, c_packleader: 2, c_general: 1, s_rally: 2, c_imp: 2, s_fireball: 3, s_snare: 1,
+      c_scout: 3, c_wolf: 3, c_rider: 3, c_hawk: 3, c_boar: 3,
+      c_assassin: 2, c_warrior: 2, c_general: 1, s_rally: 2, s_riposte: 3, s_fireball: 3, s_snare: 2,
     },
   },
   fortress: {
     name: '城塞（防御型）',
     text: '加護と除去で耐え、古竜とベヒモスで決める。',
     counts: {
-      c_shield: 2, c_sister: 3, c_viper: 2, c_pikeman: 3, c_knight: 2, c_warden: 3, c_dragon: 2, c_lionking: 1,
-      s_arrow: 3, s_ward: 2, s_lance: 2, s_wave: 2, s_judgment: 1, s_insight: 2,
+      c_ambusher: 1, c_shield: 1, c_sister: 3, c_viper: 2, c_pikeman: 3, c_knight: 2, c_warden: 3, c_dragon: 2, c_lionking: 1,
+      s_arrow: 3, s_ward: 2, s_lance: 2, s_wave: 2, s_judgment: 1, s_insight: 1, s_sidestep: 1,
     },
   },
   balance: {
     name: '均衡（標準型）',
     text: '序盤から終盤まで満遍なく戦える。',
     counts: {
-      c_apprentice: 2, c_archer: 3, c_messenger: 2, c_warrior: 3, c_duelist: 2, c_salamander: 2,
+      c_apprentice: 1, c_archer: 3, c_messenger: 2, c_warrior: 3, c_duelist: 2, c_salamander: 2, c_owl: 1,
       c_golem: 3, c_paladin: 1, c_general: 2, c_colossus: 2, c_dragon: 1,
       s_lance: 3, s_might: 1, s_recall: 1, s_fireball: 2,
     },
@@ -208,7 +208,7 @@ export const DECKS = Object.freeze({
     name: '影刃（瞬発型）',
     text: 'マナを残して構え、相手の攻撃に瞬発で切り返す。',
     counts: {
-      c_ambusher: 3, c_owl: 3, c_stalker: 2, c_pikeman: 2, c_messenger: 2, c_knight: 2, c_dragon: 1, c_apprentice: 1,
+      c_ambusher: 3, c_owl: 3, c_stalker: 3, c_pikeman: 2, c_messenger: 2, c_knight: 2, c_dragon: 1,
       s_arrow: 3, s_riposte: 3, s_sidestep: 3, s_lance: 3, s_ward: 2,
     },
   },

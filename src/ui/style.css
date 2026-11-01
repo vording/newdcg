@@ -72,10 +72,7 @@ button { font: inherit; color: inherit; }
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
 .title-inner { width: 100%; max-width: 760px; display: grid; gap: 20px; justify-items: center; text-align: center; }
-.crest { filter: drop-shadow(0 6px 18px rgba(234, 184, 74, .35)); animation: crest 3s ease-in-out infinite alternate; }
-@keyframes crest { from { transform: translateY(0); } to { transform: translateY(-4px); } }
 .logo { margin: -8px 0 0; font-family: var(--font-display); font-weight: 400; line-height: 1; display: grid; gap: 6px; }
-.logo-small { font-size: clamp(22px, 5vw, 34px); color: var(--charge); letter-spacing: .2em; }
 .logo-big {
   font-size: clamp(64px, 16vw, 128px); letter-spacing: .1em;
   background: linear-gradient(180deg, #ffe7a3 0%, var(--gold) 55%, var(--gold-deep) 100%);
@@ -83,7 +80,6 @@ button { font: inherit; color: inherit; }
   text-shadow: 0 6px 24px rgba(234, 184, 74, .25);
 }
 .logo-tbd { font-size: clamp(40px, 11vw, 88px); letter-spacing: .06em; }
-.tagline { margin: 0; color: var(--muted); font-size: 15px; }
 .setup { width: 100%; display: grid; gap: 16px; justify-items: center; }
 .setup fieldset { border: 0; margin: 0; padding: 0; width: 100%; }
 .setup legend { font-weight: 700; color: var(--muted); font-size: 12px; letter-spacing: .12em; margin: 0 auto 8px; padding: 0; }
@@ -296,6 +292,8 @@ button { font: inherit; color: inherit; }
 .mine .card.attacking { transform: translateY(-10px); }
 .theirs .card.attacking { transform: translateY(10px); }
 .card.exhausted { filter: grayscale(.6) brightness(.7); transform: rotate(4deg); }
+/* 攻撃中のクリーチャーは行動済みでも暗くしない（相手の瞬発やブロックの対象として普通に選べることを示す） */
+.card.attacking, .card.attacking.exhausted { filter: none; transform: none; }
 .card.assigned { outline: .32em solid var(--violet); outline-offset: .12em; }
 .card.returning { opacity: .5; }
 .card.fresh { animation: flash 1.1s ease-out 1; }
@@ -413,19 +411,13 @@ body { letter-spacing: .02em; }
 .btn-ghost { background: transparent; border-color: transparent; }
 .btn-big { font-family: var(--font-display); font-weight: 600; font-size: 18px; letter-spacing: .4em; padding: 12px 44px 12px 50px; }
 
-/* タイトル：細い線の王冠、明朝のロゴ、揺れない */
-.crest { filter: none; animation: none; opacity: .9; }
-.crest svg path { fill: none; stroke: var(--gold); stroke-width: 2.5; }
-.crest svg circle { fill: none; stroke: var(--gold); stroke-width: 2.5; }
-.crest svg rect { fill: var(--gold); opacity: .8; }
+/* タイトル：明朝のロゴ、揺れない */
 .logo { gap: 14px; margin-top: 4px; }
-.logo-small { font-family: var(--font-title); font-weight: 500; font-size: 13px; letter-spacing: .5em; color: var(--muted); }
 .logo-big, .logo-tbd {
   font-family: var(--font-display); font-weight: 600; font-size: clamp(36px, 8vw, 64px); letter-spacing: .3em;
   background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--text); text-shadow: none;
 }
 .logo::after { content: ''; display: block; width: 72px; height: 1px; margin: 4px auto 0; background: var(--gold); }
-.tagline { font-family: var(--font-display); font-size: 14px; letter-spacing: .2em; }
 .setup legend { letter-spacing: .3em; font-weight: 500; }
 .deck-choice .face { border-width: 1px; border-radius: 6px; background: var(--felt); }
 .deck-choice input:checked + .face { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
@@ -492,3 +484,78 @@ body { letter-spacing: .02em; }
 
 .card .mark.spent { opacity: .3; }
 .card .gem.cost.discount { border-color: #8fd0a0; color: #d8ffe0; }
+
+/* ---------- 攻撃中の表示：赤い光と剣の札。選べる／対象の線（outline）とは別の層（box-shadow）で表す ---------- */
+.card.attacking {
+  outline: none;
+  box-shadow: 0 0 0 .14em var(--crimson), 0 0 1.1em .25em rgba(205, 70, 50, .75), 0 .3em .8em rgba(0,0,0,.6);
+  animation: attackGlow 1.1s ease-in-out infinite alternate;
+}
+.mine .card.attacking { translate: 0 -10px; }
+.theirs .card.attacking { translate: 0 10px; }
+@keyframes attackGlow {
+  from { box-shadow: 0 0 0 .14em var(--crimson), 0 0 .6em .1em rgba(205, 70, 50, .55), 0 .3em .8em rgba(0,0,0,.6); }
+  to   { box-shadow: 0 0 0 .14em #d9634e, 0 0 1.4em .35em rgba(225, 85, 60, .85), 0 .3em .8em rgba(0,0,0,.6); }
+}
+.card.attacking.targetable, .card.attacking.selectable { outline: .24em solid var(--gold); outline-offset: .2em; }
+.card.attacking.targetable { animation: attackGlow 1.1s ease-in-out infinite alternate, target .9s ease-in-out infinite alternate; }
+.card.attacking .ribbon { background: rgba(120, 30, 20, .94); border-color: #e07a62; color: #fff1e8; font-size: .72em; font-weight: 700; }
+.card.blocking-link { box-shadow: 0 0 0 .14em var(--violet), 0 0 .9em .2em rgba(146, 131, 184, .7), 0 .3em .8em rgba(0,0,0,.6); }
+
+/* ---------- スマホの長押しで画像保存メニューを出さない ---------- */
+.card, .card *, .preview, .preview *, .gallery .card {
+  -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-user-drag: none;
+}
+.card img, .preview img { pointer-events: none; }
+
+/* ---------- 動きの演出（ダメージ数字・衝撃・ライフの増減など） ---------- */
+.fx-layer { position: fixed; inset: 0; pointer-events: none; z-index: 40; overflow: hidden; }
+.fx-num {
+  position: fixed; transform: translate(-50%, -50%); font-family: var(--font-num); font-weight: 700;
+  font-size: 30px; line-height: 1; white-space: nowrap;
+  text-shadow: 0 0 6px #000, 0 2px 0 #000, 0 0 14px rgba(0,0,0,.8);
+}
+.fx-num.dmg { color: #ff8a6e; }
+.fx-num.heal { color: #9fe0a0; }
+.fx-num.buff { color: #d9ccff; font-size: 22px; }
+.fx-num.mana { color: #a9d4e0; font-size: 22px; }
+.fx-num.big { font-size: 40px; }
+.fx-word {
+  position: fixed; transform: translate(-50%, -50%); font-family: var(--font-display); font-weight: 600;
+  font-size: 18px; letter-spacing: .2em; color: var(--text); white-space: nowrap;
+  padding: 4px 14px; border-radius: 4px; background: rgba(14, 10, 6, .85); border: 1px solid var(--gold);
+}
+.fx-ring {
+  position: fixed; transform: translate(-50%, -50%); border-radius: 50%; width: 40px; height: 40px;
+  border: 3px solid rgba(255, 140, 100, .9);
+}
+.fx-ring.shield { border-color: rgba(240, 220, 150, .95); }
+.fx-ring.heal { border-color: rgba(150, 220, 150, .9); }
+.fx-ring.spell { border-color: rgba(200, 180, 255, .9); }
+.fx-slash {
+  position: fixed; height: 4px; transform-origin: 0 50%; border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #ffd2a0, #fff);
+  box-shadow: 0 0 12px rgba(255, 170, 110, .9);
+}
+.fx-flash { position: fixed; inset: 0; background: radial-gradient(circle, rgba(255, 220, 160, .25), transparent 70%); }
+.life.hit, .seat .life.hit { animation: lifeHit .5s ease-out; }
+.life.healed, .seat .life.healed { animation: lifeHeal .6s ease-out; }
+@keyframes lifeHit { 0% { transform: scale(1); color: #ff8a6e; } 30% { transform: scale(1.35); color: #ff8a6e; } 100% { transform: scale(1); } }
+@keyframes lifeHeal { 0% { transform: scale(1); color: #9fe0a0; } 30% { transform: scale(1.25); color: #9fe0a0; } 100% { transform: scale(1); } }
+.card.shake { animation: shake .35s ease-in-out; }
+@keyframes shake { 0%,100% { translate: 0 0; } 20% { translate: -5px 0; } 40% { translate: 5px 0; } 60% { translate: -3px 0; } 80% { translate: 3px 0; } }
+
+/* サウンド切り替え */
+.sound-toggle { min-width: 2.6em; }
+.title-tools { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .card.attacking, .card.attacking.targetable { animation: none; }
+}
+.topbar .btn { white-space: nowrap; }
+@media (max-width: 480px) {
+  .topbar { gap: 4px; }
+  .topbar .btn { padding-inline: 8px; font-size: 13px; }
+  .topbar .turn-info { font-size: 11px; }
+}
+
