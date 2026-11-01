@@ -39,7 +39,7 @@ node scripts/simulate.js 2000 '{"exhaustedCanBlock":true}'
 ```
 src/engine/   ゲームロジック（UI非依存・DOM不使用）
   config.js   調整可能なルールパラメータ（暫定値・未確定ルールのスイッチ）
-  cards.js    カードデータ（18種）・構築済みデッキ・デッキ検証
+  cards.js    カードデータ（42種＋トークン）・構築済みデッキ・デッキ検証
   effects.js  カード効果のレジストリと対象選択
   state.js    状態操作ヘルパー（ダメージ・ドロー・乱数）
   game.js     ターン進行・アクション適用・戦闘・状態起因処理

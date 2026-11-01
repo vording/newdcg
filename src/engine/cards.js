@@ -25,24 +25,29 @@ export const KEYWORDS = Object.freeze({
   haste: { name: '速攻', text: '召喚したターンから攻撃できる。' },
   flying: { name: '天翔', text: '天翔を持つクリーチャーでしかブロックできない。' },
   firstStrike: { name: '先制攻撃', text: '戦闘で、先制攻撃を持たないクリーチャーより先にダメージを与える。' },
-  vigilance: { name: '隠蔽', text: '攻撃しても行動済みにならない（相手のターンにブロックできる）。' },
+  vigilance: { name: '番人', text: '攻撃しても行動済みにならない（相手のターンにブロックできる）。' },
   quick: { name: '瞬発', text: '相手の攻撃宣言後、ブロック宣言の前にも使える。' },
+  lifesteal: { name: '吸命', text: 'このクリーチャーが与えたダメージと同じだけ、自分のライフを回復する（最大20）。' },
+  deathtouch: { name: '必殺', text: 'このクリーチャーからダメージを受けたクリーチャーは破壊される。' },
+  trample: { name: '蹂躙', text: '攻撃してブロックされても、ブロックしたクリーチャーを倒して余ったダメージを相手プレイヤーに与える。' },
+  ward: { name: '加護', text: '次に受けるダメージを1回だけ無効にする。' },
+  lastWill: { name: '遺志', text: '破壊されたときに効果が発動する。' },
 });
 
 // effect.target を持つクリーチャーは「召喚時：対象を選んで効果」。対象がいなければ不発で召喚できる。
 const CARD_LIST = [
   // --- クリーチャー ---
   { id: 'c_apprentice', name: '見習い剣士', nameEn: 'Squire', rarity: 'common', type: 'creature', cost: 1, attack: 1, hp: 2 },
-  { id: 'c_scout', name: '森の斥候', nameEn: 'Forest Scout', rarity: 'common', type: 'creature', cost: 1, attack: 2, hp: 1, keywords: ['haste'] },
+  { id: 'c_scout', name: '森の斥候', nameEn: 'Forest Scout', rarity: 'common', type: 'creature', cost: 1, attack: 2, hp: 2, keywords: ['haste'] },
   { id: 'c_shield', name: '盾持ちの兵', nameEn: 'Shieldbearer', rarity: 'common', type: 'creature', cost: 2, attack: 1, hp: 3 },
-  { id: 'c_wolf', name: '迅雷の狼', nameEn: 'Thunder Wolf', rarity: 'common', type: 'creature', cost: 2, attack: 3, hp: 1, keywords: ['haste'] },
+  { id: 'c_wolf', name: '迅雷の狼', nameEn: 'Thunder Wolf', rarity: 'common', type: 'creature', cost: 2, attack: 3, hp: 2, keywords: ['haste'] },
   {
     id: 'c_messenger', name: '伝令の鳥', nameEn: 'Herald Bird', rarity: 'rare', type: 'creature', cost: 2, attack: 1, hp: 1, keywords: ['flying'],
     triggers: [{ on: 'summon', effect: { type: 'draw', amount: 1 } }],
     text: '召喚時：カードを1枚引く。',
   },
   { id: 'c_warrior', name: '鉄槌の戦士', nameEn: 'Hammer Warrior', rarity: 'common', type: 'creature', cost: 3, attack: 3, hp: 3 },
-  { id: 'c_rider', name: '疾風の騎手', nameEn: 'Gale Rider', rarity: 'rare', type: 'creature', cost: 3, attack: 3, hp: 2, keywords: ['haste'] },
+  { id: 'c_rider', name: '疾風の騎手', nameEn: 'Gale Rider', rarity: 'rare', type: 'creature', cost: 3, attack: 3, hp: 3, keywords: ['haste'] },
   { id: 'c_pikeman', name: '槍衾の衛兵', nameEn: 'Pike Guard', rarity: 'rare', type: 'creature', cost: 3, attack: 2, hp: 3, keywords: ['firstStrike'] },
   { id: 'c_hawk', name: '嵐の鷹', nameEn: 'Storm Hawk', rarity: 'rare', type: 'creature', cost: 3, attack: 3, hp: 2, keywords: ['flying'] },
   {
@@ -94,6 +99,45 @@ const CARD_LIST = [
     effect: { type: 'gainMana', amount: 1, draw: 1 },
     text: 'このターン、マナを1得る。カードを1枚引く。（後攻がゲーム開始時に1枚受け取る。デッキには入れられない）',
   },
+  // --- 拡張（v0.4） ---
+  { id: 'c_imp', name: '爆ぜる小鬼', nameEn: 'Ember Imp', rarity: 'common', type: 'creature', cost: 1, attack: 2, hp: 1, keywords: ['lastWill'],
+    triggers: [{ on: 'death', effect: { type: 'damageOpponent', amount: 1 } }], text: '遺志：相手プレイヤーに1ダメージ。' },
+  { id: 'c_bat', name: '夜霧の蝙蝠', nameEn: 'Mist Bat', rarity: 'rare', type: 'creature', cost: 2, attack: 1, hp: 2, keywords: ['flying', 'lifesteal'] },
+  { id: 'c_viper', name: '毒牙の蛇', nameEn: 'Fang Viper', rarity: 'rare', type: 'creature', cost: 2, attack: 1, hp: 2, keywords: ['deathtouch'] },
+  { id: 'c_sister', name: '祈りの修道女', nameEn: 'Chapel Sister', rarity: 'common', type: 'creature', cost: 2, attack: 1, hp: 3,
+    triggers: [{ on: 'summon', effect: { type: 'gainLife', amount: 2 } }], text: '召喚時：自分のライフを2回復する。' },
+  { id: 'c_gravekeeper', name: '墓守の老人', nameEn: 'Old Gravekeeper', rarity: 'common', type: 'creature', cost: 3, attack: 2, hp: 2, keywords: ['lastWill'],
+    triggers: [{ on: 'death', effect: { type: 'draw', amount: 1 } }], text: '遺志：カードを1枚引く。' },
+  { id: 'c_archer', name: '見張り塔の弓兵', nameEn: 'Tower Archer', rarity: 'common', type: 'creature', cost: 2, attack: 2, hp: 1,
+    effect: { type: 'damage', amount: 1, target: 'enemyCreature' }, text: '召喚時：相手のクリーチャー1体に1ダメージ。' },
+  { id: 'c_boar', name: '突進する猪', nameEn: 'Charging Boar', rarity: 'common', type: 'creature', cost: 3, attack: 4, hp: 2, keywords: ['trample'] },
+  { id: 'c_duelist', name: '双剣の決闘士', nameEn: 'Twinblade Duelist', rarity: 'rare', type: 'creature', cost: 3, attack: 2, hp: 2, keywords: ['firstStrike', 'deathtouch'] },
+  { id: 'c_assassin', name: '影の暗殺者', nameEn: 'Shadow Assassin', rarity: 'rare', type: 'creature', cost: 3, attack: 2, hp: 1, keywords: ['haste', 'deathtouch'] },
+  { id: 'c_packleader', name: '群れの長', nameEn: 'Pack Leader', rarity: 'rare', type: 'creature', cost: 4, attack: 2, hp: 3,
+    triggers: [{ on: 'summon', effect: { type: 'summonToken', cardId: 't_pup', count: 2 } }], text: '召喚時：狼の子（1/1・速攻）を2体呼び出す。' },
+  { id: 'c_paladin', name: '誓いの聖騎士', nameEn: 'Oathsworn Paladin', rarity: 'rare', type: 'creature', cost: 5, attack: 3, hp: 4, keywords: ['lifesteal'] },
+  { id: 'c_warden', name: '森の守り手', nameEn: 'Grove Warden', rarity: 'rare', type: 'creature', cost: 5, attack: 3, hp: 6, keywords: ['ward'] },
+  { id: 'c_phoenix', name: '不死鳥', nameEn: 'Phoenix', rarity: 'epic', type: 'creature', cost: 5, attack: 4, hp: 3, keywords: ['flying', 'lastWill'],
+    triggers: [{ on: 'death', effect: { type: 'summonToken', cardId: 't_ash', count: 1 } }], text: '遺志：灰の雛（2/2・天翔）を呼び出す。' },
+  { id: 'c_bloodlord', name: '吸血公', nameEn: 'Blood Lord', rarity: 'epic', type: 'creature', cost: 6, attack: 4, hp: 4, keywords: ['lifesteal'] },
+  { id: 'c_colossus', name: '鋼鉄の巨像', nameEn: 'Iron Colossus', rarity: 'rare', type: 'creature', cost: 6, attack: 6, hp: 6, keywords: ['trample'] },
+  { id: 'c_lionking', name: '黄金の獅子王', nameEn: 'Golden Lion King', rarity: 'legendary', type: 'creature', cost: 8, attack: 7, hp: 7, keywords: ['trample', 'ward'] },
+  // スペル
+  { id: 's_snare', name: '足止めの網', nameEn: 'Snare Net', rarity: 'common', type: 'spell', cost: 1,
+    effect: { type: 'exhaust', target: 'enemyCreature' }, text: '相手のクリーチャー1体を行動済みにする（このターン、ブロックできない）。' },
+  { id: 's_ward', name: '守護の祝福', nameEn: 'Blessing of Ward', rarity: 'rare', type: 'spell', cost: 1, keywords: ['quick'],
+    effect: { type: 'grantShield', target: 'friendlyCreature' }, text: '自分のクリーチャー1体に加護を与える。' },
+  { id: 's_lance', name: '雷の槍', nameEn: 'Thunder Lance', rarity: 'common', type: 'spell', cost: 2,
+    effect: { type: 'damage', amount: 2, target: 'enemyCreature' }, text: '相手のクリーチャー1体に2ダメージを与える。' },
+  { id: 's_recall', name: '送還の風', nameEn: 'Recall Wind', rarity: 'rare', type: 'spell', cost: 2,
+    effect: { type: 'bounce', target: 'creature' }, text: 'クリーチャー1体を持ち主の手札に戻す。' },
+  { id: 's_prayer', name: '癒しの祈り', nameEn: 'Healing Prayer', rarity: 'common', type: 'spell', cost: 3,
+    effect: { type: 'gainLife', amount: 4, draw: 1 }, text: '自分のライフを4回復し、カードを1枚引く。' },
+  { id: 's_judgment', name: '断罪の剣', nameEn: 'Sword of Judgment', rarity: 'epic', type: 'spell', cost: 5,
+    effect: { type: 'destroy', target: 'enemyCreature' }, text: '相手のクリーチャー1体を破壊する。' },
+  // トークン（効果で呼び出されるだけで、デッキには入れられない）
+  { id: 't_pup', name: '狼の子', nameEn: 'Wolf Pup', rarity: 'common', type: 'creature', cost: 1, attack: 1, hp: 1, keywords: ['haste'], token: true },
+  { id: 't_ash', name: '灰の雛', nameEn: 'Ash Hatchling', rarity: 'common', type: 'creature', cost: 2, attack: 2, hp: 2, keywords: ['flying'], token: true },
   // 旧テストカード（デッキには入れていない。テスト用に残す）
   {
     id: 's_mend', name: '癒しの光', nameEn: 'Mending Light', rarity: 'common', type: 'spell', cost: 1, keywords: ['quick'],
@@ -118,27 +162,36 @@ export function hasKeyword(card, kw) {
 export const DECKS = Object.freeze({
   swift: {
     name: '疾風（速攻型）',
-    text: '低コストのクリーチャーと速攻・天翔で一気にライフを削る。',
+    text: '速攻と天翔、蹂躙で一気にライフを削る。',
     counts: {
-      c_rider: 3, c_scout: 3, c_wolf: 3, c_messenger: 2, c_warrior: 3, c_hawk: 3,
-      c_pikeman: 1, c_salamander: 2, c_general: 2, s_fireball: 3, s_might: 3, s_rally: 2,
+      c_scout: 3, c_wolf: 3, c_warrior: 2, c_rider: 3, c_hawk: 3, c_boar: 3,
+      c_assassin: 2, c_packleader: 2, c_general: 1, s_rally: 2, c_imp: 2, s_fireball: 3, s_snare: 1,
     },
   },
   fortress: {
     name: '城塞（防御型）',
-    text: '硬いクリーチャーと除去で耐え、古竜で決める。',
+    text: '加護と除去で耐え、古竜と獅子王で決める。',
     counts: {
-      c_shield: 3, c_pikeman: 3, c_messenger: 2, c_golem: 3, c_knight: 3, c_dragon: 3,
-      c_salamander: 3, s_arrow: 3, s_insight: 2, s_wave: 2, s_fireball: 3,
+      c_shield: 2, c_sister: 3, c_viper: 2, c_pikeman: 3, c_knight: 2, c_warden: 3, c_dragon: 2, c_lionking: 1,
+      s_arrow: 3, s_ward: 2, s_lance: 2, s_wave: 2, s_judgment: 2, s_insight: 1,
     },
   },
   balance: {
     name: '均衡（標準型）',
     text: '序盤から終盤まで満遍なく戦える。',
     counts: {
-      c_apprentice: 3, c_wolf: 2, c_messenger: 2, c_warrior: 3, c_pikeman: 2, c_hawk: 2,
-      c_salamander: 2, c_golem: 2, c_knight: 2, c_general: 2, c_dragon: 1,
-      s_fireball: 3, s_arrow: 2, s_might: 2,
+      c_apprentice: 2, c_archer: 3, c_messenger: 2, c_warrior: 3, c_duelist: 2, c_salamander: 2,
+      c_golem: 3, c_paladin: 1, c_general: 2, c_colossus: 2, c_dragon: 1,
+      s_lance: 3, s_might: 1, s_recall: 1, s_fireball: 2,
+    },
+  },
+  night: {
+    name: '冥夜（遺志・吸命型）',
+    text: '倒れても力を残す遺志と、ライフを奪う吸命でじわじわ押し切る。',
+    counts: {
+      c_imp: 2, c_gravekeeper: 3, c_bat: 3, c_messenger: 2, c_salamander: 2, c_warrior: 1,
+      c_phoenix: 2, c_paladin: 2, c_bloodlord: 1, c_assassin: 1, c_archer: 1,
+      s_prayer: 1, s_lance: 3, s_recall: 2, s_ward: 2, s_judgment: 1, s_insight: 1,
     },
   },
 });

@@ -20,8 +20,12 @@ const GLYPH = {
   c_rider: '騎', c_pikeman: '槍', c_hawk: '鷹', c_salamander: '蜥', c_golem: '岩', c_knight: '犬',
   c_general: '将', c_dragon: '竜', s_arrow: '矢', s_might: '力', s_rally: '鬨', s_fireball: '炎',
   s_insight: '泉', s_wave: '波', s_coin: '雫', s_mend: '癒',
+  c_imp: '鬼', c_bat: '蝠', c_viper: '蛇', c_sister: '祈', c_gravekeeper: '墓', c_archer: '弓', c_boar: '猪',
+  c_duelist: '決', c_assassin: '影', c_packleader: '長', c_paladin: '誓', c_warden: '守', c_phoenix: '鳳',
+  c_bloodlord: '血', c_colossus: '像', c_lionking: '獅', s_snare: '網', s_ward: '護', s_lance: '雷',
+  s_recall: '還', s_prayer: '祷', s_judgment: '断', t_pup: '仔', t_ash: '灰',
 };
-const DECK_TYPE = { swift: '速攻型', fortress: '防御型', balance: '標準型' };
+const DECK_TYPE = { swift: '速攻型', fortress: '防御型', balance: '標準型', night: '遺志・吸命型' };
 
 let game = null;
 let mode = 'cpu';
@@ -285,6 +289,11 @@ const MARK = {
   firstStrike: 'M14.5 3H21v6.5L10.5 20l-3-3-2 2L4 17.5l2-2L3 12.5 14.5 3zM3.5 19 5 20.5 3.5 22 2 20.5z',
   vigilance: 'M12 5C6 5 2 12 2 12s4 7 10 7 10-7 10-7-4-7-10-7zm0 11.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
   quick: 'M6 2h12v2c0 3-2 5-4.5 6.5v3C16 15 18 17 18 20v2H6v-2c0-3 2-5 4.5-6.5v-3C8 9 6 7 6 4V2zm2.2 2c.3 1.9 1.7 3.3 3.8 4.6 2.1-1.3 3.5-2.7 3.8-4.6H8.2z',
+  lifesteal: 'M12 2C9 7 6 10.5 6 14a6 6 0 0 0 12 0c0-3.5-3-7-6-12z',
+  deathtouch: 'M12 2a8 8 0 0 0-8 8c0 2.6 1.3 4.6 3 5.8V19a1 1 0 0 0 1 1h1v2h2v-2h2v2h2v-2h1a1 1 0 0 0 1-1v-3.2c1.7-1.2 3-3.2 3-5.8a8 8 0 0 0-8-8zM8.5 13a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm7 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4z',
+  trample: 'M3 5l7 7-7 7V5zm8 0l7 7-7 7V5zm8 0h2v14h-2z',
+  ward: 'M12 2 4 5v6c0 5 3.4 9.3 8 11 4.6-1.7 8-6 8-11V5l-8-3z',
+  lastWill: 'M12 2c1.5 2 3 3.5 3 5.5A3 3 0 0 1 12 10a3 3 0 0 1-3-2.5C9 5.5 10.5 4 12 2zM9 11h6v11H9z',
 };
 function markSvg(k) {
   const span = el('span');
@@ -313,10 +322,13 @@ function buildCard(card, stats = null) {
   title.append(el('div', `c-en${size}`, en));
   if (card.type === 'spell') title.append(el('div', 'c-type', 'SPELL'));
   node.append(art, el('div', 'c-shade'), el('div', 'c-corners'), title);
-  if (card.keywords?.length) {
+  // 場のクリーチャーは加護の状態を反映（使い切ったら薄く、呪文で得たら追加）
+  const kws = [...(card.keywords ?? [])];
+  if (stats?.shield && !kws.includes('ward')) kws.push('ward');
+  if (kws.length) {
     const marks = el('div', 'c-marks');
-    for (const k of card.keywords) {
-      const m = el('span', `mark kw-${k}`);
+    for (const k of kws) {
+      const m = el('span', `mark kw-${k}${k === 'ward' && stats && !stats.shield ? ' spent' : ''}`);
       m.append(markSvg(k));
       m.setAttribute('aria-label', KEYWORDS[k].name);
       marks.append(m);
@@ -420,7 +432,7 @@ function renderCreature(c) {
   const card = getCard(c.cardId);
   const left = c.hp - c.damage;
   const node = buildCard(card, {
-    atk: c.attack, hp: left,
+    atk: c.attack, hp: left, shield: !!c.shield,
     atkCls: c.attack > card.attack ? 'buffed' : '',
     hpCls: `${c.damage ? 'damaged' : ''} ${c.hp > card.hp ? 'buffed' : ''}`,
   });
@@ -587,7 +599,7 @@ function describe(e) {
   switch (e.type) {
     case 'gameStart': return `ゲーム開始。先攻は${nm(e.firstPlayer)}`;
     case 'turnStart': return `―― ${nm(e.player)}のターン（${e.turnOfPlayer}ターン目） ――`;
-    case 'summon': return `${nm(e.player)}：${e.name}を召喚`;
+    case 'summon': return e.token ? `${nm(e.player)}：${e.name}が現れた` : `${nm(e.player)}：${e.name}を召喚`;
     case 'castSpell': return `${nm(e.player)}：${e.name}を使用${e.response ? '（瞬発）' : ''}`;
     case 'attack': return `${nm(e.player)}：${e.attackers.length}体で攻撃`;
     case 'blocks': return e.blocks.length ? `${nm(e.player)}：${e.blocks.length}体でブロック` : `${nm(e.player)}：ブロックしない`;
@@ -596,6 +608,14 @@ function describe(e) {
     case 'heal': return `${nm(e.owner)}の${e.targetName}のダメージを${e.amount}回復`;
     case 'buff': return `${nm(e.owner)}の${e.targetName}が+${e.attack}/+${e.hp}${e.temporary ? '（このターン）' : ''}`;
     case 'buffAll': return `${nm(e.player)}のクリーチャーすべてが+${e.attack}/+${e.hp}（このターン）`;
+    case 'lifeGain': return `${e.sourceName ? `${e.sourceName}→` : ''}${nm(e.player)}のライフが${e.amount}回復`;
+    case 'shieldBroken': return `${nm(e.owner)}の${e.targetName}の加護がダメージを防いだ`;
+    case 'deathtouch': return `${e.sourceName}の必殺で${nm(e.owner)}の${e.targetName}が倒れる`;
+    case 'lastWill': return `${nm(e.owner)}の${e.name}の遺志が発動`;
+    case 'exhausted': return `${nm(e.owner)}の${e.targetName}は行動済みになった`;
+    case 'destroyEffect': return `${nm(e.owner)}の${e.targetName}を破壊`;
+    case 'shieldGranted': return `${nm(e.owner)}の${e.targetName}に加護`;
+    case 'bounced': return `${nm(e.owner)}の${e.targetName}が手札に戻った`;
     case 'gainMana': return `${nm(e.player)}：マナを${e.amount}得た`;
     case 'bonusCard': return `${nm(e.player)}は後攻なので「マナの雫」を受け取った`;
     case 'destroyed': return `${nm(e.owner)}の${e.name}は破壊された`;

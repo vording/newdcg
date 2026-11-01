@@ -41,7 +41,7 @@ test('先制攻撃: 倒し切れなければ通常どおり反撃を受ける', 
   assert.equal(pike.damage, 2);
 });
 
-test('隠蔽: 攻撃しても行動済みにならず、相手ターンにブロックできる', () => {
+test('番人: 攻撃しても行動済みにならず、相手ターンにブロックできる', () => {
   const s = newGame();
   const k = put(s, 0, 'c_knight');
   ok(attack(s, k.uid));
@@ -80,7 +80,7 @@ test('瞬発で剛力の薬: ブロッカーを強化して返り討ち', () => 
 
 test('召喚時に対象を選ぶクリーチャー（火吹きトカゲ）', () => {
   const s = newGame();
-  const e = put(s, 1, 'c_scout');
+  const e = put(s, 1, 'c_assassin'); // 2/1
   s.players[0].mana = 3;
   setHand(s, 0, ['c_salamander']);
   assert.equal(applyAction(s, 0, { type: 'playCard', handIndex: 0 }).ok, false); // 対象が必要

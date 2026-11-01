@@ -8,8 +8,9 @@
 // 対象の表現: { kind: 'player', player: 0|1 } または { kind: 'creature', uid }
 
 import {
-  dealDamageToCreature, dealDamageToPlayer, drawCards, findCreature, healCreature, log,
+  dealDamageToCreature, dealDamageToPlayer, drawCards, findCreature, gainLife, healCreature, log, makeCreature,
 } from './state.js';
+import { CARDS } from './cards.js';
 
 export const EFFECTS = {
   damage: {
@@ -68,6 +69,71 @@ export const EFFECTS = {
   draw: {
     resolve(state, playerIndex, params, target, source) {
       drawCards(state, playerIndex, params.amount);
+    },
+  },
+  /** 自分のライフを回復（初期ライフが上限）。draw があれば引く */
+  gainLife: {
+    resolve(state, playerIndex, params, target, source) {
+      gainLife(state, playerIndex, params.amount, typeof source === 'string' ? CARDS[source]?.name : null);
+      if (params.draw) drawCards(state, playerIndex, params.draw);
+    },
+  },
+  /** 相手プレイヤーにダメージ */
+  damageOpponent: {
+    resolve(state, playerIndex, params, target, source) {
+      dealDamageToPlayer(state, 1 - playerIndex, params.amount, source);
+    },
+  },
+  /** トークン（デッキに入らないクリーチャー）を場に出す。場がいっぱいなら出ない */
+  summonToken: {
+    resolve(state, playerIndex, params) {
+      const p = state.players[playerIndex];
+      for (let i = 0; i < (params.count ?? 1); i++) {
+        if (p.board.length >= state.config.boardLimit) break;
+        const c = makeCreature(state, params.cardId, playerIndex);
+        p.board.push(c);
+        log(state, 'summon', { player: playerIndex, uid: c.uid, name: c.name, token: true });
+      }
+    },
+  },
+  /** 相手のクリーチャーを行動済みにする（このターン、ブロックできない） */
+  exhaust: {
+    resolve(state, playerIndex, params, target) {
+      const c = findCreature(state, target.uid);
+      c.exhausted = true;
+      log(state, 'exhausted', { target: c.uid, targetName: c.name, owner: c.owner });
+    },
+  },
+  /** クリーチャーを破壊する（加護は無視） */
+  destroy: {
+    resolve(state, playerIndex, params, target) {
+      const c = findCreature(state, target.uid);
+      c.damage = Math.max(c.damage, c.hp);
+      log(state, 'destroyEffect', { target: c.uid, targetName: c.name, owner: c.owner });
+    },
+  },
+  /** 加護を与える */
+  grantShield: {
+    resolve(state, playerIndex, params, target) {
+      const c = findCreature(state, target.uid);
+      c.shield = true;
+      log(state, 'shieldGranted', { target: c.uid, targetName: c.name, owner: c.owner });
+    },
+  },
+  /** クリーチャーを持ち主の手札に戻す（トークンは消える） */
+  bounce: {
+    resolve(state, playerIndex, params, target) {
+      const c = findCreature(state, target.uid);
+      const p = state.players[c.owner];
+      p.board = p.board.filter((x) => x.uid !== c.uid);
+      log(state, 'bounced', { target: c.uid, targetName: c.name, owner: c.owner });
+      if (CARDS[c.cardId].token) return;
+      if (state.config.handLimit != null && p.hand.length >= state.config.handLimit) {
+        p.graveyard.push(c.cardId);
+        log(state, 'burn', { player: c.owner, cardId: c.cardId });
+      } else {
+        p.hand.push(c.cardId);
+      }
     },
   },
 };

@@ -31,16 +31,74 @@ export function remainingHp(creature) {
   return creature.hp - creature.damage;
 }
 
+/** 場に出すクリーチャーの実体を作る（召喚・トークン生成で共通） */
+export function makeCreature(state, cardId, owner) {
+  const card = CARDS[cardId];
+  return {
+    uid: state.nextUid++,
+    cardId,
+    owner,
+    name: card.name,
+    attack: card.attack,
+    hp: card.hp,
+    damage: 0,
+    tempAttack: 0,
+    tempHp: 0,
+    exhausted: false,
+    summoningSick: true,
+    shield: (card.keywords ?? []).includes('ward'), // 加護
+  };
+}
+
+function sourceCreatureKeyword(state, source, kw) {
+  if (typeof source !== 'number') return false;
+  const c = findCreature(state, source);
+  return !!c && (CARDS[c.cardId].keywords ?? []).includes(kw);
+}
+
+/** 吸命：ダメージを与えたクリーチャーの持ち主のライフを回復（初期ライフが上限） */
+function applyLifesteal(state, source, amount) {
+  if (!sourceCreatureKeyword(state, source, 'lifesteal')) return;
+  const c = findCreature(state, source);
+  const p = state.players[c.owner];
+  const healed = Math.min(amount, Math.max(0, state.config.startingLife - p.life));
+  if (healed > 0) {
+    p.life += healed;
+    log(state, 'lifeGain', { player: c.owner, amount: healed, sourceName: c.name });
+  }
+}
+
 export function dealDamageToCreature(state, creature, amount, source) {
   if (amount <= 0) return;
+  if (creature.shield) {
+    // 加護：ダメージを1回だけ無効にする
+    creature.shield = false;
+    log(state, 'shieldBroken', { target: creature.uid, targetName: creature.name, owner: creature.owner, sourceName: sourceName(state, source) });
+    return;
+  }
   creature.damage += amount;
   log(state, 'damage', { target: creature.uid, targetName: creature.name, owner: creature.owner, amount, source, sourceName: sourceName(state, source) });
+  if (sourceCreatureKeyword(state, source, 'deathtouch') && creature.damage < creature.hp) {
+    creature.damage = creature.hp; // 必殺
+    log(state, 'deathtouch', { target: creature.uid, targetName: creature.name, owner: creature.owner, sourceName: sourceName(state, source) });
+  }
+  applyLifesteal(state, source, amount);
 }
 
 export function dealDamageToPlayer(state, playerIndex, amount, source) {
   if (amount <= 0) return;
   state.players[playerIndex].life -= amount;
   log(state, 'playerDamage', { player: playerIndex, amount, source, sourceName: sourceName(state, source) });
+  applyLifesteal(state, source, amount);
+}
+
+export function gainLife(state, playerIndex, amount, sourceName = null) {
+  const p = state.players[playerIndex];
+  const healed = Math.min(amount, Math.max(0, state.config.startingLife - p.life));
+  if (healed > 0) {
+    p.life += healed;
+    log(state, 'lifeGain', { player: playerIndex, amount: healed, sourceName });
+  }
 }
 
 export function healCreature(state, creature, amount, source) {

@@ -15,6 +15,11 @@ export const WEIGHTS = {
   flying: 1.5,
   firstStrike: 1.0,
   vigilance: 0.6,
+  lifesteal: 0.6, // 攻撃力1あたり
+  deathtouch: 2.0,
+  trample: 0.8,
+  ward: 1.5, // 加護が残っているとき
+  lastWill: 1.2,
   hand: 1.6, // 手札1枚
   quickHoldBonus: 1.2, // 瞬発カードを手札に持っていることの価値（相手ターンに使える）
 };
@@ -36,6 +41,12 @@ export function creatureValue(c) {
   if (hasKeyword(card, 'flying')) v += WEIGHTS.flying * Math.min(atk, 3) / 2;
   if (hasKeyword(card, 'firstStrike')) v += WEIGHTS.firstStrike;
   if (hasKeyword(card, 'vigilance')) v += WEIGHTS.vigilance;
+  if (hasKeyword(card, 'lifesteal')) v += WEIGHTS.lifesteal * atk;
+  if (hasKeyword(card, 'deathtouch')) v += WEIGHTS.deathtouch;
+  if (hasKeyword(card, 'trample')) v += WEIGHTS.trample;
+  if (hasKeyword(card, 'lastWill')) v += WEIGHTS.lastWill;
+  if (c.shield) v += WEIGHTS.ward + 0.3 * atk;
+  if (card.token) v *= 0.9;
   return v;
 }
 
@@ -252,8 +263,8 @@ export function fight(a, b) {
   const fb = hasKeyword(getCard(b.cardId), 'firstStrike');
   const aHp = a.hp - a.damage;
   const bHp = b.hp - b.damage;
-  const bDies = a.attack >= bHp;
-  const aDies = b.attack >= aHp;
+  const bDies = !b.shield && a.attack > 0 && (a.attack >= bHp || hasKeyword(getCard(a.cardId), 'deathtouch'));
+  const aDies = !a.shield && b.attack > 0 && (b.attack >= aHp || hasKeyword(getCard(b.cardId), 'deathtouch'));
   if (fa && !fb && bDies) return { aDies: false, bDies: true };
   if (fb && !fa && aDies) return { aDies: true, bDies: false };
   return { aDies, bDies };

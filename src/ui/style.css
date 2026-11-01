@@ -489,3 +489,5 @@ body { letter-spacing: .02em; }
 .battlefield { border: 3px double color-mix(in srgb, var(--gold) 45%, transparent); background: linear-gradient(180deg, rgba(184,151,90,.03), rgba(0,0,0,0)), var(--felt); }
 .command, .deck-choice .face, .howto, .gallery, .result, .preview .info { border-color: color-mix(in srgb, var(--gold) 35%, var(--line)); }
 .topbar { background: rgba(14, 12, 10, .92); border-bottom-color: color-mix(in srgb, var(--gold) 35%, var(--line)); }
+
+.card .mark.spent { opacity: .3; }

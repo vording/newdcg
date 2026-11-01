@@ -22,7 +22,7 @@ import { getCard, hasKeyword, validateDeck } from './cards.js';
 import { makeConfig } from './config.js';
 import { legalTargets, resolveEffect, sameTarget } from './effects.js';
 import {
-  dealDamageToCreature, dealDamageToPlayer, drawCards, log, nextRandom, opponentOf, shuffle,
+  dealDamageToCreature, dealDamageToPlayer, drawCards, log, makeCreature, nextRandom, opponentOf, shuffle,
 } from './state.js';
 
 export function createGame({ decks, seed = Date.now(), firstPlayer = null, config = {}, names } = {}) {
@@ -167,13 +167,26 @@ function runTriggers(state, playerIndex, on) {
 // ---------------------------------------------------------------------------
 
 export function checkStateBased(state) {
-  for (const p of state.players) {
-    const dead = p.board.filter((c) => c.damage >= c.hp);
-    if (dead.length) {
+  // 遺志（破壊時の効果）でさらに破壊が起きることがあるので、落ち着くまで繰り返す
+  for (let guard = 0; guard < 20; guard++) {
+    const died = [];
+    for (const p of state.players) {
+      const dead = p.board.filter((c) => c.damage >= c.hp);
+      if (!dead.length) continue;
       p.board = p.board.filter((c) => c.damage < c.hp);
       for (const c of dead) {
-        p.graveyard.push(c.cardId);
+        if (!getCard(c.cardId).token) p.graveyard.push(c.cardId); // トークンは消える
         log(state, 'destroyed', { uid: c.uid, name: c.name, owner: p.index });
+        died.push(c);
+      }
+    }
+    if (!died.length) break;
+    for (const c of died) {
+      for (const t of getCard(c.cardId).triggers ?? []) {
+        if (t.on === 'death') {
+          log(state, 'lastWill', { uid: c.uid, name: c.name, owner: c.owner });
+          resolveEffect(state, c.owner, t.effect, null, c.uid);
+        }
       }
     }
   }
@@ -299,19 +312,7 @@ function playCard(state, playerIndex, { handIndex, target = null }) {
   p.hand.splice(handIndex, 1);
 
   if (card.type === 'creature') {
-    const creature = {
-      uid: state.nextUid++,
-      cardId,
-      owner: playerIndex,
-      name: card.name,
-      attack: card.attack,
-      hp: card.hp,
-      damage: 0,
-      tempAttack: 0,
-      tempHp: 0,
-      exhausted: false,
-      summoningSick: true,
-    };
+    const creature = makeCreature(state, cardId, playerIndex);
     p.board.push(creature);
     log(state, 'summon', { player: playerIndex, uid: creature.uid, name: card.name });
     if (card.effect && target) resolveEffect(state, playerIndex, card.effect, target, creature.uid);
@@ -338,7 +339,7 @@ function declareAttack(state, playerIndex, { attackers }) {
   }
   for (const uid of attackers) {
     const c = board.find((x) => x.uid === uid);
-    if (!hasKeyword(getCard(c.cardId), 'vigilance')) c.exhausted = true; // 隠蔽は行動済みにならない
+    if (!hasKeyword(getCard(c.cardId), 'vigilance')) c.exhausted = true; // 番人は行動済みにならない
   }
   state.combat = { attackers: [...attackers], blocks: {} };
   log(state, 'attack', { player: playerIndex, attackers: [...attackers] });
@@ -430,7 +431,19 @@ function resolveCombat(state) {
       }
       const b = onBoard(defPlayer, bUid);
       if (!b) continue; // ブロッカーが除去されても「ブロックされた」まま
-      if (firstStrike(a) === isFirst) pending.push(() => dealDamageToCreature(state, b, a.attack, a.uid));
+      if (firstStrike(a) === isFirst) {
+        pending.push(() => {
+          // 蹂躙：ブロッカーを倒すのに必要な分だけ与え、残りを相手プレイヤーへ
+          if (hasKeyword(getCard(a.cardId), 'trample') && !b.shield) {
+            const lethal = hasKeyword(getCard(a.cardId), 'deathtouch') ? 1 : Math.max(0, b.hp - b.damage);
+            const toBlocker = Math.min(a.attack, lethal);
+            dealDamageToCreature(state, b, toBlocker, a.uid);
+            dealDamageToPlayer(state, defPlayer, a.attack - toBlocker, a.uid);
+          } else {
+            dealDamageToCreature(state, b, a.attack, a.uid);
+          }
+        });
+      }
       if (firstStrike(b) === isFirst) pending.push(() => dealDamageToCreature(state, a, b.attack, b.uid));
     }
     for (const fn of pending) fn();

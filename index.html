@@ -497,6 +497,8 @@ body { letter-spacing: .02em; }
 .command, .deck-choice .face, .howto, .gallery, .result, .preview .info { border-color: color-mix(in srgb, var(--gold) 35%, var(--line)); }
 .topbar { background: rgba(14, 12, 10, .92); border-bottom-color: color-mix(in srgb, var(--gold) 35%, var(--line)); }
 
+.card .mark.spent { opacity: .3; }
+
 </style>
 </head>
 <body>
@@ -540,7 +542,8 @@ body { letter-spacing: .02em; }
           <li>攻撃されたら、攻撃1体につき1体でブロックできる。ブロックすると互いの攻撃力ぶんダメージを与え合う。</li>
           <li>ダメージはターン終了時に回復する。倒すならそのターンのうちに。</li>
           <li><b>瞬発</b>カードは、相手の攻撃宣言後・ブロック前にも1枚使える。マナを残してターンを終えよう。</li>
-          <li><b>天翔</b>は天翔でしか止められない。<b>先制攻撃</b>は先にダメージを与える。<b>隠蔽</b>は攻撃しても行動済みにならない。</li>
+          <li><b>天翔</b>は天翔でしか止められない。<b>先制攻撃</b>は先にダメージを与える。<b>番人</b>は攻撃しても行動済みにならない。<b>速攻</b>は出したターンに攻撃できる。</li>
+          <li><b>吸命</b>は与えたダメージぶんライフ回復。<b>必殺</b>はダメージを与えたクリーチャーを倒す。<b>蹂躙</b>はブロックされても余りのダメージが通る。<b>加護</b>は1回だけダメージを防ぐ。<b>遺志</b>は倒れたときに効果が出る。</li>
           <li>後攻は「マナの雫」（0マナ：このターンマナ+1、1枚引く）を受け取る。</li>
         </ul>
       </details>
@@ -645,24 +648,29 @@ const KEYWORDS = Object.freeze({
   haste: { name: '速攻', text: '召喚したターンから攻撃できる。' },
   flying: { name: '天翔', text: '天翔を持つクリーチャーでしかブロックできない。' },
   firstStrike: { name: '先制攻撃', text: '戦闘で、先制攻撃を持たないクリーチャーより先にダメージを与える。' },
-  vigilance: { name: '隠蔽', text: '攻撃しても行動済みにならない（相手のターンにブロックできる）。' },
+  vigilance: { name: '番人', text: '攻撃しても行動済みにならない（相手のターンにブロックできる）。' },
   quick: { name: '瞬発', text: '相手の攻撃宣言後、ブロック宣言の前にも使える。' },
+  lifesteal: { name: '吸命', text: 'このクリーチャーが与えたダメージと同じだけ、自分のライフを回復する（最大20）。' },
+  deathtouch: { name: '必殺', text: 'このクリーチャーからダメージを受けたクリーチャーは破壊される。' },
+  trample: { name: '蹂躙', text: '攻撃してブロックされても、ブロックしたクリーチャーを倒して余ったダメージを相手プレイヤーに与える。' },
+  ward: { name: '加護', text: '次に受けるダメージを1回だけ無効にする。' },
+  lastWill: { name: '遺志', text: '破壊されたときに効果が発動する。' },
 });
 
 // effect.target を持つクリーチャーは「召喚時：対象を選んで効果」。対象がいなければ不発で召喚できる。
 const CARD_LIST = [
   // --- クリーチャー ---
   { id: 'c_apprentice', name: '見習い剣士', nameEn: 'Squire', rarity: 'common', type: 'creature', cost: 1, attack: 1, hp: 2 },
-  { id: 'c_scout', name: '森の斥候', nameEn: 'Forest Scout', rarity: 'common', type: 'creature', cost: 1, attack: 2, hp: 1, keywords: ['haste'] },
+  { id: 'c_scout', name: '森の斥候', nameEn: 'Forest Scout', rarity: 'common', type: 'creature', cost: 1, attack: 2, hp: 2, keywords: ['haste'] },
   { id: 'c_shield', name: '盾持ちの兵', nameEn: 'Shieldbearer', rarity: 'common', type: 'creature', cost: 2, attack: 1, hp: 3 },
-  { id: 'c_wolf', name: '迅雷の狼', nameEn: 'Thunder Wolf', rarity: 'common', type: 'creature', cost: 2, attack: 3, hp: 1, keywords: ['haste'] },
+  { id: 'c_wolf', name: '迅雷の狼', nameEn: 'Thunder Wolf', rarity: 'common', type: 'creature', cost: 2, attack: 3, hp: 2, keywords: ['haste'] },
   {
     id: 'c_messenger', name: '伝令の鳥', nameEn: 'Herald Bird', rarity: 'rare', type: 'creature', cost: 2, attack: 1, hp: 1, keywords: ['flying'],
     triggers: [{ on: 'summon', effect: { type: 'draw', amount: 1 } }],
     text: '召喚時：カードを1枚引く。',
   },
   { id: 'c_warrior', name: '鉄槌の戦士', nameEn: 'Hammer Warrior', rarity: 'common', type: 'creature', cost: 3, attack: 3, hp: 3 },
-  { id: 'c_rider', name: '疾風の騎手', nameEn: 'Gale Rider', rarity: 'rare', type: 'creature', cost: 3, attack: 3, hp: 2, keywords: ['haste'] },
+  { id: 'c_rider', name: '疾風の騎手', nameEn: 'Gale Rider', rarity: 'rare', type: 'creature', cost: 3, attack: 3, hp: 3, keywords: ['haste'] },
   { id: 'c_pikeman', name: '槍衾の衛兵', nameEn: 'Pike Guard', rarity: 'rare', type: 'creature', cost: 3, attack: 2, hp: 3, keywords: ['firstStrike'] },
   { id: 'c_hawk', name: '嵐の鷹', nameEn: 'Storm Hawk', rarity: 'rare', type: 'creature', cost: 3, attack: 3, hp: 2, keywords: ['flying'] },
   {
@@ -714,6 +722,45 @@ const CARD_LIST = [
     effect: { type: 'gainMana', amount: 1, draw: 1 },
     text: 'このターン、マナを1得る。カードを1枚引く。（後攻がゲーム開始時に1枚受け取る。デッキには入れられない）',
   },
+  // --- 拡張（v0.4） ---
+  { id: 'c_imp', name: '爆ぜる小鬼', nameEn: 'Ember Imp', rarity: 'common', type: 'creature', cost: 1, attack: 2, hp: 1, keywords: ['lastWill'],
+    triggers: [{ on: 'death', effect: { type: 'damageOpponent', amount: 1 } }], text: '遺志：相手プレイヤーに1ダメージ。' },
+  { id: 'c_bat', name: '夜霧の蝙蝠', nameEn: 'Mist Bat', rarity: 'rare', type: 'creature', cost: 2, attack: 1, hp: 2, keywords: ['flying', 'lifesteal'] },
+  { id: 'c_viper', name: '毒牙の蛇', nameEn: 'Fang Viper', rarity: 'rare', type: 'creature', cost: 2, attack: 1, hp: 2, keywords: ['deathtouch'] },
+  { id: 'c_sister', name: '祈りの修道女', nameEn: 'Chapel Sister', rarity: 'common', type: 'creature', cost: 2, attack: 1, hp: 3,
+    triggers: [{ on: 'summon', effect: { type: 'gainLife', amount: 2 } }], text: '召喚時：自分のライフを2回復する。' },
+  { id: 'c_gravekeeper', name: '墓守の老人', nameEn: 'Old Gravekeeper', rarity: 'common', type: 'creature', cost: 3, attack: 2, hp: 2, keywords: ['lastWill'],
+    triggers: [{ on: 'death', effect: { type: 'draw', amount: 1 } }], text: '遺志：カードを1枚引く。' },
+  { id: 'c_archer', name: '見張り塔の弓兵', nameEn: 'Tower Archer', rarity: 'common', type: 'creature', cost: 2, attack: 2, hp: 1,
+    effect: { type: 'damage', amount: 1, target: 'enemyCreature' }, text: '召喚時：相手のクリーチャー1体に1ダメージ。' },
+  { id: 'c_boar', name: '突進する猪', nameEn: 'Charging Boar', rarity: 'common', type: 'creature', cost: 3, attack: 4, hp: 2, keywords: ['trample'] },
+  { id: 'c_duelist', name: '双剣の決闘士', nameEn: 'Twinblade Duelist', rarity: 'rare', type: 'creature', cost: 3, attack: 2, hp: 2, keywords: ['firstStrike', 'deathtouch'] },
+  { id: 'c_assassin', name: '影の暗殺者', nameEn: 'Shadow Assassin', rarity: 'rare', type: 'creature', cost: 3, attack: 2, hp: 1, keywords: ['haste', 'deathtouch'] },
+  { id: 'c_packleader', name: '群れの長', nameEn: 'Pack Leader', rarity: 'rare', type: 'creature', cost: 4, attack: 2, hp: 3,
+    triggers: [{ on: 'summon', effect: { type: 'summonToken', cardId: 't_pup', count: 2 } }], text: '召喚時：狼の子（1/1・速攻）を2体呼び出す。' },
+  { id: 'c_paladin', name: '誓いの聖騎士', nameEn: 'Oathsworn Paladin', rarity: 'rare', type: 'creature', cost: 5, attack: 3, hp: 4, keywords: ['lifesteal'] },
+  { id: 'c_warden', name: '森の守り手', nameEn: 'Grove Warden', rarity: 'rare', type: 'creature', cost: 5, attack: 3, hp: 6, keywords: ['ward'] },
+  { id: 'c_phoenix', name: '不死鳥', nameEn: 'Phoenix', rarity: 'epic', type: 'creature', cost: 5, attack: 4, hp: 3, keywords: ['flying', 'lastWill'],
+    triggers: [{ on: 'death', effect: { type: 'summonToken', cardId: 't_ash', count: 1 } }], text: '遺志：灰の雛（2/2・天翔）を呼び出す。' },
+  { id: 'c_bloodlord', name: '吸血公', nameEn: 'Blood Lord', rarity: 'epic', type: 'creature', cost: 6, attack: 4, hp: 4, keywords: ['lifesteal'] },
+  { id: 'c_colossus', name: '鋼鉄の巨像', nameEn: 'Iron Colossus', rarity: 'rare', type: 'creature', cost: 6, attack: 6, hp: 6, keywords: ['trample'] },
+  { id: 'c_lionking', name: '黄金の獅子王', nameEn: 'Golden Lion King', rarity: 'legendary', type: 'creature', cost: 8, attack: 7, hp: 7, keywords: ['trample', 'ward'] },
+  // スペル
+  { id: 's_snare', name: '足止めの網', nameEn: 'Snare Net', rarity: 'common', type: 'spell', cost: 1,
+    effect: { type: 'exhaust', target: 'enemyCreature' }, text: '相手のクリーチャー1体を行動済みにする（このターン、ブロックできない）。' },
+  { id: 's_ward', name: '守護の祝福', nameEn: 'Blessing of Ward', rarity: 'rare', type: 'spell', cost: 1, keywords: ['quick'],
+    effect: { type: 'grantShield', target: 'friendlyCreature' }, text: '自分のクリーチャー1体に加護を与える。' },
+  { id: 's_lance', name: '雷の槍', nameEn: 'Thunder Lance', rarity: 'common', type: 'spell', cost: 2,
+    effect: { type: 'damage', amount: 2, target: 'enemyCreature' }, text: '相手のクリーチャー1体に2ダメージを与える。' },
+  { id: 's_recall', name: '送還の風', nameEn: 'Recall Wind', rarity: 'rare', type: 'spell', cost: 2,
+    effect: { type: 'bounce', target: 'creature' }, text: 'クリーチャー1体を持ち主の手札に戻す。' },
+  { id: 's_prayer', name: '癒しの祈り', nameEn: 'Healing Prayer', rarity: 'common', type: 'spell', cost: 3,
+    effect: { type: 'gainLife', amount: 4, draw: 1 }, text: '自分のライフを4回復し、カードを1枚引く。' },
+  { id: 's_judgment', name: '断罪の剣', nameEn: 'Sword of Judgment', rarity: 'epic', type: 'spell', cost: 5,
+    effect: { type: 'destroy', target: 'enemyCreature' }, text: '相手のクリーチャー1体を破壊する。' },
+  // トークン（効果で呼び出されるだけで、デッキには入れられない）
+  { id: 't_pup', name: '狼の子', nameEn: 'Wolf Pup', rarity: 'common', type: 'creature', cost: 1, attack: 1, hp: 1, keywords: ['haste'], token: true },
+  { id: 't_ash', name: '灰の雛', nameEn: 'Ash Hatchling', rarity: 'common', type: 'creature', cost: 2, attack: 2, hp: 2, keywords: ['flying'], token: true },
   // 旧テストカード（デッキには入れていない。テスト用に残す）
   {
     id: 's_mend', name: '癒しの光', nameEn: 'Mending Light', rarity: 'common', type: 'spell', cost: 1, keywords: ['quick'],
@@ -738,27 +785,36 @@ function hasKeyword(card, kw) {
 const DECKS = Object.freeze({
   swift: {
     name: '疾風（速攻型）',
-    text: '低コストのクリーチャーと速攻・天翔で一気にライフを削る。',
+    text: '速攻と天翔、蹂躙で一気にライフを削る。',
     counts: {
-      c_rider: 3, c_scout: 3, c_wolf: 3, c_messenger: 2, c_warrior: 3, c_hawk: 3,
-      c_pikeman: 1, c_salamander: 2, c_general: 2, s_fireball: 3, s_might: 3, s_rally: 2,
+      c_scout: 3, c_wolf: 3, c_warrior: 2, c_rider: 3, c_hawk: 3, c_boar: 3,
+      c_assassin: 2, c_packleader: 2, c_general: 1, s_rally: 2, c_imp: 2, s_fireball: 3, s_snare: 1,
     },
   },
   fortress: {
     name: '城塞（防御型）',
-    text: '硬いクリーチャーと除去で耐え、古竜で決める。',
+    text: '加護と除去で耐え、古竜と獅子王で決める。',
     counts: {
-      c_shield: 3, c_pikeman: 3, c_messenger: 2, c_golem: 3, c_knight: 3, c_dragon: 3,
-      c_salamander: 3, s_arrow: 3, s_insight: 2, s_wave: 2, s_fireball: 3,
+      c_shield: 2, c_sister: 3, c_viper: 2, c_pikeman: 3, c_knight: 2, c_warden: 3, c_dragon: 2, c_lionking: 1,
+      s_arrow: 3, s_ward: 2, s_lance: 2, s_wave: 2, s_judgment: 2, s_insight: 1,
     },
   },
   balance: {
     name: '均衡（標準型）',
     text: '序盤から終盤まで満遍なく戦える。',
     counts: {
-      c_apprentice: 3, c_wolf: 2, c_messenger: 2, c_warrior: 3, c_pikeman: 2, c_hawk: 2,
-      c_salamander: 2, c_golem: 2, c_knight: 2, c_general: 2, c_dragon: 1,
-      s_fireball: 3, s_arrow: 2, s_might: 2,
+      c_apprentice: 2, c_archer: 3, c_messenger: 2, c_warrior: 3, c_duelist: 2, c_salamander: 2,
+      c_golem: 3, c_paladin: 1, c_general: 2, c_colossus: 2, c_dragon: 1,
+      s_lance: 3, s_might: 1, s_recall: 1, s_fireball: 2,
+    },
+  },
+  night: {
+    name: '冥夜（遺志・吸命型）',
+    text: '倒れても力を残す遺志と、ライフを奪う吸命でじわじわ押し切る。',
+    counts: {
+      c_imp: 2, c_gravekeeper: 3, c_bat: 3, c_messenger: 2, c_salamander: 2, c_warrior: 1,
+      c_phoenix: 2, c_paladin: 2, c_bloodlord: 1, c_assassin: 1, c_archer: 1,
+      s_prayer: 1, s_lance: 3, s_recall: 2, s_ward: 2, s_judgment: 1, s_insight: 1,
     },
   },
 });
@@ -827,16 +883,74 @@ function remainingHp(creature) {
   return creature.hp - creature.damage;
 }
 
+/** 場に出すクリーチャーの実体を作る（召喚・トークン生成で共通） */
+function makeCreature(state, cardId, owner) {
+  const card = CARDS[cardId];
+  return {
+    uid: state.nextUid++,
+    cardId,
+    owner,
+    name: card.name,
+    attack: card.attack,
+    hp: card.hp,
+    damage: 0,
+    tempAttack: 0,
+    tempHp: 0,
+    exhausted: false,
+    summoningSick: true,
+    shield: (card.keywords ?? []).includes('ward'), // 加護
+  };
+}
+
+function sourceCreatureKeyword(state, source, kw) {
+  if (typeof source !== 'number') return false;
+  const c = findCreature(state, source);
+  return !!c && (CARDS[c.cardId].keywords ?? []).includes(kw);
+}
+
+/** 吸命：ダメージを与えたクリーチャーの持ち主のライフを回復（初期ライフが上限） */
+function applyLifesteal(state, source, amount) {
+  if (!sourceCreatureKeyword(state, source, 'lifesteal')) return;
+  const c = findCreature(state, source);
+  const p = state.players[c.owner];
+  const healed = Math.min(amount, Math.max(0, state.config.startingLife - p.life));
+  if (healed > 0) {
+    p.life += healed;
+    log(state, 'lifeGain', { player: c.owner, amount: healed, sourceName: c.name });
+  }
+}
+
 function dealDamageToCreature(state, creature, amount, source) {
   if (amount <= 0) return;
+  if (creature.shield) {
+    // 加護：ダメージを1回だけ無効にする
+    creature.shield = false;
+    log(state, 'shieldBroken', { target: creature.uid, targetName: creature.name, owner: creature.owner, sourceName: sourceName(state, source) });
+    return;
+  }
   creature.damage += amount;
   log(state, 'damage', { target: creature.uid, targetName: creature.name, owner: creature.owner, amount, source, sourceName: sourceName(state, source) });
+  if (sourceCreatureKeyword(state, source, 'deathtouch') && creature.damage < creature.hp) {
+    creature.damage = creature.hp; // 必殺
+    log(state, 'deathtouch', { target: creature.uid, targetName: creature.name, owner: creature.owner, sourceName: sourceName(state, source) });
+  }
+  applyLifesteal(state, source, amount);
 }
 
 function dealDamageToPlayer(state, playerIndex, amount, source) {
   if (amount <= 0) return;
   state.players[playerIndex].life -= amount;
   log(state, 'playerDamage', { player: playerIndex, amount, source, sourceName: sourceName(state, source) });
+  applyLifesteal(state, source, amount);
+}
+
+function gainLife(state, playerIndex, amount, sourceName = null) {
+  const p = state.players[playerIndex];
+  const healed = Math.min(amount, Math.max(0, state.config.startingLife - p.life));
+  if (healed > 0) {
+    p.life += healed;
+    log(state, 'lifeGain', { player: playerIndex, amount: healed, sourceName });
+  }
 }
 
 function healCreature(state, creature, amount, source) {
@@ -904,6 +1018,7 @@ function shuffle(state, array) {
 // 対象の表現: { kind: 'player', player: 0|1 } または { kind: 'creature', uid }
 
 
+
 const EFFECTS = {
   damage: {
     resolve(state, playerIndex, params, target, source) {
@@ -961,6 +1076,71 @@ const EFFECTS = {
   draw: {
     resolve(state, playerIndex, params, target, source) {
       drawCards(state, playerIndex, params.amount);
+    },
+  },
+  /** 自分のライフを回復（初期ライフが上限）。draw があれば引く */
+  gainLife: {
+    resolve(state, playerIndex, params, target, source) {
+      gainLife(state, playerIndex, params.amount, typeof source === 'string' ? CARDS[source]?.name : null);
+      if (params.draw) drawCards(state, playerIndex, params.draw);
+    },
+  },
+  /** 相手プレイヤーにダメージ */
+  damageOpponent: {
+    resolve(state, playerIndex, params, target, source) {
+      dealDamageToPlayer(state, 1 - playerIndex, params.amount, source);
+    },
+  },
+  /** トークン（デッキに入らないクリーチャー）を場に出す。場がいっぱいなら出ない */
+  summonToken: {
+    resolve(state, playerIndex, params) {
+      const p = state.players[playerIndex];
+      for (let i = 0; i < (params.count ?? 1); i++) {
+        if (p.board.length >= state.config.boardLimit) break;
+        const c = makeCreature(state, params.cardId, playerIndex);
+        p.board.push(c);
+        log(state, 'summon', { player: playerIndex, uid: c.uid, name: c.name, token: true });
+      }
+    },
+  },
+  /** 相手のクリーチャーを行動済みにする（このターン、ブロックできない） */
+  exhaust: {
+    resolve(state, playerIndex, params, target) {
+      const c = findCreature(state, target.uid);
+      c.exhausted = true;
+      log(state, 'exhausted', { target: c.uid, targetName: c.name, owner: c.owner });
+    },
+  },
+  /** クリーチャーを破壊する（加護は無視） */
+  destroy: {
+    resolve(state, playerIndex, params, target) {
+      const c = findCreature(state, target.uid);
+      c.damage = Math.max(c.damage, c.hp);
+      log(state, 'destroyEffect', { target: c.uid, targetName: c.name, owner: c.owner });
+    },
+  },
+  /** 加護を与える */
+  grantShield: {
+    resolve(state, playerIndex, params, target) {
+      const c = findCreature(state, target.uid);
+      c.shield = true;
+      log(state, 'shieldGranted', { target: c.uid, targetName: c.name, owner: c.owner });
+    },
+  },
+  /** クリーチャーを持ち主の手札に戻す（トークンは消える） */
+  bounce: {
+    resolve(state, playerIndex, params, target) {
+      const c = findCreature(state, target.uid);
+      const p = state.players[c.owner];
+      p.board = p.board.filter((x) => x.uid !== c.uid);
+      log(state, 'bounced', { target: c.uid, targetName: c.name, owner: c.owner });
+      if (CARDS[c.cardId].token) return;
+      if (state.config.handLimit != null && p.hand.length >= state.config.handLimit) {
+        p.graveyard.push(c.cardId);
+        log(state, 'burn', { player: c.owner, cardId: c.cardId });
+      } else {
+        p.hand.push(c.cardId);
+      }
     },
   },
 };
@@ -1175,13 +1355,26 @@ function runTriggers(state, playerIndex, on) {
 // ---------------------------------------------------------------------------
 
 function checkStateBased(state) {
-  for (const p of state.players) {
-    const dead = p.board.filter((c) => c.damage >= c.hp);
-    if (dead.length) {
+  // 遺志（破壊時の効果）でさらに破壊が起きることがあるので、落ち着くまで繰り返す
+  for (let guard = 0; guard < 20; guard++) {
+    const died = [];
+    for (const p of state.players) {
+      const dead = p.board.filter((c) => c.damage >= c.hp);
+      if (!dead.length) continue;
       p.board = p.board.filter((c) => c.damage < c.hp);
       for (const c of dead) {
-        p.graveyard.push(c.cardId);
+        if (!getCard(c.cardId).token) p.graveyard.push(c.cardId); // トークンは消える
         log(state, 'destroyed', { uid: c.uid, name: c.name, owner: p.index });
+        died.push(c);
+      }
+    }
+    if (!died.length) break;
+    for (const c of died) {
+      for (const t of getCard(c.cardId).triggers ?? []) {
+        if (t.on === 'death') {
+          log(state, 'lastWill', { uid: c.uid, name: c.name, owner: c.owner });
+          resolveEffect(state, c.owner, t.effect, null, c.uid);
+        }
       }
     }
   }
@@ -1307,19 +1500,7 @@ function playCard(state, playerIndex, { handIndex, target = null }) {
   p.hand.splice(handIndex, 1);
 
   if (card.type === 'creature') {
-    const creature = {
-      uid: state.nextUid++,
-      cardId,
-      owner: playerIndex,
-      name: card.name,
-      attack: card.attack,
-      hp: card.hp,
-      damage: 0,
-      tempAttack: 0,
-      tempHp: 0,
-      exhausted: false,
-      summoningSick: true,
-    };
+    const creature = makeCreature(state, cardId, playerIndex);
     p.board.push(creature);
     log(state, 'summon', { player: playerIndex, uid: creature.uid, name: card.name });
     if (card.effect && target) resolveEffect(state, playerIndex, card.effect, target, creature.uid);
@@ -1346,7 +1527,7 @@ function declareAttack(state, playerIndex, { attackers }) {
   }
   for (const uid of attackers) {
     const c = board.find((x) => x.uid === uid);
-    if (!hasKeyword(getCard(c.cardId), 'vigilance')) c.exhausted = true; // 隠蔽は行動済みにならない
+    if (!hasKeyword(getCard(c.cardId), 'vigilance')) c.exhausted = true; // 番人は行動済みにならない
   }
   state.combat = { attackers: [...attackers], blocks: {} };
   log(state, 'attack', { player: playerIndex, attackers: [...attackers] });
@@ -1438,7 +1619,19 @@ function resolveCombat(state) {
       }
       const b = onBoard(defPlayer, bUid);
       if (!b) continue; // ブロッカーが除去されても「ブロックされた」まま
-      if (firstStrike(a) === isFirst) pending.push(() => dealDamageToCreature(state, b, a.attack, a.uid));
+      if (firstStrike(a) === isFirst) {
+        pending.push(() => {
+          // 蹂躙：ブロッカーを倒すのに必要な分だけ与え、残りを相手プレイヤーへ
+          if (hasKeyword(getCard(a.cardId), 'trample') && !b.shield) {
+            const lethal = hasKeyword(getCard(a.cardId), 'deathtouch') ? 1 : Math.max(0, b.hp - b.damage);
+            const toBlocker = Math.min(a.attack, lethal);
+            dealDamageToCreature(state, b, toBlocker, a.uid);
+            dealDamageToPlayer(state, defPlayer, a.attack - toBlocker, a.uid);
+          } else {
+            dealDamageToCreature(state, b, a.attack, a.uid);
+          }
+        });
+      }
       if (firstStrike(b) === isFirst) pending.push(() => dealDamageToCreature(state, a, b.attack, b.uid));
     }
     for (const fn of pending) fn();
@@ -1480,6 +1673,11 @@ const WEIGHTS = {
   flying: 1.5,
   firstStrike: 1.0,
   vigilance: 0.6,
+  lifesteal: 0.6, // 攻撃力1あたり
+  deathtouch: 2.0,
+  trample: 0.8,
+  ward: 1.5, // 加護が残っているとき
+  lastWill: 1.2,
   hand: 1.6, // 手札1枚
   quickHoldBonus: 1.2, // 瞬発カードを手札に持っていることの価値（相手ターンに使える）
 };
@@ -1501,6 +1699,12 @@ function creatureValue(c) {
   if (hasKeyword(card, 'flying')) v += WEIGHTS.flying * Math.min(atk, 3) / 2;
   if (hasKeyword(card, 'firstStrike')) v += WEIGHTS.firstStrike;
   if (hasKeyword(card, 'vigilance')) v += WEIGHTS.vigilance;
+  if (hasKeyword(card, 'lifesteal')) v += WEIGHTS.lifesteal * atk;
+  if (hasKeyword(card, 'deathtouch')) v += WEIGHTS.deathtouch;
+  if (hasKeyword(card, 'trample')) v += WEIGHTS.trample;
+  if (hasKeyword(card, 'lastWill')) v += WEIGHTS.lastWill;
+  if (c.shield) v += WEIGHTS.ward + 0.3 * atk;
+  if (card.token) v *= 0.9;
   return v;
 }
 
@@ -1717,8 +1921,8 @@ function fight(a, b) {
   const fb = hasKeyword(getCard(b.cardId), 'firstStrike');
   const aHp = a.hp - a.damage;
   const bHp = b.hp - b.damage;
-  const bDies = a.attack >= bHp;
-  const aDies = b.attack >= aHp;
+  const bDies = !b.shield && a.attack > 0 && (a.attack >= bHp || hasKeyword(getCard(a.cardId), 'deathtouch'));
+  const aDies = !a.shield && b.attack > 0 && (b.attack >= aHp || hasKeyword(getCard(b.cardId), 'deathtouch'));
   if (fa && !fb && bDies) return { aDies: false, bDies: true };
   if (fb && !fa && aDies) return { aDies: true, bDies: false };
   return { aDies, bDies };
@@ -1798,8 +2002,12 @@ const GLYPH = {
   c_rider: '騎', c_pikeman: '槍', c_hawk: '鷹', c_salamander: '蜥', c_golem: '岩', c_knight: '犬',
   c_general: '将', c_dragon: '竜', s_arrow: '矢', s_might: '力', s_rally: '鬨', s_fireball: '炎',
   s_insight: '泉', s_wave: '波', s_coin: '雫', s_mend: '癒',
+  c_imp: '鬼', c_bat: '蝠', c_viper: '蛇', c_sister: '祈', c_gravekeeper: '墓', c_archer: '弓', c_boar: '猪',
+  c_duelist: '決', c_assassin: '影', c_packleader: '長', c_paladin: '誓', c_warden: '守', c_phoenix: '鳳',
+  c_bloodlord: '血', c_colossus: '像', c_lionking: '獅', s_snare: '網', s_ward: '護', s_lance: '雷',
+  s_recall: '還', s_prayer: '祷', s_judgment: '断', t_pup: '仔', t_ash: '灰',
 };
-const DECK_TYPE = { swift: '速攻型', fortress: '防御型', balance: '標準型' };
+const DECK_TYPE = { swift: '速攻型', fortress: '防御型', balance: '標準型', night: '遺志・吸命型' };
 
 let game = null;
 let mode = 'cpu';
@@ -2063,6 +2271,11 @@ const MARK = {
   firstStrike: 'M14.5 3H21v6.5L10.5 20l-3-3-2 2L4 17.5l2-2L3 12.5 14.5 3zM3.5 19 5 20.5 3.5 22 2 20.5z',
   vigilance: 'M12 5C6 5 2 12 2 12s4 7 10 7 10-7 10-7-4-7-10-7zm0 11.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
   quick: 'M6 2h12v2c0 3-2 5-4.5 6.5v3C16 15 18 17 18 20v2H6v-2c0-3 2-5 4.5-6.5v-3C8 9 6 7 6 4V2zm2.2 2c.3 1.9 1.7 3.3 3.8 4.6 2.1-1.3 3.5-2.7 3.8-4.6H8.2z',
+  lifesteal: 'M12 2C9 7 6 10.5 6 14a6 6 0 0 0 12 0c0-3.5-3-7-6-12z',
+  deathtouch: 'M12 2a8 8 0 0 0-8 8c0 2.6 1.3 4.6 3 5.8V19a1 1 0 0 0 1 1h1v2h2v-2h2v2h2v-2h1a1 1 0 0 0 1-1v-3.2c1.7-1.2 3-3.2 3-5.8a8 8 0 0 0-8-8zM8.5 13a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm7 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4z',
+  trample: 'M3 5l7 7-7 7V5zm8 0l7 7-7 7V5zm8 0h2v14h-2z',
+  ward: 'M12 2 4 5v6c0 5 3.4 9.3 8 11 4.6-1.7 8-6 8-11V5l-8-3z',
+  lastWill: 'M12 2c1.5 2 3 3.5 3 5.5A3 3 0 0 1 12 10a3 3 0 0 1-3-2.5C9 5.5 10.5 4 12 2zM9 11h6v11H9z',
 };
 function markSvg(k) {
   const span = el('span');
@@ -2091,10 +2304,13 @@ function buildCard(card, stats = null) {
   title.append(el('div', `c-en${size}`, en));
   if (card.type === 'spell') title.append(el('div', 'c-type', 'SPELL'));
   node.append(art, el('div', 'c-shade'), el('div', 'c-corners'), title);
-  if (card.keywords?.length) {
+  // 場のクリーチャーは加護の状態を反映（使い切ったら薄く、呪文で得たら追加）
+  const kws = [...(card.keywords ?? [])];
+  if (stats?.shield && !kws.includes('ward')) kws.push('ward');
+  if (kws.length) {
     const marks = el('div', 'c-marks');
-    for (const k of card.keywords) {
-      const m = el('span', `mark kw-${k}`);
+    for (const k of kws) {
+      const m = el('span', `mark kw-${k}${k === 'ward' && stats && !stats.shield ? ' spent' : ''}`);
       m.append(markSvg(k));
       m.setAttribute('aria-label', KEYWORDS[k].name);
       marks.append(m);
@@ -2198,7 +2414,7 @@ function renderCreature(c) {
   const card = getCard(c.cardId);
   const left = c.hp - c.damage;
   const node = buildCard(card, {
-    atk: c.attack, hp: left,
+    atk: c.attack, hp: left, shield: !!c.shield,
     atkCls: c.attack > card.attack ? 'buffed' : '',
     hpCls: `${c.damage ? 'damaged' : ''} ${c.hp > card.hp ? 'buffed' : ''}`,
   });
@@ -2365,7 +2581,7 @@ function describe(e) {
   switch (e.type) {
     case 'gameStart': return `ゲーム開始。先攻は${nm(e.firstPlayer)}`;
     case 'turnStart': return `―― ${nm(e.player)}のターン（${e.turnOfPlayer}ターン目） ――`;
-    case 'summon': return `${nm(e.player)}：${e.name}を召喚`;
+    case 'summon': return e.token ? `${nm(e.player)}：${e.name}が現れた` : `${nm(e.player)}：${e.name}を召喚`;
     case 'castSpell': return `${nm(e.player)}：${e.name}を使用${e.response ? '（瞬発）' : ''}`;
     case 'attack': return `${nm(e.player)}：${e.attackers.length}体で攻撃`;
     case 'blocks': return e.blocks.length ? `${nm(e.player)}：${e.blocks.length}体でブロック` : `${nm(e.player)}：ブロックしない`;
@@ -2374,6 +2590,14 @@ function describe(e) {
     case 'heal': return `${nm(e.owner)}の${e.targetName}のダメージを${e.amount}回復`;
     case 'buff': return `${nm(e.owner)}の${e.targetName}が+${e.attack}/+${e.hp}${e.temporary ? '（このターン）' : ''}`;
     case 'buffAll': return `${nm(e.player)}のクリーチャーすべてが+${e.attack}/+${e.hp}（このターン）`;
+    case 'lifeGain': return `${e.sourceName ? `${e.sourceName}→` : ''}${nm(e.player)}のライフが${e.amount}回復`;
+    case 'shieldBroken': return `${nm(e.owner)}の${e.targetName}の加護がダメージを防いだ`;
+    case 'deathtouch': return `${e.sourceName}の必殺で${nm(e.owner)}の${e.targetName}が倒れる`;
+    case 'lastWill': return `${nm(e.owner)}の${e.name}の遺志が発動`;
+    case 'exhausted': return `${nm(e.owner)}の${e.targetName}は行動済みになった`;
+    case 'destroyEffect': return `${nm(e.owner)}の${e.targetName}を破壊`;
+    case 'shieldGranted': return `${nm(e.owner)}の${e.targetName}に加護`;
+    case 'bounced': return `${nm(e.owner)}の${e.targetName}が手札に戻った`;
     case 'gainMana': return `${nm(e.player)}：マナを${e.amount}得た`;
     case 'bonusCard': return `${nm(e.player)}は後攻なので「マナの雫」を受け取った`;
     case 'destroyed': return `${nm(e.owner)}の${e.name}は破壊された`;
@@ -2447,7 +2671,7 @@ $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logP
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
 showTitle();
 
-document.getElementById('build').textContent = "v0.3 build 59b5d41";
+document.getElementById('build').textContent = "v0.3 build 4a345c1";
 })();
 </script>
 </body>
