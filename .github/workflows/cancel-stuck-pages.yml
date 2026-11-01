@@ -1,0 +1,24 @@
+# GitHub Pages の公開処理が「実行中」のまま止まったときに、それを取り消すための手動実行ワークフロー。
+# Actions タブ →「Cancel stuck Pages deployment」→「Run workflow」で、止まっている処理のコミットIDを入力する。
+name: Cancel stuck Pages deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_version:
+        description: 止まっている公開処理のコミットID（エラーメッセージの "Please cancel ○○ first" の部分）
+        required: true
+
+permissions:
+  pages: write
+  contents: read
+
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel the stuck deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X POST "repos/${{ github.repository }}/pages/deployments/${{ inputs.build_version }}/cancel" && echo "取り消しました"
