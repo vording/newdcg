@@ -9,7 +9,7 @@ const block = (s, blocks) => {
   return applyAction(s, 1 - s.activePlayer, { type: 'declareBlocks', blocks });
 };
 
-test('吸命: 与えたダメージぶんライフ回復（初期ライフが上限）', () => {
+test('吸命: 与えたダメージぶんライフ回復（20を超えて増える）', () => {
   const s = newGame();
   s.players[0].life = 15;
   const bat = put(s, 0, 'c_bat'); // 1/2 天翔 吸命
@@ -21,7 +21,13 @@ test('吸命: 与えたダメージぶんライフ回復（初期ライフが上
   const b2 = put(t, 0, 'c_bat');
   ok(attack(t, b2.uid));
   ok(block(t, []));
-  assert.equal(t.players[0].life, 20); // 上限
+  assert.equal(t.players[0].life, 21); // 上限なし
+
+  const u = newGame({ lifeCap: 20 });
+  const b3 = put(u, 0, 'c_bat');
+  ok(attack(u, b3.uid));
+  ok(block(u, []));
+  assert.equal(u.players[0].life, 20); // lifeCap を設定すれば上限あり
 });
 
 test('必殺: ダメージを受けたクリーチャーは破壊される', () => {

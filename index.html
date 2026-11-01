@@ -610,6 +610,8 @@ const DEFAULT_CONFIG = Object.freeze({
   damageResetsAtTurnEnd: true,
   // 後攻がゲーム開始時（マリガン後）に受け取るカード（null = なし）。先攻有利の補正。
   secondPlayerBonusCard: 's_coin',
+  // ライフの上限（null = 上限なし。回復・吸命で初期ライフを超えて増やせる）
+  lifeCap: null,
   // Q9【決定】手札上限10枚。超えて引いたカードは墓地へ（null = 上限なし）
   handLimit: 10,
   // Q10【決定】ゲーム開始時に1回、好きな枚数を引き直せる
@@ -650,7 +652,7 @@ const KEYWORDS = Object.freeze({
   firstStrike: { name: '先制攻撃', text: '戦闘で、先制攻撃を持たないクリーチャーより先にダメージを与える。' },
   vigilance: { name: '番人', text: '攻撃しても行動済みにならない（相手のターンにブロックできる）。' },
   quick: { name: '瞬発', text: '相手の攻撃宣言後、ブロック宣言の前にも使える。' },
-  lifesteal: { name: '吸命', text: 'このクリーチャーが与えたダメージと同じだけ、自分のライフを回復する（最大20）。' },
+  lifesteal: { name: '吸命', text: 'このクリーチャーが与えたダメージと同じだけ、自分のライフを回復する。' },
   deathtouch: { name: '必殺', text: 'このクリーチャーからダメージを受けたクリーチャーは破壊される。' },
   trample: { name: '蹂躙', text: '攻撃してブロックされても、ブロックしたクリーチャーを倒して余ったダメージを相手プレイヤーに与える。' },
   ward: { name: '加護', text: '次に受けるダメージを1回だけ無効にする。' },
@@ -908,16 +910,11 @@ function sourceCreatureKeyword(state, source, kw) {
   return !!c && (CARDS[c.cardId].keywords ?? []).includes(kw);
 }
 
-/** 吸命：ダメージを与えたクリーチャーの持ち主のライフを回復（初期ライフが上限） */
+/** 吸命：ダメージを与えたクリーチャーの持ち主のライフを回復 */
 function applyLifesteal(state, source, amount) {
   if (!sourceCreatureKeyword(state, source, 'lifesteal')) return;
   const c = findCreature(state, source);
-  const p = state.players[c.owner];
-  const healed = Math.min(amount, Math.max(0, state.config.startingLife - p.life));
-  if (healed > 0) {
-    p.life += healed;
-    log(state, 'lifeGain', { player: c.owner, amount: healed, sourceName: c.name });
-  }
+  gainLife(state, c.owner, amount, c.name);
 }
 
 function dealDamageToCreature(state, creature, amount, source) {
@@ -944,9 +941,11 @@ function dealDamageToPlayer(state, playerIndex, amount, source) {
   applyLifesteal(state, source, amount);
 }
 
+/** ライフ回復。config.lifeCap が null なら上限なし */
 function gainLife(state, playerIndex, amount, sourceName = null) {
   const p = state.players[playerIndex];
-  const healed = Math.min(amount, Math.max(0, state.config.startingLife - p.life));
+  const cap = state.config.lifeCap;
+  const healed = cap == null ? amount : Math.min(amount, Math.max(0, cap - p.life));
   if (healed > 0) {
     p.life += healed;
     log(state, 'lifeGain', { player: playerIndex, amount: healed, sourceName });
@@ -1078,7 +1077,7 @@ const EFFECTS = {
       drawCards(state, playerIndex, params.amount);
     },
   },
-  /** 自分のライフを回復（初期ライフが上限）。draw があれば引く */
+  /** 自分のライフを回復。draw があれば引く */
   gainLife: {
     resolve(state, playerIndex, params, target, source) {
       gainLife(state, playerIndex, params.amount, typeof source === 'string' ? CARDS[source]?.name : null);
@@ -2695,7 +2694,7 @@ $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logP
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
 showTitle();
 
-document.getElementById('build').textContent = "v0.3 build dfd0265";
+document.getElementById('build').textContent = "v0.3 build bb7a20c";
 })();
 </script>
 </body>

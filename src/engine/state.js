@@ -56,16 +56,11 @@ function sourceCreatureKeyword(state, source, kw) {
   return !!c && (CARDS[c.cardId].keywords ?? []).includes(kw);
 }
 
-/** 吸命：ダメージを与えたクリーチャーの持ち主のライフを回復（初期ライフが上限） */
+/** 吸命：ダメージを与えたクリーチャーの持ち主のライフを回復 */
 function applyLifesteal(state, source, amount) {
   if (!sourceCreatureKeyword(state, source, 'lifesteal')) return;
   const c = findCreature(state, source);
-  const p = state.players[c.owner];
-  const healed = Math.min(amount, Math.max(0, state.config.startingLife - p.life));
-  if (healed > 0) {
-    p.life += healed;
-    log(state, 'lifeGain', { player: c.owner, amount: healed, sourceName: c.name });
-  }
+  gainLife(state, c.owner, amount, c.name);
 }
 
 export function dealDamageToCreature(state, creature, amount, source) {
@@ -92,9 +87,11 @@ export function dealDamageToPlayer(state, playerIndex, amount, source) {
   applyLifesteal(state, source, amount);
 }
 
+/** ライフ回復。config.lifeCap が null なら上限なし */
 export function gainLife(state, playerIndex, amount, sourceName = null) {
   const p = state.players[playerIndex];
-  const healed = Math.min(amount, Math.max(0, state.config.startingLife - p.life));
+  const cap = state.config.lifeCap;
+  const healed = cap == null ? amount : Math.min(amount, Math.max(0, cap - p.life));
   if (healed > 0) {
     p.life += healed;
     log(state, 'lifeGain', { player: playerIndex, amount: healed, sourceName });

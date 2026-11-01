@@ -71,7 +71,7 @@ export const EFFECTS = {
       drawCards(state, playerIndex, params.amount);
     },
   },
-  /** 自分のライフを回復（初期ライフが上限）。draw があれば引く */
+  /** 自分のライフを回復。draw があれば引く */
   gainLife: {
     resolve(state, playerIndex, params, target, source) {
       gainLife(state, playerIndex, params.amount, typeof source === 'string' ? CARDS[source]?.name : null);
