@@ -509,7 +509,7 @@ function renderCommand(me) {
   const aw = game.awaiting;
 
   if (game.winner !== null) {
-    msg.textContent = '決着！';
+    msg.textContent = '決着';
   } else if (!isHumanTurn()) {
     msg.textContent = `${nm(aw.player)}が考えています`;
     msg.classList.add('thinking');
@@ -523,7 +523,7 @@ function renderCommand(me) {
     const n = ui.mulligan.size;
     actions.append(button(n ? `${n}枚引き直す` : 'このまま始める', () => act({ type: 'mulligan', handIndices: [...ui.mulligan] }), 'btn-gold'));
   } else if (aw.step === 'response') {
-    msg.textContent = `${nm(game.activePlayer)}が${game.combat.attackers.length}体で攻撃してきた！`;
+    msg.textContent = `${nm(game.activePlayer)}が${game.combat.attackers.length}体で攻撃してきた`;
     sub.textContent = 'ブロックの前に「対応」カードを1枚使えます。';
     actions.append(button('対応しない', () => act({ type: 'pass' }), 'btn-gold'));
   } else if (aw.step === 'main') {
@@ -535,7 +535,7 @@ function renderCommand(me) {
     if (game.players[aw.player].hand.some((id) => hasKeyword(getCard(id), 'quick'))) sub.textContent += '（対応カードはマナを残すと相手の攻撃時にも使える）';
     const all = button('全員で攻撃', () => { ready.forEach((c) => ui.attackers.add(c.uid)); render(); });
     all.disabled = ready.length === 0 || ui.attackers.size === ready.length;
-    const atk = button(ui.attackers.size ? `突撃！（${ui.attackers.size}体）` : '突撃！', () => act({ type: 'attack', attackers: [...ui.attackers] }), 'btn-crimson');
+    const atk = button(ui.attackers.size ? `攻撃する（${ui.attackers.size}体）` : '攻撃する', () => act({ type: 'attack', attackers: [...ui.attackers] }), 'btn-crimson');
     atk.disabled = ui.attackers.size === 0;
     actions.append(all, atk, button('ターン終了', () => act({ type: 'endTurn' }), ui.attackers.size ? '' : 'btn-gold'));
   } else if (aw.step === 'block') {
@@ -568,9 +568,9 @@ function renderOverlay() {
   ov.textContent = '';
   const won = game.winner === 0;
   const box = el('div', `result ${mode === 'hotseat' || won ? 'win' : 'lose'}`);
-  const title = game.winner === 'draw' ? '引き分け' : mode === 'hotseat' ? `${game.players[game.winner].name}の勝利` : won ? '勝利！' : '敗北…';
+  const title = game.winner === 'draw' ? '引き分け' : mode === 'hotseat' ? `${game.players[game.winner].name}の勝利` : won ? '勝利' : '敗北';
   box.append(el('h2', '', title));
-  box.append(el('p', '', mode === 'cpu' && won ? '見事な勝利だ。' : mode === 'cpu' ? 'CPUの勝ち。もう一度挑もう。' : '見事な戦いだった。'));
+  box.append(el('p', '', mode === 'cpu' && won ? '見事な勝利だ。' : mode === 'cpu' ? 'CPUの勝ち。次の一局で。' : '見事な戦いだった。'));
   box.append(el('p', '', `${Math.ceil(game.turn / 2)}ターンで決着　あなた：${deckNames[0]}／相手：${deckNames[1]}`));
   const actions = el('div', 'actions');
   actions.append(button('もう一度', startGame, 'btn-gold'), button('タイトルへ', showTitle));
@@ -589,7 +589,7 @@ function describe(e) {
     case 'turnStart': return `―― ${nm(e.player)}のターン（${e.turnOfPlayer}ターン目） ――`;
     case 'summon': return `${nm(e.player)}：${e.name}を召喚`;
     case 'castSpell': return `${nm(e.player)}：${e.name}を使用${e.response ? '（対応）' : ''}`;
-    case 'attack': return `${nm(e.player)}：${e.attackers.length}体で突撃`;
+    case 'attack': return `${nm(e.player)}：${e.attackers.length}体で攻撃`;
     case 'blocks': return e.blocks.length ? `${nm(e.player)}：${e.blocks.length}体でブロック` : `${nm(e.player)}：ブロックしない`;
     case 'damage': return `${e.sourceName ? `${e.sourceName}→` : ''}${nm(e.owner)}の${e.targetName}に${e.amount}ダメージ`;
     case 'playerDamage': return `${e.sourceName ? `${e.sourceName}→` : ''}${nm(e.player)}に${e.amount}ダメージ`;

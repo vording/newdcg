@@ -5,32 +5,34 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>カードバトル（タイトル未定）</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Shippori+Mincho+B1:wght@600;800&family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Shippori+Mincho+B1:wght@500;600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap');
 
-/* 夜の軍議卓：紺の卓、金の王冠、青いマナ（チャージ）、赤い攻撃。カードは羊皮紙。
+/* 夜の書斎と戦卓：炭色に近い紺の卓、くすんだ真鍮、象牙色の文字。
+   見出しは明朝、数字と英字は碑文風のセリフ体。彩度と光沢を抑え、落ち着いた大人のトーンに統一する。
    単一のダークな世界観で統一する（ライト/ダークの切り替えはしない）。 */
 :root {
-  --night: #0e1226;      /* 背景 */
-  --felt: #182044;       /* 卓 */
-  --felt-hi: #232d5c;    /* 卓の明るい面 */
-  --line: #34407a;       /* 罫線 */
-  --text: #e8ebf7;       /* 卓上の文字 */
-  --muted: #9ba5cc;
-  --gold: #eab84a;       /* 王冠・選択・主要ボタン */
-  --gold-deep: #a9761c;
-  --gold-ink: #2a1d04;
-  --parchment: #f3e8cf;  /* カード面 */
-  --parchment-2: #e6d6b0;
-  --ink: #2b2318;        /* カード上の文字 */
+  --night: #0b0d12;      /* 背景 */
+  --felt: #14171f;       /* 卓 */
+  --felt-hi: #1b1f29;    /* 卓の明るい面 */
+  --line: #2c313d;       /* 罫線 */
+  --text: #e7e2d6;       /* 象牙色の文字 */
+  --muted: #918b7d;
+  --gold: #c2a46b;       /* 真鍮：選択・主要ボタン */
+  --gold-deep: #7a6232;
+  --gold-ink: #17140d;
+  --parchment: #efe6d2;
+  --parchment-2: #ddd0b2;
+  --ink: #2b2318;
   --ink-muted: #6c5d45;
-  --charge: #5cc6ff;     /* マナ */
-  --crimson: #e2564a;    /* 攻撃・危険 */
-  --verdant: #4fcf8f;    /* HP・使える */
-  --violet: #a98bff;     /* 一時強化・飛行 */
-  --shadow: rgba(0, 0, 0, .45);
+  --charge: #7aa9c4;     /* マナ（くすんだ青） */
+  --crimson: #b5513f;    /* 攻撃・危険 */
+  --verdant: #6f9f80;    /* 使える */
+  --violet: #9283b8;     /* 一時強化 */
+  --shadow: rgba(0, 0, 0, .5);
 
-  --font-display: 'Dela Gothic One', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+  --font-display: 'Shippori Mincho B1', 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif;
   --font-title: 'Cinzel', 'Times New Roman', serif;
+  --font-num: 'Cinzel', 'Times New Roman', serif;
   --font-ja-name: 'Shippori Mincho B1', 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif;
   --font-body: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', system-ui, sans-serif;
   --cw-hand: 126px;
@@ -41,7 +43,7 @@
 html, body { height: 100%; }
 body {
   margin: 0;
-  background: radial-gradient(1200px 600px at 50% -10%, #1d2756 0%, var(--night) 60%) fixed, var(--night);
+  background: radial-gradient(1200px 700px at 50% -20%, #1a1e28 0%, var(--night) 65%) fixed, var(--night);
   color: var(--text);
   font-family: var(--font-body);
   font-size: 14px;
@@ -381,6 +383,122 @@ button { font: inherit; color: inherit; }
 /* 消えていくカードの残像（破壊・スペル使用の演出） */
 .card.ghost { position: fixed; margin: 0; z-index: 15; pointer-events: none; transform: none; }
 
+
+/* ==========================================================================
+   大人っぽいトーンへの調整（上の各ルールを上書き）
+   ========================================================================== */
+body { letter-spacing: .02em; }
+
+/* ボタン：角を締め、立体の段差と強い光沢をやめる */
+.btn { border-radius: 4px; font-weight: 500; letter-spacing: .08em; padding: 8px 16px; border-color: var(--line); background: var(--felt-hi); }
+.btn:hover:not(:disabled) { background: #232836; }
+.btn-gold { background: var(--gold); border-color: var(--gold); color: var(--gold-ink); box-shadow: none; font-weight: 700; }
+.btn-gold:hover:not(:disabled) { background: #d1b47c; }
+.btn-crimson { background: transparent; border-color: var(--crimson); color: #e2a597; box-shadow: none; }
+.btn-crimson:hover:not(:disabled) { background: rgba(181, 81, 63, .15); }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-big { font-family: var(--font-display); font-weight: 600; font-size: 18px; letter-spacing: .4em; padding: 12px 44px 12px 50px; }
+
+/* タイトル：細い線の王冠、明朝のロゴ、揺れない */
+.crest { filter: none; animation: none; opacity: .9; }
+.crest svg path { fill: none; stroke: var(--gold); stroke-width: 2.5; }
+.crest svg circle { fill: none; stroke: var(--gold); stroke-width: 2.5; }
+.crest svg rect { fill: var(--gold); opacity: .8; }
+.logo { gap: 14px; margin-top: 4px; }
+.logo-small { font-family: var(--font-title); font-weight: 500; font-size: 13px; letter-spacing: .5em; color: var(--muted); }
+.logo-big, .logo-tbd {
+  font-family: var(--font-display); font-weight: 600; font-size: clamp(36px, 8vw, 64px); letter-spacing: .3em;
+  background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--text); text-shadow: none;
+}
+.logo::after { content: ''; display: block; width: 72px; height: 1px; margin: 4px auto 0; background: var(--gold); }
+.tagline { font-family: var(--font-display); font-size: 14px; letter-spacing: .2em; }
+.setup legend { letter-spacing: .3em; font-weight: 500; }
+.deck-choice .face { border-width: 1px; border-radius: 6px; background: var(--felt); }
+.deck-choice input:checked + .face { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
+.deck-choice .dname { font-family: var(--font-display); font-weight: 600; font-size: 20px; letter-spacing: .15em; }
+.deck-choice .dtype { color: var(--gold); letter-spacing: .3em; font-size: 10px; }
+.seg span { font-weight: 500; letter-spacing: .1em; background: var(--felt); }
+.seg label:first-of-type span { border-radius: 4px 0 0 4px; }
+.seg label:last-of-type span { border-radius: 0 4px 4px 0; }
+.seg input:checked + span { background: transparent; color: var(--gold); border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
+.howto { border-radius: 6px; background: var(--felt); }
+
+/* 対戦画面 */
+.topbar { background: rgba(11, 13, 18, .9); }
+.topbar-title { font-family: var(--font-display); font-weight: 600; color: var(--text); letter-spacing: .3em; font-size: 14px; }
+.seat .who { font-family: var(--font-display); font-weight: 600; letter-spacing: .15em; }
+.seat .who .turn-badge { background: transparent; color: var(--gold); border: 1px solid var(--gold); border-radius: 2px; font-weight: 500; letter-spacing: .15em; }
+.life {
+  background: radial-gradient(circle at 50% 35%, #2a1e1c, #140f0f 75%);
+  border: 1.5px solid #8c4a3c; color: var(--text);
+  font-family: var(--font-num); font-weight: 700; font-size: 22px;
+  box-shadow: 0 0 0 3px var(--felt), 0 0 0 4px rgba(140, 74, 60, .5), 0 4px 10px var(--shadow);
+}
+.life small { letter-spacing: .2em; }
+.life.low { border-color: var(--crimson); animation: none; box-shadow: 0 0 0 3px var(--felt), 0 0 0 4px var(--crimson), 0 0 14px rgba(181, 81, 63, .45); }
+.life.targetable { border-color: var(--gold); box-shadow: 0 0 0 3px var(--felt), 0 0 0 5px var(--gold); }
+.pip { width: 11px; height: 11px; border-width: 1.5px; border-radius: 1px; }
+.pip.full { box-shadow: none; }
+.mana-num { font-family: var(--font-num); font-weight: 700; letter-spacing: .05em; }
+.battlefield {
+  background: linear-gradient(180deg, rgba(255,255,255,.015), rgba(255,255,255,0)), var(--felt);
+  border-radius: 8px; box-shadow: inset 0 0 60px rgba(0,0,0,.5);
+}
+.midline { height: 1px; opacity: .5; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+.command { border-radius: 6px; background: rgba(20, 23, 31, .92); }
+.command .msg { font-family: var(--font-display); font-weight: 600; letter-spacing: .12em; font-size: 15px; }
+.thinking::after { animation-duration: 1.6s; }
+
+/* カード：宝石の光沢と彩度を抑え、数字はセリフ体に */
+.card { border-radius: .5em; }
+.card .c-art, .card .c-shade { border-radius: .35em; }
+.card .gem {
+  font-family: var(--font-num); font-weight: 900; font-size: calc(var(--cw) * .12);
+  -webkit-text-stroke: 0; text-shadow: 0 .06em .12em rgba(0,0,0,.8);
+  border-width: calc(var(--cw) * .012);
+  box-shadow: 0 0 0 calc(var(--cw) * .008) #0a0a0a, 0 .15em .35em rgba(0,0,0,.6), inset 0 -.2em .35em rgba(0,0,0,.45);
+}
+.card .gem.cost { background: radial-gradient(circle at 40% 30%, #4f7ea0, #1f3d58 70%); }
+.card .gem.atk { background: radial-gradient(circle at 40% 30%, #9c4a3d, #4c1c16 70%); }
+.card .gem.hp { background: radial-gradient(circle at 40% 30%, #4f8063, #1d3a2a 70%); }
+.card .gem.hp.damaged { background: radial-gradient(circle at 40% 30%, #b06a3c, #4f2610 70%); }
+.card .gem.buffed { color: #e6dcff; box-shadow: 0 0 0 calc(var(--cw) * .008) #0a0a0a, 0 0 .45em rgba(146, 131, 184, .8); }
+.card .c-en { font-weight: 700; letter-spacing: .06em; -webkit-text-stroke: 0; text-shadow: 0 .05em .3em rgba(0,0,0,.95), 0 0 .8em rgba(0,0,0,.6); }
+.card .c-type { letter-spacing: .4em; color: rgba(231, 226, 214, .6); }
+.card .mark { background: rgba(12, 14, 20, .85); border-width: .08em; }
+.card .mark svg { fill: var(--text) !important; opacity: .9; }
+.card.r-epic { --glow: rgba(146, 131, 184, .25); }
+.card.r-legendary { --glow: rgba(181, 81, 63, .35); }
+.card.r-legendary::after { animation-duration: 6s; opacity: .6; }
+.card.playable, .card.selectable { outline-width: .14em; outline-color: var(--verdant); }
+.card.selected { outline-width: .2em; outline-color: var(--gold); }
+.card.targetable { outline-width: .2em; animation-duration: 1.4s; }
+.card.attacking { outline-width: .2em; outline-color: var(--crimson); }
+.card .ribbon { font-weight: 500; letter-spacing: .12em; background: rgba(11, 13, 18, .88); }
+
+/* 詳細・一覧・結果・ログ */
+.preview .info { border-radius: 6px; background: rgba(14, 16, 22, .97); }
+.preview .info .kw svg { fill: var(--gold); }
+.gallery { border-radius: 8px; }
+.gallery h2 { font-family: var(--font-display); font-weight: 600; letter-spacing: .3em; color: var(--text); }
+.gallery h3 { font-family: var(--font-title); letter-spacing: .3em; font-weight: 500; }
+.result { border-radius: 8px; border-width: 1px; border-color: var(--gold-deep); }
+.result h2 { font-family: var(--font-display); font-weight: 600; font-size: 44px; letter-spacing: .4em; padding-left: .4em; }
+.result.win h2 { color: var(--gold); }
+.log-panel li.turn { color: var(--gold); letter-spacing: .1em; }
+.card.back {
+  background:
+    repeating-linear-gradient(45deg, rgba(194, 164, 107, .14) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(-45deg, rgba(194, 164, 107, .14) 0 1px, transparent 1px 7px),
+    #161a22;
+  box-shadow: inset 0 0 0 1px var(--gold-deep), inset 0 0 0 3px #161a22, inset 0 0 0 4px rgba(194, 164, 107, .35), 0 3px 6px rgba(0,0,0,.5);
+  border-radius: 4px;
+}
+@media (max-width: 640px) {
+  .command .actions .btn { letter-spacing: .02em; padding: 9px 6px; white-space: nowrap; font-size: 13px; }
+  .btn-big { letter-spacing: .25em; padding: 12px 32px 12px 36px; }
+}
+
 </style>
 </head>
 <body>
@@ -390,7 +508,7 @@ button { font: inherit; color: inherit; }
       <div class="crest" aria-hidden="true">
         <svg viewBox="0 0 120 80" width="120" height="80"><path d="M10 70 L18 22 L42 46 L60 8 L78 46 L102 22 L110 70 Z" fill="var(--gold)" stroke="var(--gold-deep)" stroke-width="3" stroke-linejoin="round"/><circle cx="18" cy="20" r="6" fill="var(--gold)"/><circle cx="60" cy="7" r="6" fill="var(--gold)"/><circle cx="102" cy="20" r="6" fill="var(--gold)"/><rect x="10" y="66" width="100" height="8" rx="2" fill="var(--gold-deep)"/></svg>
       </div>
-      <h1 class="logo"><span class="logo-small">1対1カードバトル</span><span class="logo-big logo-tbd">タイトル未定</span></h1>
+      <h1 class="logo"><span class="logo-small">A Duel of Cards</span><span class="logo-big logo-tbd">タイトル未定</span></h1>
       <p class="tagline">マナを溜め、軍勢を率い、相手のライフを削りきれ。</p>
 
       <form id="setup" class="setup">
@@ -435,7 +553,7 @@ button { font: inherit; color: inherit; }
   <!-- 対戦画面 -->
   <section id="game" class="screen game-screen" hidden>
     <header class="topbar">
-      <button id="menuBtn" type="button" class="btn btn-ghost">≡ タイトル</button>
+      <button id="menuBtn" type="button" class="btn btn-ghost">タイトルへ</button>
       <div class="topbar-title">タイトル未定</div>
       <div id="turnInfo" class="turn-info"></div>
       <button id="logBtn" type="button" class="btn btn-ghost">記録</button>
@@ -2171,7 +2289,7 @@ function renderCommand(me) {
   const aw = game.awaiting;
 
   if (game.winner !== null) {
-    msg.textContent = '決着！';
+    msg.textContent = '決着';
   } else if (!isHumanTurn()) {
     msg.textContent = `${nm(aw.player)}が考えています`;
     msg.classList.add('thinking');
@@ -2185,7 +2303,7 @@ function renderCommand(me) {
     const n = ui.mulligan.size;
     actions.append(button(n ? `${n}枚引き直す` : 'このまま始める', () => act({ type: 'mulligan', handIndices: [...ui.mulligan] }), 'btn-gold'));
   } else if (aw.step === 'response') {
-    msg.textContent = `${nm(game.activePlayer)}が${game.combat.attackers.length}体で攻撃してきた！`;
+    msg.textContent = `${nm(game.activePlayer)}が${game.combat.attackers.length}体で攻撃してきた`;
     sub.textContent = 'ブロックの前に「対応」カードを1枚使えます。';
     actions.append(button('対応しない', () => act({ type: 'pass' }), 'btn-gold'));
   } else if (aw.step === 'main') {
@@ -2197,7 +2315,7 @@ function renderCommand(me) {
     if (game.players[aw.player].hand.some((id) => hasKeyword(getCard(id), 'quick'))) sub.textContent += '（対応カードはマナを残すと相手の攻撃時にも使える）';
     const all = button('全員で攻撃', () => { ready.forEach((c) => ui.attackers.add(c.uid)); render(); });
     all.disabled = ready.length === 0 || ui.attackers.size === ready.length;
-    const atk = button(ui.attackers.size ? `突撃！（${ui.attackers.size}体）` : '突撃！', () => act({ type: 'attack', attackers: [...ui.attackers] }), 'btn-crimson');
+    const atk = button(ui.attackers.size ? `攻撃する（${ui.attackers.size}体）` : '攻撃する', () => act({ type: 'attack', attackers: [...ui.attackers] }), 'btn-crimson');
     atk.disabled = ui.attackers.size === 0;
     actions.append(all, atk, button('ターン終了', () => act({ type: 'endTurn' }), ui.attackers.size ? '' : 'btn-gold'));
   } else if (aw.step === 'block') {
@@ -2230,9 +2348,9 @@ function renderOverlay() {
   ov.textContent = '';
   const won = game.winner === 0;
   const box = el('div', `result ${mode === 'hotseat' || won ? 'win' : 'lose'}`);
-  const title = game.winner === 'draw' ? '引き分け' : mode === 'hotseat' ? `${game.players[game.winner].name}の勝利` : won ? '勝利！' : '敗北…';
+  const title = game.winner === 'draw' ? '引き分け' : mode === 'hotseat' ? `${game.players[game.winner].name}の勝利` : won ? '勝利' : '敗北';
   box.append(el('h2', '', title));
-  box.append(el('p', '', mode === 'cpu' && won ? '見事な勝利だ。' : mode === 'cpu' ? 'CPUの勝ち。もう一度挑もう。' : '見事な戦いだった。'));
+  box.append(el('p', '', mode === 'cpu' && won ? '見事な勝利だ。' : mode === 'cpu' ? 'CPUの勝ち。次の一局で。' : '見事な戦いだった。'));
   box.append(el('p', '', `${Math.ceil(game.turn / 2)}ターンで決着　あなた：${deckNames[0]}／相手：${deckNames[1]}`));
   const actions = el('div', 'actions');
   actions.append(button('もう一度', startGame, 'btn-gold'), button('タイトルへ', showTitle));
@@ -2251,7 +2369,7 @@ function describe(e) {
     case 'turnStart': return `―― ${nm(e.player)}のターン（${e.turnOfPlayer}ターン目） ――`;
     case 'summon': return `${nm(e.player)}：${e.name}を召喚`;
     case 'castSpell': return `${nm(e.player)}：${e.name}を使用${e.response ? '（対応）' : ''}`;
-    case 'attack': return `${nm(e.player)}：${e.attackers.length}体で突撃`;
+    case 'attack': return `${nm(e.player)}：${e.attackers.length}体で攻撃`;
     case 'blocks': return e.blocks.length ? `${nm(e.player)}：${e.blocks.length}体でブロック` : `${nm(e.player)}：ブロックしない`;
     case 'damage': return `${e.sourceName ? `${e.sourceName}→` : ''}${nm(e.owner)}の${e.targetName}に${e.amount}ダメージ`;
     case 'playerDamage': return `${e.sourceName ? `${e.sourceName}→` : ''}${nm(e.player)}に${e.amount}ダメージ`;
@@ -2331,7 +2449,7 @@ $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logP
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
 showTitle();
 
-document.getElementById('build').textContent = "v0.3 build 882e9c2";
+document.getElementById('build').textContent = "v0.3 build 5f64b48";
 })();
 </script>
 </body>
