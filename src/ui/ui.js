@@ -860,7 +860,7 @@ $('#galleryBtn').addEventListener('click', showGallery);
 for (const b of document.querySelectorAll('.sound-toggle')) b.addEventListener('click', toggleSound);
 refreshSoundButtons();
 // 最初の操作で音を使えるようにし、ボタンには軽いクリック音を付ける
-for (const ev of ['pointerdown', 'keydown', 'touchstart']) document.addEventListener(ev, unlockAudio, { passive: true });
+for (const ev of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) document.addEventListener(ev, unlockAudio, { passive: true, capture: true });
 document.addEventListener('click', (e) => { if (e.target.closest('button:not(.sound-toggle)')) sfx('click'); });
 // カードの長押しで画像保存などのメニューを出さない
 document.addEventListener('contextmenu', (e) => { if (e.target.closest('.card, .preview, .gallery')) e.preventDefault(); });

@@ -30,11 +30,23 @@ export function unlockAudio() {
       const d = noiseBuf.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     }
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+    // iPhone：マナーモード（消音スイッチ）でも効果音が鳴るよう「再生」用の音声セッションにする（iOS 17+）
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* 非対応 */ }
+    if (audioCtx.state !== 'running') audioCtx.resume().catch(() => {});
+    // iOS は操作の中で実際に音を1回出さないと解錠されないことがあるので、無音を一瞬鳴らす
+    const src = audioCtx.createBufferSource();
+    src.buffer = audioCtx.createBuffer(1, 1, 22050);
+    src.connect(audioCtx.destination);
+    src.start(0);
   } catch { audioCtx = null; }
 }
 
-function ready() { return soundOn && audioCtx && audioCtx.state === 'running'; }
+function ready() {
+  if (!soundOn || !audioCtx) return false;
+  // 画面を切り替えた後などで止まっていたら再開を試みる
+  if (audioCtx.state !== 'running') { audioCtx.resume().catch(() => {}); return false; }
+  return true;
+}
 
 /** 音程つきの短い音 */
 function tone({ freq = 440, to = null, type = 'sine', dur = 0.15, vol = 0.3, delay = 0, attack = 0.005 }) {
