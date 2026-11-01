@@ -114,6 +114,7 @@ function creatureByUid(uid) {
 }
 
 function render() {
+  hidePreview();
   updateFeed();
   const me = viewer();
   const opp = 1 - me;
@@ -200,54 +201,82 @@ function renderHand(pi) {
 
 // --- カード ---
 
-/** カード面を作る（参考デザイン準拠）。stats を渡すとクリーチャーの攻撃力・HPを差し替えて表示する */
+// キーワード能力のマーク（24×24のSVGパス。固定文字列）
+const MARK = {
+  haste: 'M13 2 4 14h6l-1 8 9-12h-6l1-8z',
+  flying: 'M2 15c5-1 8-5 10-11 1 4 0 7-2 9 3-1 7-1 11 0-3 2-7 3-10 3 2 1 5 2 8 4-6 1-12 0-17-5z',
+  firstStrike: 'M14.5 3H21v6.5L10.5 20l-3-3-2 2L4 17.5l2-2L3 12.5 14.5 3zM3.5 19 5 20.5 3.5 22 2 20.5z',
+  vigilance: 'M12 5C6 5 2 12 2 12s4 7 10 7 10-7 10-7-4-7-10-7zm0 11.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm0-2.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+  quick: 'M6 2h12v2c0 3-2 5-4.5 6.5v3C16 15 18 17 18 20v2H6v-2c0-3 2-5 4.5-6.5v-3C8 9 6 7 6 4V2zm2.2 2c.3 1.9 1.7 3.3 3.8 4.6 2.1-1.3 3.5-2.7 3.8-4.6H8.2z',
+};
+function markSvg(k) {
+  const span = el('span');
+  span.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${MARK[k] ?? ''}"/></svg>`;
+  return span.firstChild;
+}
+
+/** カード面を作る（全面イラスト＋英語名）。stats を渡すとクリーチャーの攻撃力・HPを差し替えて表示する */
 function buildCard(card, stats = null) {
   const node = el('div', `card ${card.type} r-${card.rarity}`);
   const art = el('div', 'c-art');
-  art.append(el('div', 'c-art-in', GLYPH[card.id] ?? ''));
-  const name = el('div', 'c-name');
+  art.append(el('div', 'c-glyph', GLYPH[card.id] ?? ''));
+  const title = el('div', 'c-title');
   const en = card.nameEn ?? card.name;
-  name.append(el('span', `en${en.length > 14 ? ' xlong' : en.length > 11 ? ' long' : ''}`, en), el('span', 'ja', card.name));
-  const body = el('div', 'c-body');
+  const longestWord = Math.max(...en.split(' ').map((w) => w.length));
+  const size = longestWord >= 12 ? ' xlong' : longestWord >= 9 || en.length > 13 ? ' long' : '';
+  title.append(el('div', `c-en${size}`, en));
+  if (card.type === 'spell') title.append(el('div', 'c-type', 'SPELL'));
+  node.append(art, el('div', 'c-shade'), title);
   if (card.keywords?.length) {
-    const kws = el('div', 'c-kws');
+    const marks = el('div', 'c-marks');
     for (const k of card.keywords) {
-      const chip = el('span', `c-kw kw-${k}`, KEYWORDS[k].name);
-      chip.title = KEYWORDS[k].text;
-      kws.append(chip);
+      const m = el('span', `mark kw-${k}`);
+      m.append(markSvg(k));
+      m.setAttribute('aria-label', KEYWORDS[k].name);
+      marks.append(m);
     }
-    body.append(kws);
+    node.append(marks);
   }
-  if (card.text) body.append(el('div', 'c-text', card.text));
-  node.append(art, name, body, el('div', 'c-foot', card.type === 'spell' ? 'SPELL' : ''));
   node.append(el('div', 'gem cost', String(card.cost)));
   if (card.type === 'creature') {
     const s = stats ?? { atk: card.attack, hp: card.hp, atkCls: '', hpCls: '' };
-    const atk = el('div', `gem atk ${s.atkCls}`, String(s.atk));
-    const hp = el('div', `gem hp ${s.hpCls}`, String(s.hp));
-    atk.title = `攻撃力 ${s.atk}`;
-    hp.title = `HP ${s.hp}`;
-    node.append(atk, hp);
+    node.append(el('div', `gem atk ${s.atkCls}`, String(s.atk)), el('div', `gem hp ${s.hpCls}`, String(s.hp)));
   }
-  node.title = [`${card.nameEn ?? ''}（${card.name}）`, `${RARITIES[card.rarity].name}`, ...(card.keywords ?? []).map((k) => `${KEYWORDS[k].name}：${KEYWORDS[k].text}`), card.text].filter(Boolean).join('\n');
+  node.setAttribute('aria-label', `${card.name}（${en}）コスト${card.cost}`);
   attachPreview(node, card, stats);
   return node;
 }
 
-// --- カード詳細（PCはマウスオーバー、スマホは長押し） ---
+// --- カード詳細（マウスオーバー／長押しで、大きなカード＋日本語名・能力・効果） ---
 let previewTimer = null;
 let suppressClick = false;
 function showPreview(card, stats) {
   const pv = $('#preview');
   pv.textContent = '';
-  const big = buildCardStatic(card, stats);
-  pv.append(big, el('div', 'rar', `${RARITIES[card.rarity].name}・${card.type === 'creature' ? 'クリーチャー' : 'スペル'}`));
+  const info = el('div', 'info');
+  info.append(el('div', 'ja', card.name), el('div', 'en', card.nameEn ?? ''));
+  info.append(el('div', 'meta', `${RARITIES[card.rarity].name}・${card.type === 'creature' ? 'クリーチャー' : 'スペル'}・コスト${card.cost}`));
+  if (card.type === 'creature') {
+    const s = stats ?? { atk: card.attack, hp: card.hp };
+    info.append(el('div', 'stat-line', `攻撃力 ${s.atk}／HP ${s.hp}${stats && (s.atk !== card.attack || s.hp !== card.hp) ? `（元は ${card.attack}／${card.hp}）` : ''}`));
+  }
+  for (const k of card.keywords ?? []) {
+    const row = el('div', 'kw');
+    const txt = el('div');
+    txt.append(el('b', '', KEYWORDS[k].name), document.createTextNode(`：${KEYWORDS[k].text}`));
+    row.append(markSvg(k), txt);
+    info.append(row);
+  }
+  if (card.text) info.append(el('div', 'effect', card.text));
+  pv.append(buildCardStatic(card, stats), info);
   pv.hidden = false;
 }
 function hidePreview() { $('#preview').hidden = true; }
+// 画面が切り替わったときに詳細表示が残らないようにする
+document.addEventListener('click', () => { if (!suppressClick) hidePreview(); });
 function attachPreview(node, card, stats) {
   if (previewDisabled) return;
-  node.addEventListener('mouseenter', () => { if (matchMedia('(hover: hover) and (min-width: 1000px)').matches) showPreview(card, stats); });
+  node.addEventListener('mouseenter', () => { if (matchMedia('(hover: hover)').matches) showPreview(card, stats); });
   node.addEventListener('mouseleave', hidePreview);
   node.addEventListener('touchstart', () => {
     clearTimeout(previewTimer);
@@ -520,7 +549,7 @@ function showGallery() {
   const box = el('div', 'gallery');
   const head = el('div', 'gallery-head');
   head.append(el('h2', '', 'カード一覧'), button('閉じる', () => { ov.hidden = true; }));
-  box.append(head, el('p', 'hint', '枠の素材と色はレア度で変わります。強いカードほどレア度が高くなっています。（イラストは未作成）'));
+  box.append(head, el('p', 'hint', 'カーソルを合わせる（スマホは長押し）と日本語名と効果が見られます。縁の色はレア度。イラストは未作成。'));
   const inDecks = new Set(Object.values(DECKS).flatMap((d) => Object.keys(d.counts)));
   const all = Object.values(CARDS).filter((c) => inDecks.has(c.id) || c.token);
   for (const r of Object.keys(RARITIES).sort((a, b) => RARITIES[b].order - RARITIES[a].order)) {
@@ -530,7 +559,7 @@ function showGallery() {
     const grid = el('div', 'gallery-grid');
     for (const c of cards) {
       const cell = el('div');
-      cell.append(buildCardStatic(c), el('div', 'meta', c.token ? '後攻が受け取る特別なカード' : ''));
+      cell.append(buildCard(c));
       grid.append(cell);
     }
     box.append(grid);
