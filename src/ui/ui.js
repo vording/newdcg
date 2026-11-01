@@ -120,6 +120,7 @@ function render() {
   const me = viewer();
   const opp = 1 - me;
   const table = $('#table');
+  const before = snapshotCards(table);
   table.textContent = '';
   table.append(
     renderSeat(opp, false),
@@ -129,10 +130,85 @@ function render() {
     renderHand(me),
     renderSeat(me, true),
   );
+  animateCards(table, before);
   $('#turnInfo').textContent = game.turn > 0 ? `ターン ${Math.ceil(game.turn / 2)}・${nm(game.activePlayer)}の番` : '準備中';
   renderLog();
   renderOverlay();
   scheduleCpu();
+}
+
+// ---------------------------------------------------------------------------
+// カードの動き（描き直しの前後で位置を比べ、瞬間移動せずに滑らかに動かす）
+// ---------------------------------------------------------------------------
+
+let lastPlayed = null; // 直前に手札から使ったカードの位置（召喚されたクリーチャーの出発点にする）
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function snapshotCards(root) {
+  const map = new Map();
+  for (const el of root.querySelectorAll('[data-key]')) map.set(el.dataset.key, { el, rect: el.getBoundingClientRect() });
+  return map;
+}
+
+function animateCards(root, before) {
+  if (reduceMotion() || before.size === 0) { lastPlayed = null; return; }
+  const after = new Map();
+  for (const el of root.querySelectorAll('[data-key]')) after.set(el.dataset.key, el);
+  const ease = 'cubic-bezier(.2,.8,.2,1)';
+
+  for (const [key, el] of after) {
+    const now = el.getBoundingClientRect();
+    const prev = before.get(key);
+    if (prev) {
+      // 同じカードが別の場所に移った → 前の位置から滑らせる
+      const dx = prev.rect.left - now.left;
+      const dy = prev.rect.top - now.top;
+      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+        el.animate([{ translate: `${dx}px ${dy}px` }, { translate: '0px 0px' }], { duration: 320, easing: ease });
+      }
+    } else if (key.startsWith('u')) {
+      // 新しく場に出たクリーチャー → 手札（相手なら相手の手札）から飛んでくる
+      const owner = Number(el.dataset.owner);
+      let from = lastPlayed && lastPlayed.owner === owner ? lastPlayed.rect : null;
+      if (!from) {
+        const handRow = root.querySelector(owner === viewer() ? '.hand' : '.opp-hand');
+        from = handRow?.getBoundingClientRect();
+      }
+      const dx = from ? from.left + from.width / 2 - (now.left + now.width / 2) : 0;
+      const dy = from ? from.top + from.height / 2 - (now.top + now.height / 2) : -30;
+      el.animate([
+        { translate: `${dx}px ${dy}px`, scale: '0.8', opacity: 0.4 },
+        { translate: '0px 0px', scale: '1', opacity: 1 },
+      ], { duration: 420, easing: ease });
+    } else if (key.startsWith('h')) {
+      // 引いたカード → 右から滑り込む
+      el.animate([{ translate: '60px 0px', opacity: 0 }, { translate: '0px 0px', opacity: 1 }], { duration: 300, easing: ease });
+    }
+  }
+
+  // 消えたカード（破壊されたクリーチャー、使ったスペル）は、元の位置で消えていく様子を見せる
+  const bf = root.querySelector('.battlefield')?.getBoundingClientRect();
+  for (const [key, { el, rect }] of before) {
+    if (after.has(key)) continue;
+    const isCreature = key.startsWith('u');
+    const isSpell = key.startsWith('h') && el.dataset.kind === 'spell';
+    if (!isCreature && !isSpell) continue;
+    const ghost = el.cloneNode(true);
+    ghost.classList.remove('playable', 'selectable', 'selected', 'targetable', 'unplayable');
+    ghost.classList.add('ghost');
+    Object.assign(ghost.style, { left: `${rect.left}px`, top: `${rect.top}px`, '--cw': `${rect.width}px` });
+    document.body.append(ghost);
+    let frames;
+    if (isCreature) {
+      frames = [{ opacity: 1, filter: 'brightness(1.6)' }, { opacity: 0, scale: '0.85', translate: '0px 16px', filter: 'grayscale(1) brightness(.5)' }];
+    } else {
+      const tx = bf ? bf.left + bf.width / 2 - (rect.left + rect.width / 2) : 0;
+      const ty = bf ? bf.top + bf.height / 2 - (rect.top + rect.height / 2) : -80;
+      frames = [{ opacity: 1 }, { translate: `${tx}px ${ty}px`, scale: '1.1', opacity: 1, offset: 0.6 }, { translate: `${tx}px ${ty}px`, scale: '1.3', opacity: 0 }];
+    }
+    ghost.animate(frames, { duration: isCreature ? 520 : 600, easing: 'ease-out' }).finished.then(() => ghost.remove(), () => ghost.remove());
+  }
+  lastPlayed = null;
 }
 
 function updateFeed() {
@@ -307,6 +383,10 @@ function buildCardStatic(card, stats = null) {
 function renderHandCard(pi, cardId, handIndex) {
   const card = getCard(cardId);
   const node = buildCard(card);
+  // 同じカードが複数あっても区別できるよう「何枚目か」を含めたキーにする
+  const nth = game.players[pi].hand.slice(0, handIndex).filter((id) => id === cardId).length;
+  node.dataset.key = `h${pi}-${cardId}-${nth}`;
+  node.dataset.kind = card.type;
   if (isHumanTurn() && game.awaiting.step === 'mulligan') {
     node.classList.add('selectable');
     node.tabIndex = 0;
@@ -321,6 +401,7 @@ function renderHandCard(pi, cardId, handIndex) {
     node.classList.add('playable');
     node.tabIndex = 0;
     const use = () => {
+      lastPlayed = { rect: node.getBoundingClientRect(), owner: pi };
       const targets = targetsForHandCard(game, pi, handIndex);
       if (targets.length === 1 && targets[0] === null) act({ type: 'playCard', handIndex });
       else { ui.targeting = handIndex; ui.attackers.clear(); render(); }
@@ -344,6 +425,8 @@ function renderCreature(c) {
     hpCls: `${c.damage ? 'damaged' : ''} ${c.hp > card.hp ? 'buffed' : ''}`,
   });
   if (fresh.has(c.uid)) node.classList.add('fresh');
+  node.dataset.key = `u${c.uid}`;
+  node.dataset.owner = String(c.owner);
 
   const status = [];
   if (c.tempAttack || c.tempHp) status.push(`+${c.tempAttack}/+${c.tempHp}`);
