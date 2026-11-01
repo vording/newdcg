@@ -7,15 +7,15 @@
 // state.awaiting は「次に誰が何を決める必要があるか」を表す。
 //   { player, step: 'mulligan' } : ゲーム開始時の手札引き直し（先攻→後攻の順）
 //   { player, step: 'main' }     : 手番プレイヤーのメインフェイズ
-//   { player, step: 'response' } : 攻撃宣言後、防御側が応手カードを使えるタイミング
+//   { player, step: 'response' } : 攻撃宣言後、防御側が瞬発カードを使えるタイミング
 //   { player, step: 'block' }    : 防御側プレイヤーのブロック宣言
 //
 // アクション:
 //   { type: 'mulligan', handIndices: [i, ...] }         引き直すカード（空配列 = そのまま）
-//   { type: 'playCard', handIndex, target? }            メインフェイズ／応手（応手カードのみ）
+//   { type: 'playCard', handIndex, target? }            メインフェイズ／瞬発（瞬発カードのみ）
 //   { type: 'attack', attackers: [uid, ...] }           メインフェイズ → バトルフェイズへ
 //   { type: 'endTurn' }                                 メインフェイズ（攻撃せず終了）
-//   { type: 'pass' }                                    応手しない
+//   { type: 'pass' }                                    瞬発しない
 //   { type: 'declareBlocks', blocks: [{attacker, blocker}] }  ブロック宣言（空配列 = ブロックなし）
 
 import { getCard, hasKeyword, validateDeck } from './cards.js';
@@ -222,7 +222,7 @@ export function playability(state, playerIndex, handIndex) {
   }
   const card = getCard(cardId);
   if (aw.step === 'response' && !hasKeyword(card, 'quick')) {
-    return { ok: false, reason: '相手のターン中は「応手」カードしか使えません' };
+    return { ok: false, reason: '相手のターン中は「瞬発」カードしか使えません' };
   }
   if (card.cost > p.mana) return { ok: false, reason: 'マナが足りません' };
   if (card.type === 'creature' && p.board.length >= state.config.boardLimit) {
@@ -338,19 +338,19 @@ function declareAttack(state, playerIndex, { attackers }) {
   }
   for (const uid of attackers) {
     const c = board.find((x) => x.uid === uid);
-    if (!hasKeyword(getCard(c.cardId), 'vigilance')) c.exhausted = true; // 不寝番は行動済みにならない
+    if (!hasKeyword(getCard(c.cardId), 'vigilance')) c.exhausted = true; // 隠蔽は行動済みにならない
   }
   state.combat = { attackers: [...attackers], blocks: {} };
   log(state, 'attack', { player: playerIndex, attackers: [...attackers] });
 
-  // 4. バトルフェイズ: 防御側に応手の機会 → ブロック宣言
+  // 4. バトルフェイズ: 防御側に瞬発の機会 → ブロック宣言
   const defender = opponentOf(playerIndex);
   if (hasResponse(state, defender)) state.awaiting = { player: defender, step: 'response' };
   else proceedToBlock(state);
   return { ok: true };
 }
 
-/** 防御側が今使える応手カードを持っているか（持っていなければ確認を出さない） */
+/** 防御側が今使える瞬発カードを持っているか（持っていなければ確認を出さない） */
 export function hasResponse(state, playerIndex) {
   const saved = state.awaiting;
   state.awaiting = { player: playerIndex, step: 'response' };
@@ -359,7 +359,7 @@ export function hasResponse(state, playerIndex) {
   return any;
 }
 
-/** 応手カードを1枚使う。再応手はなく、解決後はブロック宣言へ進む。 */
+/** 瞬発カードを1枚使う。再瞬発はなく、解決後はブロック宣言へ進む。 */
 function respond(state, playerIndex, action) {
   const res = playCard(state, playerIndex, action);
   if (!res.ok) return res;
@@ -368,7 +368,7 @@ function respond(state, playerIndex, action) {
 }
 
 function proceedToBlock(state) {
-  // 応手で除去された攻撃クリーチャーは戦闘から外れる
+  // 瞬発で除去された攻撃クリーチャーは戦闘から外れる
   const atkBoard = state.players[state.activePlayer].board;
   state.combat.attackers = state.combat.attackers.filter((uid) => atkBoard.some((c) => c.uid === uid));
   if (state.combat.attackers.length === 0) {
@@ -418,7 +418,7 @@ function resolveCombat(state) {
   const firstStrike = (c) => hasKeyword(getCard(c.cardId), 'firstStrike');
   const pairs = state.combat.attackers.map((uid) => ({ a: uid, b: state.combat.blocks[uid] }));
 
-  // 一閃を持つクリーチャーが先にダメージを与え、その後に残りが与える。各段階の中では同時。
+  // 先制攻撃を持つクリーチャーが先にダメージを与え、その後に残りが与える。各段階の中では同時。
   for (const isFirst of [true, false]) {
     const pending = [];
     for (const { a: aUid, b: bUid } of pairs) {

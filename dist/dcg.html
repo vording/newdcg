@@ -533,8 +533,8 @@ body { letter-spacing: .02em; }
           <li>クリーチャーは出したターンは攻撃できない（<b>速攻</b>を除く）。攻撃すると行動済みになり、相手のターンにブロックできない。</li>
           <li>攻撃されたら、攻撃1体につき1体でブロックできる。ブロックすると互いの攻撃力ぶんダメージを与え合う。</li>
           <li>ダメージはターン終了時に回復する。倒すならそのターンのうちに。</li>
-          <li><b>応手</b>カードは、相手の攻撃宣言後・ブロック前にも1枚使える。マナを残してターンを終えよう。</li>
-          <li><b>天翔</b>は天翔でしか止められない。<b>一閃</b>は先にダメージを与える。<b>不寝番</b>は攻撃しても行動済みにならない。</li>
+          <li><b>瞬発</b>カードは、相手の攻撃宣言後・ブロック前にも1枚使える。マナを残してターンを終えよう。</li>
+          <li><b>天翔</b>は天翔でしか止められない。<b>先制攻撃</b>は先にダメージを与える。<b>隠蔽</b>は攻撃しても行動済みにならない。</li>
           <li>後攻は「マナの雫」（0マナ：このターンマナ+1、1枚引く）を受け取る。</li>
         </ul>
       </details>
@@ -622,7 +622,7 @@ function makeConfig(overrides = {}) {
 //   type      : 'creature' | 'spell'
 //   cost      : マナコスト
 //   attack/hp : クリーチャーのみ
-//   keywords  : 能力キーワード（'haste' = 速攻, 'quick' = 応手）
+//   keywords  : 能力キーワード（'haste' = 速攻, 'quick' = 瞬発）
 //   effect    : スペルの効果 { type, ...params }（effects.js のキー）
 //   triggers  : 誘発能力 [{ on: 'summon' | 'turnStart' | 'turnEnd', effect }]
 //   rarity    : レア度（表示用）'common' | 'rare' | 'epic' | 'legendary'。強いカードほど高い
@@ -638,9 +638,9 @@ const RARITIES = Object.freeze({
 const KEYWORDS = Object.freeze({
   haste: { name: '速攻', text: '召喚したターンから攻撃できる。' },
   flying: { name: '天翔', text: '天翔を持つクリーチャーでしかブロックできない。' },
-  firstStrike: { name: '一閃', text: '戦闘で、一閃を持たないクリーチャーより先にダメージを与える。' },
-  vigilance: { name: '不寝番', text: '攻撃しても行動済みにならない（相手のターンにブロックできる）。' },
-  quick: { name: '応手', text: '相手の攻撃宣言後、ブロック宣言の前にも使える。' },
+  firstStrike: { name: '先制攻撃', text: '戦闘で、先制攻撃を持たないクリーチャーより先にダメージを与える。' },
+  vigilance: { name: '隠蔽', text: '攻撃しても行動済みにならない（相手のターンにブロックできる）。' },
+  quick: { name: '瞬発', text: '相手の攻撃宣言後、ブロック宣言の前にも使える。' },
 });
 
 // effect.target を持つクリーチャーは「召喚時：対象を選んで効果」。対象がいなければ不発で召喚できる。
@@ -1012,15 +1012,15 @@ function resolveEffect(state, playerIndex, effect, target, source) {
 // state.awaiting は「次に誰が何を決める必要があるか」を表す。
 //   { player, step: 'mulligan' } : ゲーム開始時の手札引き直し（先攻→後攻の順）
 //   { player, step: 'main' }     : 手番プレイヤーのメインフェイズ
-//   { player, step: 'response' } : 攻撃宣言後、防御側が応手カードを使えるタイミング
+//   { player, step: 'response' } : 攻撃宣言後、防御側が瞬発カードを使えるタイミング
 //   { player, step: 'block' }    : 防御側プレイヤーのブロック宣言
 //
 // アクション:
 //   { type: 'mulligan', handIndices: [i, ...] }         引き直すカード（空配列 = そのまま）
-//   { type: 'playCard', handIndex, target? }            メインフェイズ／応手（応手カードのみ）
+//   { type: 'playCard', handIndex, target? }            メインフェイズ／瞬発（瞬発カードのみ）
 //   { type: 'attack', attackers: [uid, ...] }           メインフェイズ → バトルフェイズへ
 //   { type: 'endTurn' }                                 メインフェイズ（攻撃せず終了）
-//   { type: 'pass' }                                    応手しない
+//   { type: 'pass' }                                    瞬発しない
 //   { type: 'declareBlocks', blocks: [{attacker, blocker}] }  ブロック宣言（空配列 = ブロックなし）
 
 
@@ -1224,7 +1224,7 @@ function playability(state, playerIndex, handIndex) {
   }
   const card = getCard(cardId);
   if (aw.step === 'response' && !hasKeyword(card, 'quick')) {
-    return { ok: false, reason: '相手のターン中は「応手」カードしか使えません' };
+    return { ok: false, reason: '相手のターン中は「瞬発」カードしか使えません' };
   }
   if (card.cost > p.mana) return { ok: false, reason: 'マナが足りません' };
   if (card.type === 'creature' && p.board.length >= state.config.boardLimit) {
@@ -1340,19 +1340,19 @@ function declareAttack(state, playerIndex, { attackers }) {
   }
   for (const uid of attackers) {
     const c = board.find((x) => x.uid === uid);
-    if (!hasKeyword(getCard(c.cardId), 'vigilance')) c.exhausted = true; // 不寝番は行動済みにならない
+    if (!hasKeyword(getCard(c.cardId), 'vigilance')) c.exhausted = true; // 隠蔽は行動済みにならない
   }
   state.combat = { attackers: [...attackers], blocks: {} };
   log(state, 'attack', { player: playerIndex, attackers: [...attackers] });
 
-  // 4. バトルフェイズ: 防御側に応手の機会 → ブロック宣言
+  // 4. バトルフェイズ: 防御側に瞬発の機会 → ブロック宣言
   const defender = opponentOf(playerIndex);
   if (hasResponse(state, defender)) state.awaiting = { player: defender, step: 'response' };
   else proceedToBlock(state);
   return { ok: true };
 }
 
-/** 防御側が今使える応手カードを持っているか（持っていなければ確認を出さない） */
+/** 防御側が今使える瞬発カードを持っているか（持っていなければ確認を出さない） */
 function hasResponse(state, playerIndex) {
   const saved = state.awaiting;
   state.awaiting = { player: playerIndex, step: 'response' };
@@ -1361,7 +1361,7 @@ function hasResponse(state, playerIndex) {
   return any;
 }
 
-/** 応手カードを1枚使う。再応手はなく、解決後はブロック宣言へ進む。 */
+/** 瞬発カードを1枚使う。再瞬発はなく、解決後はブロック宣言へ進む。 */
 function respond(state, playerIndex, action) {
   const res = playCard(state, playerIndex, action);
   if (!res.ok) return res;
@@ -1370,7 +1370,7 @@ function respond(state, playerIndex, action) {
 }
 
 function proceedToBlock(state) {
-  // 応手で除去された攻撃クリーチャーは戦闘から外れる
+  // 瞬発で除去された攻撃クリーチャーは戦闘から外れる
   const atkBoard = state.players[state.activePlayer].board;
   state.combat.attackers = state.combat.attackers.filter((uid) => atkBoard.some((c) => c.uid === uid));
   if (state.combat.attackers.length === 0) {
@@ -1420,7 +1420,7 @@ function resolveCombat(state) {
   const firstStrike = (c) => hasKeyword(getCard(c.cardId), 'firstStrike');
   const pairs = state.combat.attackers.map((uid) => ({ a: uid, b: state.combat.blocks[uid] }));
 
-  // 一閃を持つクリーチャーが先にダメージを与え、その後に残りが与える。各段階の中では同時。
+  // 先制攻撃を持つクリーチャーが先にダメージを与え、その後に残りが与える。各段階の中では同時。
   for (const isFirst of [true, false]) {
     const pending = [];
     for (const { a: aUid, b: bUid } of pairs) {
@@ -1475,7 +1475,7 @@ const WEIGHTS = {
   firstStrike: 1.0,
   vigilance: 0.6,
   hand: 1.6, // 手札1枚
-  quickHoldBonus: 1.2, // 応手カードを手札に持っていることの価値（相手ターンに使える）
+  quickHoldBonus: 1.2, // 瞬発カードを手札に持っていることの価値（相手ターンに使える）
 };
 
 // ---------------------------------------------------------------------------
@@ -1531,8 +1531,8 @@ function tryAction(state, me, actor, action) {
  * awaiting.player の次の1アクションを決めて返す（適用はしない）
  * @param {{level?: 'hard'|'normal'|'easy', random?: () => number}} opts
  *   hard  : 全力（評価＋先読み）
- *   normal: 応手を半分見逃す、ブロックは簡易判断、攻撃は上位3候補からランダム
- *   easy  : 応手しない、カードを出し渋ることがある、ブロックを見逃すことがある、攻撃は上位5候補からランダム
+ *   normal: 瞬発を半分見逃す、ブロックは簡易判断、攻撃は上位3候補からランダム
+ *   easy  : 瞬発しない、カードを出し渋ることがある、ブロックを見逃すことがある、攻撃は上位5候補からランダム
  */
 function chooseAction(state, opts = {}) {
   const me = state.awaiting.player;
@@ -1630,7 +1630,7 @@ function chooseAttack(state, me, rnd = null, pool = 3) {
   return scored[0].action;
 }
 
-/** 相手の応手なし・相手は簡易ブロックを行うと仮定して戦闘を最後まで進めて評価 */
+/** 相手の瞬発なし・相手は簡易ブロックを行うと仮定して戦闘を最後まで進めて評価 */
 function scoreAfterCombat(s, me) {
   let guard = 10;
   while (s.winner === null && s.awaiting && s.awaiting.player !== s.activePlayer && guard--) {
@@ -1643,7 +1643,7 @@ function scoreAfterCombat(s, me) {
   return evaluate(s, me);
 }
 
-/** 応手: 使わない場合と、使える応手カード×対象のすべてを比較 */
+/** 瞬発: 使わない場合と、使える瞬発カード×対象のすべてを比較 */
 function chooseResponse(state, me) {
   let best = { type: 'pass' };
   let bestScore = afterResponseScore(tryAction(state, me, me, best), me);
@@ -1705,7 +1705,7 @@ function searchBlocks(state, me) {
   return best ?? [];
 }
 
-/** 戦闘1対1の結果予測（一閃考慮） */
+/** 戦闘1対1の結果予測（先制攻撃考慮） */
 function fight(a, b) {
   const fa = hasKeyword(getCard(a.cardId), 'firstStrike');
   const fb = hasKeyword(getCard(b.cardId), 'firstStrike');
@@ -2296,7 +2296,7 @@ function renderCommand(me) {
     actions.append(button(n ? `${n}枚引き直す` : 'このまま始める', () => act({ type: 'mulligan', handIndices: [...ui.mulligan] }), 'btn-gold'));
   } else if (aw.step === 'response') {
     msg.textContent = `${nm(game.activePlayer)}が${game.combat.attackers.length}体で攻撃してきた`;
-    sub.textContent = 'ブロックの前に「応手」カードを1枚使えます。';
+    sub.textContent = 'ブロックの前に「瞬発」カードを1枚使えます。';
     actions.append(button('見送る', () => act({ type: 'pass' }), 'btn-gold'));
   } else if (aw.step === 'main') {
     const ready = game.players[aw.player].board.filter((c) => canAttack(game, c));
@@ -2304,7 +2304,7 @@ function renderCommand(me) {
     sub.textContent = ready.length
       ? '光っている手札を使う／攻撃するクリーチャーを選ぶ'
       : '光っている手札を使ってから、ターンを終了';
-    if (game.players[aw.player].hand.some((id) => hasKeyword(getCard(id), 'quick'))) sub.textContent += '（応手カードはマナを残すと相手の攻撃時にも使える）';
+    if (game.players[aw.player].hand.some((id) => hasKeyword(getCard(id), 'quick'))) sub.textContent += '（瞬発カードはマナを残すと相手の攻撃時にも使える）';
     const all = button('全員で攻撃', () => { ready.forEach((c) => ui.attackers.add(c.uid)); render(); });
     all.disabled = ready.length === 0 || ui.attackers.size === ready.length;
     const atk = button(ui.attackers.size ? `攻撃する（${ui.attackers.size}体）` : '攻撃する', () => act({ type: 'attack', attackers: [...ui.attackers] }), 'btn-crimson');
@@ -2360,7 +2360,7 @@ function describe(e) {
     case 'gameStart': return `ゲーム開始。先攻は${nm(e.firstPlayer)}`;
     case 'turnStart': return `―― ${nm(e.player)}のターン（${e.turnOfPlayer}ターン目） ――`;
     case 'summon': return `${nm(e.player)}：${e.name}を召喚`;
-    case 'castSpell': return `${nm(e.player)}：${e.name}を使用${e.response ? '（応手）' : ''}`;
+    case 'castSpell': return `${nm(e.player)}：${e.name}を使用${e.response ? '（瞬発）' : ''}`;
     case 'attack': return `${nm(e.player)}：${e.attackers.length}体で攻撃`;
     case 'blocks': return e.blocks.length ? `${nm(e.player)}：${e.blocks.length}体でブロック` : `${nm(e.player)}：ブロックしない`;
     case 'damage': return `${e.sourceName ? `${e.sourceName}→` : ''}${nm(e.owner)}の${e.targetName}に${e.amount}ダメージ`;
@@ -2372,7 +2372,7 @@ function describe(e) {
     case 'bonusCard': return `${nm(e.player)}は後攻なので「マナの雫」を受け取った`;
     case 'destroyed': return `${nm(e.owner)}の${e.name}は破壊された`;
     case 'mulligan': return e.count ? `${nm(e.player)}：${e.count}枚引き直した` : `${nm(e.player)}：手札をそのままにした`;
-    case 'pass': return `${nm(e.player)}：応手を見送った`;
+    case 'pass': return `${nm(e.player)}：瞬発を見送った`;
     case 'combatCancelled': return '攻撃クリーチャーがいなくなり、戦闘は終了';
     case 'burn': return `${nm(e.player)}は手札がいっぱいで、引いたカードが捨て札へ`;
     case 'deckOut': return `${nm(e.player)}は山札切れでカードを引けない`;
@@ -2441,6 +2441,6 @@ $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logP
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
 showTitle();
 
-document.getElementById('build').textContent = "v0.3 build 53e784a";
+document.getElementById('build').textContent = "v0.3 build 59b5d41";
 })();
 </script>

@@ -8,7 +8,7 @@
 //   type      : 'creature' | 'spell'
 //   cost      : マナコスト
 //   attack/hp : クリーチャーのみ
-//   keywords  : 能力キーワード（'haste' = 速攻, 'quick' = 応手）
+//   keywords  : 能力キーワード（'haste' = 速攻, 'quick' = 瞬発）
 //   effect    : スペルの効果 { type, ...params }（effects.js のキー）
 //   triggers  : 誘発能力 [{ on: 'summon' | 'turnStart' | 'turnEnd', effect }]
 //   rarity    : レア度（表示用）'common' | 'rare' | 'epic' | 'legendary'。強いカードほど高い
@@ -24,9 +24,9 @@ export const RARITIES = Object.freeze({
 export const KEYWORDS = Object.freeze({
   haste: { name: '速攻', text: '召喚したターンから攻撃できる。' },
   flying: { name: '天翔', text: '天翔を持つクリーチャーでしかブロックできない。' },
-  firstStrike: { name: '一閃', text: '戦闘で、一閃を持たないクリーチャーより先にダメージを与える。' },
-  vigilance: { name: '不寝番', text: '攻撃しても行動済みにならない（相手のターンにブロックできる）。' },
-  quick: { name: '応手', text: '相手の攻撃宣言後、ブロック宣言の前にも使える。' },
+  firstStrike: { name: '先制攻撃', text: '戦闘で、先制攻撃を持たないクリーチャーより先にダメージを与える。' },
+  vigilance: { name: '隠蔽', text: '攻撃しても行動済みにならない（相手のターンにブロックできる）。' },
+  quick: { name: '瞬発', text: '相手の攻撃宣言後、ブロック宣言の前にも使える。' },
 });
 
 // effect.target を持つクリーチャーは「召喚時：対象を選んで効果」。対象がいなければ不発で召喚できる。

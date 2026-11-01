@@ -16,7 +16,7 @@ export const WEIGHTS = {
   firstStrike: 1.0,
   vigilance: 0.6,
   hand: 1.6, // 手札1枚
-  quickHoldBonus: 1.2, // 応手カードを手札に持っていることの価値（相手ターンに使える）
+  quickHoldBonus: 1.2, // 瞬発カードを手札に持っていることの価値（相手ターンに使える）
 };
 
 // ---------------------------------------------------------------------------
@@ -72,8 +72,8 @@ function tryAction(state, me, actor, action) {
  * awaiting.player の次の1アクションを決めて返す（適用はしない）
  * @param {{level?: 'hard'|'normal'|'easy', random?: () => number}} opts
  *   hard  : 全力（評価＋先読み）
- *   normal: 応手を半分見逃す、ブロックは簡易判断、攻撃は上位3候補からランダム
- *   easy  : 応手しない、カードを出し渋ることがある、ブロックを見逃すことがある、攻撃は上位5候補からランダム
+ *   normal: 瞬発を半分見逃す、ブロックは簡易判断、攻撃は上位3候補からランダム
+ *   easy  : 瞬発しない、カードを出し渋ることがある、ブロックを見逃すことがある、攻撃は上位5候補からランダム
  */
 export function chooseAction(state, opts = {}) {
   const me = state.awaiting.player;
@@ -171,7 +171,7 @@ function chooseAttack(state, me, rnd = null, pool = 3) {
   return scored[0].action;
 }
 
-/** 相手の応手なし・相手は簡易ブロックを行うと仮定して戦闘を最後まで進めて評価 */
+/** 相手の瞬発なし・相手は簡易ブロックを行うと仮定して戦闘を最後まで進めて評価 */
 function scoreAfterCombat(s, me) {
   let guard = 10;
   while (s.winner === null && s.awaiting && s.awaiting.player !== s.activePlayer && guard--) {
@@ -184,7 +184,7 @@ function scoreAfterCombat(s, me) {
   return evaluate(s, me);
 }
 
-/** 応手: 使わない場合と、使える応手カード×対象のすべてを比較 */
+/** 瞬発: 使わない場合と、使える瞬発カード×対象のすべてを比較 */
 function chooseResponse(state, me) {
   let best = { type: 'pass' };
   let bestScore = afterResponseScore(tryAction(state, me, me, best), me);
@@ -246,7 +246,7 @@ function searchBlocks(state, me) {
   return best ?? [];
 }
 
-/** 戦闘1対1の結果予測（一閃考慮） */
+/** 戦闘1対1の結果予測（先制攻撃考慮） */
 export function fight(a, b) {
   const fa = hasKeyword(getCard(a.cardId), 'firstStrike');
   const fb = hasKeyword(getCard(b.cardId), 'firstStrike');

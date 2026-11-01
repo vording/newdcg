@@ -524,7 +524,7 @@ function renderCommand(me) {
     actions.append(button(n ? `${n}枚引き直す` : 'このまま始める', () => act({ type: 'mulligan', handIndices: [...ui.mulligan] }), 'btn-gold'));
   } else if (aw.step === 'response') {
     msg.textContent = `${nm(game.activePlayer)}が${game.combat.attackers.length}体で攻撃してきた`;
-    sub.textContent = 'ブロックの前に「応手」カードを1枚使えます。';
+    sub.textContent = 'ブロックの前に「瞬発」カードを1枚使えます。';
     actions.append(button('見送る', () => act({ type: 'pass' }), 'btn-gold'));
   } else if (aw.step === 'main') {
     const ready = game.players[aw.player].board.filter((c) => canAttack(game, c));
@@ -532,7 +532,7 @@ function renderCommand(me) {
     sub.textContent = ready.length
       ? '光っている手札を使う／攻撃するクリーチャーを選ぶ'
       : '光っている手札を使ってから、ターンを終了';
-    if (game.players[aw.player].hand.some((id) => hasKeyword(getCard(id), 'quick'))) sub.textContent += '（応手カードはマナを残すと相手の攻撃時にも使える）';
+    if (game.players[aw.player].hand.some((id) => hasKeyword(getCard(id), 'quick'))) sub.textContent += '（瞬発カードはマナを残すと相手の攻撃時にも使える）';
     const all = button('全員で攻撃', () => { ready.forEach((c) => ui.attackers.add(c.uid)); render(); });
     all.disabled = ready.length === 0 || ui.attackers.size === ready.length;
     const atk = button(ui.attackers.size ? `攻撃する（${ui.attackers.size}体）` : '攻撃する', () => act({ type: 'attack', attackers: [...ui.attackers] }), 'btn-crimson');
@@ -588,7 +588,7 @@ function describe(e) {
     case 'gameStart': return `ゲーム開始。先攻は${nm(e.firstPlayer)}`;
     case 'turnStart': return `―― ${nm(e.player)}のターン（${e.turnOfPlayer}ターン目） ――`;
     case 'summon': return `${nm(e.player)}：${e.name}を召喚`;
-    case 'castSpell': return `${nm(e.player)}：${e.name}を使用${e.response ? '（応手）' : ''}`;
+    case 'castSpell': return `${nm(e.player)}：${e.name}を使用${e.response ? '（瞬発）' : ''}`;
     case 'attack': return `${nm(e.player)}：${e.attackers.length}体で攻撃`;
     case 'blocks': return e.blocks.length ? `${nm(e.player)}：${e.blocks.length}体でブロック` : `${nm(e.player)}：ブロックしない`;
     case 'damage': return `${e.sourceName ? `${e.sourceName}→` : ''}${nm(e.owner)}の${e.targetName}に${e.amount}ダメージ`;
@@ -600,7 +600,7 @@ function describe(e) {
     case 'bonusCard': return `${nm(e.player)}は後攻なので「マナの雫」を受け取った`;
     case 'destroyed': return `${nm(e.owner)}の${e.name}は破壊された`;
     case 'mulligan': return e.count ? `${nm(e.player)}：${e.count}枚引き直した` : `${nm(e.player)}：手札をそのままにした`;
-    case 'pass': return `${nm(e.player)}：応手を見送った`;
+    case 'pass': return `${nm(e.player)}：瞬発を見送った`;
     case 'combatCancelled': return '攻撃クリーチャーがいなくなり、戦闘は終了';
     case 'burn': return `${nm(e.player)}は手札がいっぱいで、引いたカードが捨て札へ`;
     case 'deckOut': return `${nm(e.player)}は山札切れでカードを引けない`;
