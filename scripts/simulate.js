@@ -83,7 +83,7 @@ console.log(`勝者の平均残りライフ   : ${(total.winnerLife / decided).t
 console.log(`接戦（勝者ライフ≤5）   : ${pct(total.close)}   圧勝（勝者ライフ≥15）: ${pct(total.blowout)}`);
 console.log(`逆転勝ち（中盤劣勢から）: ${pct(total.comeback, total.comebackBase)}`);
 console.log(`リード交代/試合       : ${(total.leadChanges / decided).toFixed(2)}`);
-console.log(`対応使用/試合         : ${(total.responses / decided).toFixed(2)}`);
+console.log(`応手使用/試合         : ${(total.responses / decided).toFixed(2)}`);
 console.log(`ブロック/試合         : ${(total.blocks / decided).toFixed(2)}   破壊/試合: ${(total.deaths / decided).toFixed(2)}   手札超過: ${total.burns}`);
 console.log('デッキ相性（行のデッキの勝率、先後ランダム）:');
 for (const a of deckIds) {

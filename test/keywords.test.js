@@ -9,7 +9,7 @@ const block = (s, blocks) => {
   return applyAction(s, 1 - s.activePlayer, { type: 'declareBlocks', blocks });
 };
 
-test('飛行: 飛行を持たないクリーチャーではブロックできない', () => {
+test('天翔: 天翔を持たないクリーチャーではブロックできない', () => {
   const s = newGame();
   const hawk = put(s, 0, 'c_hawk');
   const wall = put(s, 1, 'c_shield');
@@ -20,10 +20,10 @@ test('飛行: 飛行を持たないクリーチャーではブロックできな
   assert.equal(s.players[1].board.some((c) => c.uid === bird.uid), false);
 });
 
-test('先制: 先に倒せば反撃を受けない', () => {
+test('一閃: 先に倒せば反撃を受けない', () => {
   const s = newGame();
   const a = put(s, 0, 'c_scout'); // 2/1
-  const pike = put(s, 1, 'c_pikeman'); // 2/3 先制
+  const pike = put(s, 1, 'c_pikeman'); // 2/3 一閃
   ok(attack(s, a.uid));
   ok(block(s, [{ attacker: a.uid, blocker: pike.uid }]));
   assert.equal(s.players[0].board.length, 0);
@@ -31,17 +31,17 @@ test('先制: 先に倒せば反撃を受けない', () => {
   assert.equal(pike.damage, 0);
 });
 
-test('先制: 倒し切れなければ通常どおり反撃を受ける', () => {
+test('一閃: 倒し切れなければ通常どおり反撃を受ける', () => {
   const s = newGame({ damageResetsAtTurnEnd: false });
   const a = put(s, 0, 'c_golem'); // 2/6
-  const pike = put(s, 1, 'c_pikeman'); // 2/3 先制
+  const pike = put(s, 1, 'c_pikeman'); // 2/3 一閃
   ok(attack(s, a.uid));
   ok(block(s, [{ attacker: a.uid, blocker: pike.uid }]));
   assert.equal(a.damage, 2);
   assert.equal(pike.damage, 2);
 });
 
-test('警戒: 攻撃しても行動済みにならず、相手ターンにブロックできる', () => {
+test('不寝番: 攻撃しても行動済みにならず、相手ターンにブロックできる', () => {
   const s = newGame();
   const k = put(s, 0, 'c_knight');
   ok(attack(s, k.uid));
@@ -64,10 +64,10 @@ test('剛力の薬: ターン終了時まで+2/+2、終了時に元に戻る', (
   assert.equal(c.hp, 2);
 });
 
-test('対応で剛力の薬: ブロッカーを強化して返り討ち', () => {
+test('応手で剛力の薬: ブロッカーを強化して返り討ち', () => {
   const s = newGame();
   const a = put(s, 0, 'c_warrior'); // 3/3
-  const b = put(s, 1, 'c_pikeman'); // 2/3 先制
+  const b = put(s, 1, 'c_pikeman'); // 2/3 一閃
   setHand(s, 1, ['s_might']);
   s.players[1].mana = 1;
   ok(attack(s, a.uid));

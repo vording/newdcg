@@ -8,7 +8,7 @@
 //   type      : 'creature' | 'spell'
 //   cost      : マナコスト
 //   attack/hp : クリーチャーのみ
-//   keywords  : 能力キーワード（'haste' = 速攻, 'quick' = 対応）
+//   keywords  : 能力キーワード（'haste' = 速攻, 'quick' = 応手）
 //   effect    : スペルの効果 { type, ...params }（effects.js のキー）
 //   triggers  : 誘発能力 [{ on: 'summon' | 'turnStart' | 'turnEnd', effect }]
 //   rarity    : レア度（表示用）'common' | 'rare' | 'epic' | 'legendary'。強いカードほど高い
@@ -23,10 +23,10 @@ export const RARITIES = Object.freeze({
 
 export const KEYWORDS = Object.freeze({
   haste: { name: '速攻', text: '召喚したターンから攻撃できる。' },
-  flying: { name: '飛行', text: '飛行を持つクリーチャーでしかブロックできない。' },
-  firstStrike: { name: '先制', text: '戦闘で、先制を持たないクリーチャーより先にダメージを与える。' },
-  vigilance: { name: '警戒', text: '攻撃しても行動済みにならない（相手のターンにブロックできる）。' },
-  quick: { name: '対応', text: '相手の攻撃宣言後、ブロック宣言の前にも使える。' },
+  flying: { name: '天翔', text: '天翔を持つクリーチャーでしかブロックできない。' },
+  firstStrike: { name: '一閃', text: '戦闘で、一閃を持たないクリーチャーより先にダメージを与える。' },
+  vigilance: { name: '不寝番', text: '攻撃しても行動済みにならない（相手のターンにブロックできる）。' },
+  quick: { name: '応手', text: '相手の攻撃宣言後、ブロック宣言の前にも使える。' },
 });
 
 // effect.target を持つクリーチャーは「召喚時：対象を選んで効果」。対象がいなければ不発で召喚できる。
@@ -118,7 +118,7 @@ export function hasKeyword(card, kw) {
 export const DECKS = Object.freeze({
   swift: {
     name: '疾風（速攻型）',
-    text: '低コストのクリーチャーと速攻・飛行で一気にライフを削る。',
+    text: '低コストのクリーチャーと速攻・天翔で一気にライフを削る。',
     counts: {
       c_rider: 3, c_scout: 3, c_wolf: 3, c_messenger: 2, c_warrior: 3, c_hawk: 3,
       c_pikeman: 1, c_salamander: 2, c_general: 2, s_fireball: 3, s_might: 3, s_rally: 2,

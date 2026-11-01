@@ -7,15 +7,15 @@
 // state.awaiting は「次に誰が何を決める必要があるか」を表す。
 //   { player, step: 'mulligan' } : ゲーム開始時の手札引き直し（先攻→後攻の順）
 //   { player, step: 'main' }     : 手番プレイヤーのメインフェイズ
-//   { player, step: 'response' } : 攻撃宣言後、防御側が対応カードを使えるタイミング
+//   { player, step: 'response' } : 攻撃宣言後、防御側が応手カードを使えるタイミング
 //   { player, step: 'block' }    : 防御側プレイヤーのブロック宣言
 //
 // アクション:
 //   { type: 'mulligan', handIndices: [i, ...] }         引き直すカード（空配列 = そのまま）
-//   { type: 'playCard', handIndex, target? }            メインフェイズ／対応（対応カードのみ）
+//   { type: 'playCard', handIndex, target? }            メインフェイズ／応手（応手カードのみ）
 //   { type: 'attack', attackers: [uid, ...] }           メインフェイズ → バトルフェイズへ
 //   { type: 'endTurn' }                                 メインフェイズ（攻撃せず終了）
-//   { type: 'pass' }                                    対応しない
+//   { type: 'pass' }                                    応手しない
 //   { type: 'declareBlocks', blocks: [{attacker, blocker}] }  ブロック宣言（空配列 = ブロックなし）
 
 import { getCard, hasKeyword, validateDeck } from './cards.js';
@@ -203,7 +203,7 @@ export function canBlock(state, creature) {
     && (state.config.exhaustedCanBlock || !creature.exhausted);
 }
 
-/** blocker が attacker をブロックできるか（飛行は飛行でしかブロックできない） */
+/** blocker が attacker をブロックできるか（天翔は天翔でしかブロックできない） */
 export function canBlockAttacker(state, blocker, attacker) {
   if (!canBlock(state, blocker)) return false;
   if (hasKeyword(getCard(attacker.cardId), 'flying') && !hasKeyword(getCard(blocker.cardId), 'flying')) return false;
@@ -222,7 +222,7 @@ export function playability(state, playerIndex, handIndex) {
   }
   const card = getCard(cardId);
   if (aw.step === 'response' && !hasKeyword(card, 'quick')) {
-    return { ok: false, reason: '相手のターン中は「対応」カードしか使えません' };
+    return { ok: false, reason: '相手のターン中は「応手」カードしか使えません' };
   }
   if (card.cost > p.mana) return { ok: false, reason: 'マナが足りません' };
   if (card.type === 'creature' && p.board.length >= state.config.boardLimit) {
@@ -338,19 +338,19 @@ function declareAttack(state, playerIndex, { attackers }) {
   }
   for (const uid of attackers) {
     const c = board.find((x) => x.uid === uid);
-    if (!hasKeyword(getCard(c.cardId), 'vigilance')) c.exhausted = true; // 警戒は行動済みにならない
+    if (!hasKeyword(getCard(c.cardId), 'vigilance')) c.exhausted = true; // 不寝番は行動済みにならない
   }
   state.combat = { attackers: [...attackers], blocks: {} };
   log(state, 'attack', { player: playerIndex, attackers: [...attackers] });
 
-  // 4. バトルフェイズ: 防御側に対応の機会 → ブロック宣言
+  // 4. バトルフェイズ: 防御側に応手の機会 → ブロック宣言
   const defender = opponentOf(playerIndex);
   if (hasResponse(state, defender)) state.awaiting = { player: defender, step: 'response' };
   else proceedToBlock(state);
   return { ok: true };
 }
 
-/** 防御側が今使える対応カードを持っているか（持っていなければ確認を出さない） */
+/** 防御側が今使える応手カードを持っているか（持っていなければ確認を出さない） */
 export function hasResponse(state, playerIndex) {
   const saved = state.awaiting;
   state.awaiting = { player: playerIndex, step: 'response' };
@@ -359,7 +359,7 @@ export function hasResponse(state, playerIndex) {
   return any;
 }
 
-/** 対応カードを1枚使う。再対応はなく、解決後はブロック宣言へ進む。 */
+/** 応手カードを1枚使う。再応手はなく、解決後はブロック宣言へ進む。 */
 function respond(state, playerIndex, action) {
   const res = playCard(state, playerIndex, action);
   if (!res.ok) return res;
@@ -368,7 +368,7 @@ function respond(state, playerIndex, action) {
 }
 
 function proceedToBlock(state) {
-  // 対応で除去された攻撃クリーチャーは戦闘から外れる
+  // 応手で除去された攻撃クリーチャーは戦闘から外れる
   const atkBoard = state.players[state.activePlayer].board;
   state.combat.attackers = state.combat.attackers.filter((uid) => atkBoard.some((c) => c.uid === uid));
   if (state.combat.attackers.length === 0) {
@@ -391,7 +391,7 @@ function declareBlocks(state, playerIndex, { blocks = [] }) {
     if (!b) return fail('自分のクリーチャーではありません');
     if (!canBlock(state, b)) return fail(`${b.name} はブロックできません`);
     const atk = state.players[state.activePlayer].board.find((x) => x.uid === attacker);
-    if (!canBlockAttacker(state, b, atk)) return fail(`${atk.name} は飛行を持つため、飛行でしかブロックできません`);
+    if (!canBlockAttacker(state, b, atk)) return fail(`${atk.name} は天翔を持つため、天翔でしかブロックできません`);
     if (usedBlockers.has(blocker)) return fail('1体のクリーチャーは1回しかブロックできません');
     if (blockedAttackers.has(attacker)) return fail('1体の攻撃に対するブロッカーは1体までです');
     usedBlockers.add(blocker);
@@ -418,7 +418,7 @@ function resolveCombat(state) {
   const firstStrike = (c) => hasKeyword(getCard(c.cardId), 'firstStrike');
   const pairs = state.combat.attackers.map((uid) => ({ a: uid, b: state.combat.blocks[uid] }));
 
-  // 先制を持つクリーチャーが先にダメージを与え、その後に残りが与える。各段階の中では同時。
+  // 一閃を持つクリーチャーが先にダメージを与え、その後に残りが与える。各段階の中では同時。
   for (const isFirst of [true, false]) {
     const pending = [];
     for (const { a: aUid, b: bUid } of pairs) {

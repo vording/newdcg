@@ -35,41 +35,41 @@ function attackSetup(defHand, defMana = 1) {
   return { s, a, a2 };
 }
 
-test('対応: 対応カードがなければ確認なしでブロック宣言へ', () => {
+test('応手: 応手カードがなければ確認なしでブロック宣言へ', () => {
   const { s, a } = attackSetup(['s_fireball', 'c_apprentice'], 5);
   ok(applyAction(s, 0, { type: 'attack', attackers: [a.uid] }));
   assert.deepEqual(s.awaiting, { player: 1, step: 'block' });
 });
 
-test('対応: マナが足りなければ確認なし', () => {
+test('応手: マナが足りなければ確認なし', () => {
   const { s, a } = attackSetup(['s_arrow'], 0);
   ok(applyAction(s, 0, { type: 'attack', attackers: [a.uid] }));
   assert.equal(s.awaiting.step, 'block');
 });
 
-test('対応: 攻撃宣言後に防御側へ確認。対応カード以外は使えない', () => {
+test('応手: 攻撃宣言後に防御側へ確認。応手カード以外は使えない', () => {
   const { s, a } = attackSetup(['s_arrow', 'c_apprentice'], 1);
   ok(applyAction(s, 0, { type: 'attack', attackers: [a.uid] }));
   assert.deepEqual(s.awaiting, { player: 1, step: 'response' });
   assert.equal(applyAction(s, 1, { type: 'playCard', handIndex: 1 }).ok, false);
-  assert.equal(applyAction(s, 0, { type: 'pass' }).ok, false); // 攻撃側は対応できない
+  assert.equal(applyAction(s, 0, { type: 'pass' }).ok, false); // 攻撃側は応手できない
   ok(applyAction(s, 1, { type: 'pass' }));
   assert.equal(s.awaiting.step, 'block');
 });
 
-test('対応: 迎撃で攻撃クリーチャーを倒すと戦闘から外れ、残りでブロック宣言', () => {
+test('応手: 迎撃で攻撃クリーチャーを倒すと戦闘から外れ、残りでブロック宣言', () => {
   const { s, a, a2 } = attackSetup(['s_arrow', 's_mend'], 2);
   ok(applyAction(s, 0, { type: 'attack', attackers: [a.uid, a2.uid] }));
   ok(applyAction(s, 1, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: a2.uid } }));
   assert.equal(s.players[1].mana, 1);
-  // 1回の対応で使えるのは1枚。解決後すぐブロック宣言へ（再対応なし）
+  // 1回の応手で使えるのは1枚。解決後すぐブロック宣言へ（再応手なし）
   assert.deepEqual(s.awaiting, { player: 1, step: 'block' });
   assert.deepEqual(s.combat.attackers, [a.uid]);
   ok(applyAction(s, 1, { type: 'declareBlocks', blocks: [] }));
   assert.equal(s.players[1].life, 17);
 });
 
-test('対応: 攻撃クリーチャーが全滅したら戦闘は終わりターン終了', () => {
+test('応手: 攻撃クリーチャーが全滅したら戦闘は終わりターン終了', () => {
   const { s, a2 } = attackSetup(['s_arrow'], 1);
   ok(applyAction(s, 0, { type: 'attack', attackers: [a2.uid] }));
   ok(applyAction(s, 1, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: a2.uid } }));
@@ -77,7 +77,7 @@ test('対応: 攻撃クリーチャーが全滅したら戦闘は終わりター
   assert.equal(s.players[1].life, 20);
 });
 
-test('対応カードは自分のメインフェイズにも使える（剛力の薬）', () => {
+test('応手カードは自分のメインフェイズにも使える（剛力の薬）', () => {
   const s = newGame();
   const mine = put(s, 0, 'c_scout');
   setHand(s, 0, ['s_might']);

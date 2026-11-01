@@ -7,22 +7,22 @@
    見出しは明朝、数字と英字は碑文風のセリフ体。彩度と光沢を抑え、落ち着いた大人のトーンに統一する。
    単一のダークな世界観で統一する（ライト/ダークの切り替えはしない）。 */
 :root {
-  --night: #0b0d12;      /* 背景 */
-  --felt: #14171f;       /* 卓 */
-  --felt-hi: #1b1f29;    /* 卓の明るい面 */
-  --line: #2c313d;       /* 罫線 */
-  --text: #e7e2d6;       /* 象牙色の文字 */
-  --muted: #918b7d;
-  --gold: #c2a46b;       /* 真鍮：選択・主要ボタン */
-  --gold-deep: #7a6232;
+  --night: #0e0c0a;      /* 背景 */
+  --felt: #18150f;       /* 卓 */
+  --felt-hi: #211d16;    /* 卓の明るい面 */
+  --line: #3a3225;       /* 罫線 */
+  --text: #ebe2cc;       /* 象牙色の文字 */
+  --muted: #9a8e76;
+  --gold: #b8975a;       /* 真鍮：選択・主要ボタン */
+  --gold-deep: #6d5527;
   --gold-ink: #17140d;
   --parchment: #efe6d2;
   --parchment-2: #ddd0b2;
   --ink: #2b2318;
   --ink-muted: #6c5d45;
-  --charge: #7aa9c4;     /* マナ（くすんだ青） */
-  --crimson: #b5513f;    /* 攻撃・危険 */
-  --verdant: #6f9f80;    /* 使える */
+  --charge: #8aa6a8;     /* マナ（くすんだ青） */
+  --crimson: #a5483a;    /* 攻撃・危険 */
+  --verdant: #7c9a73;    /* 使える */
   --violet: #9283b8;     /* 一時強化 */
   --shadow: rgba(0, 0, 0, .5);
 
@@ -39,7 +39,7 @@
 html, body { height: 100%; }
 body {
   margin: 0;
-  background: radial-gradient(1200px 700px at 50% -20%, #1a1e28 0%, var(--night) 65%) fixed, var(--night);
+  background: radial-gradient(1200px 700px at 50% -20%, #231d14 0%, var(--night) 65%) fixed, var(--night);
   color: var(--text);
   font-family: var(--font-body);
   font-size: 14px;
@@ -182,89 +182,124 @@ button { font: inherit; color: inherit; }
 .opp-hand .back + .back { margin-left: -18px; }
 .lane .card { --cw: var(--cw-board); }
 
-/* ---------- カード（全面イラスト＋下半分に英語名。レア度で縁の色が変わる） ----------
-   幅 --cw を基準に、すべての部品を割合で配置する。縦横比 1 : 1.4。 */
+/* ---------- カード（ヴィンテージ札：全面イラスト＋二重罫と四隅の金具。数値はすべて枠の内側） ----------
+   幅 --cw を基準に、すべての部品を割合で配置する。縦横比 1 : 1.4。
+   レア度で枠の金属が変わる（鉄＋緑青／銀／真鍮／金＋臙脂）。 */
 .card {
   --cw: 120px;
-  --rim-a: #8a949c; --rim-b: #3b4247; --glow: transparent;       /* コモン：鉄 */
-  --art-a: #3d5a3a; --art-b: #121a14;                              /* 仮の背景色 */
-  position: relative; flex: none;
+  --m1: #8a8f8c; --m2: #3e4240; --accent: #6f8f7c; --glow: transparent;   /* コモン：鉄＋緑青 */
+  --art-a: #4a4a3c; --art-b: #17150f;
+  position: relative; flex: none; overflow: hidden;
   width: var(--cw); height: calc(var(--cw) * 1.4);
   font-size: calc(var(--cw) / 10);
-  border-radius: .7em; padding: .28em;
-  background: linear-gradient(150deg, var(--rim-a), var(--rim-b) 45%, var(--rim-a) 70%, var(--rim-b));
-  box-shadow: 0 0 0 .08em rgba(0,0,0,.8), 0 0 .9em var(--glow), 0 .35em .9em rgba(0,0,0,.55);
-  color: #fff; user-select: none;
+  border-radius: .35em;
+  background: linear-gradient(155deg, var(--m1), var(--m2) 40%, var(--m1) 62%, var(--m2));
+  box-shadow: 0 0 0 .06em #050505, 0 0 .8em var(--glow), 0 .3em .8em rgba(0,0,0,.6);
+  color: var(--text); user-select: none;
 }
-.card.r-rare { --rim-a: #eef3f8; --rim-b: #7d8ea0; --art-a: #2f4c6e; --art-b: #0f1724; }
-.card.r-epic { --rim-a: #ffe7a0; --rim-b: #9a6a18; --glow: rgba(178, 119, 255, .35); --art-a: #4e3270; --art-b: #160f22; }
-.card.r-legendary { --rim-a: #ffd36a; --rim-b: #5c1820; --glow: rgba(255, 93, 74, .5); --art-a: #6e2228; --art-b: #160809; }
-.card.r-legendary::after {
-  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 3;
-  background: linear-gradient(115deg, transparent 35%, rgba(255, 220, 140, .25) 48%, transparent 60%) no-repeat;
-  background-size: 250% 100%; animation: sheen 3.2s ease-in-out infinite;
-}
-@keyframes sheen { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+.card.r-rare { --m1: #b8b3a6; --m2: #5f5c55; --accent: #a9b4bd; --art-a: #3f4650; --art-b: #121418; }
+.card.r-epic { --m1: #d8bd82; --m2: #6d5527; --accent: #e3cf9c; --glow: rgba(184, 151, 90, .25); --art-a: #4c3d26; --art-b: #17120a; }
+.card.r-legendary { --m1: #e8cf8c; --m2: #5a1f1c; --accent: #c9a24f; --glow: rgba(150, 50, 40, .35); --art-a: #4f2420; --art-b: #160807; }
 
-.card .c-art { /* 全面イラスト（未作成のあいだは仮の背景） */
-  position: absolute; inset: .28em; border-radius: .5em; overflow: hidden;
+/* 絵：枠の内側いっぱい。古写真のように少し色あせさせ、周囲を暗くする */
+.card .c-art {
+  position: absolute; inset: .42em; overflow: hidden; border-radius: .15em;
   background: radial-gradient(120% 80% at 50% 25%, var(--art-a) 0%, var(--art-b) 80%);
   display: grid; place-items: start center;
 }
-.card .c-art img { width: 100%; height: 100%; object-fit: cover; }
-.card .c-glyph { margin-top: 18%; font-family: var(--font-display); font-size: 4.2em; color: rgba(255,255,255,.12); }
-.card.spell .c-art { background: radial-gradient(120% 80% at 50% 25%, color-mix(in srgb, var(--art-a) 60%, #7a2a1a), var(--art-b) 80%); }
-.card .c-shade { /* 名前を読みやすくする下半分の影 */
-  position: absolute; inset: .28em; border-radius: .5em; pointer-events: none;
-  background: linear-gradient(180deg, transparent 38%, rgba(5, 6, 12, .55) 58%, rgba(5, 6, 12, .92) 100%);
+.card .c-art img { width: 100%; height: 100%; object-fit: cover; filter: sepia(.28) saturate(.82) contrast(1.06) brightness(.96); }
+.card .c-glyph { margin-top: 18%; font-family: var(--font-display); font-size: 4em; color: rgba(255,240,210,.12); }
+.card .c-shade { /* 周辺減光と、名前を読みやすくする下部の影。紙のざらつきも重ねる */
+  position: absolute; inset: .42em; border-radius: .15em; pointer-events: none;
+  background:
+    radial-gradient(130% 95% at 50% 40%, transparent 55%, rgba(20, 12, 4, .55) 100%),
+    linear-gradient(180deg, transparent 45%, rgba(14, 10, 6, .6) 62%, rgba(10, 7, 4, .94) 100%);
+  box-shadow: inset 0 0 0 .07em var(--accent), inset 0 0 0 .2em rgba(10,7,4,.7), inset 0 0 0 .26em color-mix(in srgb, var(--accent) 55%, transparent);
 }
+.card .c-art::after { /* 紙のざらつき */
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .22; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* 四隅の金具 */
+.card .c-corners { position: absolute; inset: .42em; pointer-events: none; z-index: 1; }
+.card .c-corners::before, .card .c-corners::after {
+  content: ''; position: absolute; left: 0; right: 0; height: 1.1em;
+  background:
+    linear-gradient(var(--accent), var(--accent)) left top / 1.1em .12em no-repeat,
+    linear-gradient(var(--accent), var(--accent)) left top / .12em 1.1em no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right top / 1.1em .12em no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right top / .12em 1.1em no-repeat;
+}
+.card .c-corners::before { top: 0; }
+.card .c-corners::after { bottom: 0; transform: scaleY(-1); }
+
+/* 名前：下部の銘板。上下に細い罫 */
 .card .c-title {
-  position: absolute; left: 6%; right: 6%; bottom: 17%; z-index: 1;
-  display: grid; justify-items: center; gap: .25em; text-align: center;
+  position: absolute; left: 8%; right: 8%; bottom: 25%; z-index: 2;
+  display: grid; justify-items: center; gap: .2em; text-align: center;
+  padding: .3em 0 .25em;
+  border-top: .07em solid color-mix(in srgb, var(--accent) 70%, transparent);
+  border-bottom: .07em solid color-mix(in srgb, var(--accent) 70%, transparent);
 }
 .card .c-en {
-  font-family: var(--font-title); font-weight: 900; font-size: 1.32em; line-height: 1.02; letter-spacing: .02em;
-  text-wrap: balance; overflow-wrap: normal; word-break: keep-all;
-  -webkit-text-stroke: .1em #0b0b0b; paint-order: stroke fill;
-  text-shadow: 0 .08em .25em rgba(0,0,0,.8);
+  font-family: var(--font-title); font-weight: 700; font-size: 1.12em; line-height: 1.05; letter-spacing: .07em;
+  color: #efe5cf; text-wrap: balance; overflow-wrap: normal; word-break: keep-all;
+  text-shadow: 0 .05em .25em rgba(0,0,0,.95);
 }
-.card .c-en.long { font-size: 1.12em; }
-.card .c-en.xlong { font-size: .95em; }
-.card .c-type { font-size: .5em; font-weight: 700; letter-spacing: .25em; color: rgba(255,255,255,.65); }
-.card .c-marks { position: absolute; right: 4%; top: 5%; z-index: 1; display: grid; gap: .3em; }
+.card .c-en.long { font-size: .98em; }
+.card .c-en.xlong { font-size: .84em; letter-spacing: .03em; }
+.card .c-type { font-family: var(--font-title); font-size: .48em; letter-spacing: .45em; color: color-mix(in srgb, var(--accent) 80%, #fff); }
+
+/* 能力の印：右上、枠の内側 */
+.card .c-marks { position: absolute; right: 7%; top: 5.5%; z-index: 2; display: grid; gap: .25em; }
 .card .mark {
-  width: 1.9em; height: 1.9em; border-radius: 50%; display: grid; place-items: center;
-  background: radial-gradient(circle at 35% 30%, #4a4f5e, #15171f 70%);
-  border: .12em solid var(--rim-a); box-shadow: 0 .1em .3em rgba(0,0,0,.6);
+  width: 1.7em; height: 1.7em; border-radius: 50%; display: grid; place-items: center;
+  background: radial-gradient(circle at 40% 35%, #2a241b, #0f0c08 75%);
+  border: .08em solid var(--accent); box-shadow: 0 .08em .2em rgba(0,0,0,.6);
 }
-.card .mark svg { width: 62%; height: 62%; fill: #fff; }
-.card .mark.kw-haste svg { fill: #ffcf4a; }
-.card .mark.kw-flying svg { fill: #bfe3ff; }
-.card .mark.kw-firstStrike svg { fill: #ff9d7a; }
-.card .mark.kw-vigilance svg { fill: #9ff0c0; }
-.card .mark.kw-quick svg { fill: #8fdcff; }
+.card .mark svg { width: 58%; height: 58%; fill: #e6d9b8; }
+
+/* 数値：真鍮のメダル（コスト左上、攻撃力左下、HP右下）。すべて枠の内側に収める */
 .card .gem {
-  position: absolute; width: 22%; aspect-ratio: 1; border-radius: 50%;
-  display: grid; place-items: center; z-index: 2;
-  font-family: var(--font-display); font-size: calc(var(--cw) * .13); line-height: 1; color: #fff;
-  -webkit-text-stroke: .1em #101010; paint-order: stroke fill;
-  border: calc(var(--cw) * .018) solid var(--rim-a);
-  box-shadow: 0 0 0 calc(var(--cw) * .01) #111, 0 .2em .4em rgba(0,0,0,.6), inset 0 -.25em .4em rgba(0,0,0,.4), inset 0 .2em .3em rgba(255,255,255,.35);
+  position: absolute; z-index: 3; width: 21%; aspect-ratio: 1; border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: var(--font-num); font-weight: 900; font-size: calc(var(--cw) * .115); line-height: 1; color: #f3ead6;
+  text-shadow: 0 .06em .1em rgba(0,0,0,.9);
+  border: calc(var(--cw) * .014) solid #b8975a;
+  box-shadow: 0 0 0 calc(var(--cw) * .008) #1a130a, inset 0 0 0 calc(var(--cw) * .008) rgba(0,0,0,.6), inset 0 -.2em .3em rgba(0,0,0,.5), 0 .1em .25em rgba(0,0,0,.6);
 }
-.card .gem.cost { left: -4%; top: -3%; background: radial-gradient(circle at 35% 30%, #7cc3ff, #1f6fc4 55%, #0d3a72); }
-.card .gem.atk { left: -4%; bottom: -3%; background: radial-gradient(circle at 35% 30%, #ff8a7a, #c0352a 55%, #6d1510); }
-.card .gem.hp { right: -4%; bottom: -3%; background: radial-gradient(circle at 35% 30%, #8ef09a, #2f9a45 55%, #135224); }
-.card .gem.hp.damaged { background: radial-gradient(circle at 35% 30%, #ffb08a, #d0552a 55%, #6d2410); }
-.card .gem.buffed { color: #f2e2ff; box-shadow: 0 0 0 calc(var(--cw) * .01) #111, 0 0 .6em #b277ff, inset 0 -.25em .4em rgba(0,0,0,.4); }
+.card .gem.cost { left: 5.5%; top: 4%; background: radial-gradient(circle at 40% 30%, #46667a, #1b2c38 72%); }
+.card .gem.atk { left: 5.5%; bottom: 3.5%; background: radial-gradient(circle at 40% 30%, #7d3a2e, #351410 72%); }
+.card .gem.hp { right: 5.5%; bottom: 3.5%; background: radial-gradient(circle at 40% 30%, #4b6e57, #1a2c20 72%); }
+.card .gem.hp.damaged { background: radial-gradient(circle at 40% 30%, #9a5a30, #3d1d0c 72%); color: #ffd9b8; }
+.card .gem.buffed { color: #e6dcff; border-color: #a99cd0; }
+/* 攻撃力・HPのメダルの下に小さな札（ATK / HP） */
+.card .gem.atk::after, .card .gem.hp::after {
+  position: absolute; bottom: -.05em; font-family: var(--font-title); font-weight: 700; font-size: .28em; letter-spacing: .1em; color: #d9c79c;
+}
+.card .gem.atk::after { content: 'ATK'; }
+.card .gem.hp::after { content: 'HP'; }
+
 .card .ribbon {
-  position: absolute; left: .28em; right: .28em; top: 38%; z-index: 2; text-align: center;
-  font-size: .62em; font-weight: 700; padding: .2em 0;
-  background: rgba(10, 12, 24, .85); color: #fff; border-top: .1em solid var(--rim-a); border-bottom: .1em solid var(--rim-a);
+  position: absolute; left: .42em; right: .42em; top: 38%; z-index: 4; text-align: center;
+  font-size: .6em; font-weight: 500; letter-spacing: .12em; padding: .2em 0;
+  background: rgba(14, 10, 6, .88); color: var(--text);
+  border-top: .1em solid var(--accent); border-bottom: .1em solid var(--accent);
 }
+.card.r-legendary::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 5;
+  background: linear-gradient(115deg, transparent 38%, rgba(255, 225, 160, .16) 48%, transparent 58%) no-repeat;
+  background-size: 250% 100%; animation: sheen 7s ease-in-out infinite;
+}
+@keyframes sheen { from { background-position: 150% 0; } to { background-position: -50% 0; } }
 .card.back {
-  width: 40px; height: 56px; border-radius: 6px; padding: 0; font-size: 4px;
-  background: repeating-linear-gradient(45deg, #2a3570 0 6px, #1d2756 6px 12px);
-  box-shadow: inset 0 0 0 2px var(--gold-deep), 0 3px 6px rgba(0,0,0,.5);
+  width: 40px; height: 56px; padding: 0; font-size: 4px; overflow: hidden;
+  background:
+    repeating-linear-gradient(45deg, rgba(184, 151, 90, .16) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(-45deg, rgba(184, 151, 90, .16) 0 1px, transparent 1px 7px),
+    #1a1611;
+  box-shadow: inset 0 0 0 1px #6d5527, inset 0 0 0 3px #1a1611, inset 0 0 0 4px rgba(184, 151, 90, .4), 0 3px 6px rgba(0,0,0,.5);
+  border-radius: 3px;
 }
 
 /* カードの状態（枠の質感を残すため outline と filter で表す） */
@@ -342,7 +377,7 @@ button { font: inherit; color: inherit; }
 /* 勝敗 */
 .overlay {
   position: fixed; inset: 0; z-index: 30; display: grid; place-items: center;
-  background: rgba(8, 10, 22, .72); backdrop-filter: blur(3px);
+  background: rgba(12, 9, 5, .75); backdrop-filter: blur(3px);
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
@@ -387,7 +422,7 @@ body { letter-spacing: .02em; }
 
 /* ボタン：角を締め、立体の段差と強い光沢をやめる */
 .btn { border-radius: 4px; font-weight: 500; letter-spacing: .08em; padding: 8px 16px; border-color: var(--line); background: var(--felt-hi); }
-.btn:hover:not(:disabled) { background: #232836; }
+.btn:hover:not(:disabled) { background: #2a241a; }
 .btn-gold { background: var(--gold); border-color: var(--gold); color: var(--gold-ink); box-shadow: none; font-weight: 700; }
 .btn-gold:hover:not(:disabled) { background: #d1b47c; }
 .btn-crimson { background: transparent; border-color: var(--crimson); color: #e2a597; box-shadow: none; }
@@ -441,39 +476,18 @@ body { letter-spacing: .02em; }
   border-radius: 8px; box-shadow: inset 0 0 60px rgba(0,0,0,.5);
 }
 .midline { height: 1px; opacity: .5; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
-.command { border-radius: 6px; background: rgba(20, 23, 31, .92); }
+.command { border-radius: 6px; background: rgba(26, 22, 16, .92); }
 .command .msg { font-family: var(--font-display); font-weight: 600; letter-spacing: .12em; font-size: 15px; }
 .thinking::after { animation-duration: 1.6s; }
 
-/* カード：宝石の光沢と彩度を抑え、数字はセリフ体に */
-.card { border-radius: .5em; }
-.card .c-art, .card .c-shade { border-radius: .35em; }
-.card .gem {
-  font-family: var(--font-num); font-weight: 900; font-size: calc(var(--cw) * .12);
-  -webkit-text-stroke: 0; text-shadow: 0 .06em .12em rgba(0,0,0,.8);
-  border-width: calc(var(--cw) * .012);
-  box-shadow: 0 0 0 calc(var(--cw) * .008) #0a0a0a, 0 .15em .35em rgba(0,0,0,.6), inset 0 -.2em .35em rgba(0,0,0,.45);
-}
-.card .gem.cost { background: radial-gradient(circle at 40% 30%, #4f7ea0, #1f3d58 70%); }
-.card .gem.atk { background: radial-gradient(circle at 40% 30%, #9c4a3d, #4c1c16 70%); }
-.card .gem.hp { background: radial-gradient(circle at 40% 30%, #4f8063, #1d3a2a 70%); }
-.card .gem.hp.damaged { background: radial-gradient(circle at 40% 30%, #b06a3c, #4f2610 70%); }
-.card .gem.buffed { color: #e6dcff; box-shadow: 0 0 0 calc(var(--cw) * .008) #0a0a0a, 0 0 .45em rgba(146, 131, 184, .8); }
-.card .c-en { font-weight: 700; letter-spacing: .06em; -webkit-text-stroke: 0; text-shadow: 0 .05em .3em rgba(0,0,0,.95), 0 0 .8em rgba(0,0,0,.6); }
-.card .c-type { letter-spacing: .4em; color: rgba(231, 226, 214, .6); }
-.card .mark { background: rgba(12, 14, 20, .85); border-width: .08em; }
-.card .mark svg { fill: var(--text) !important; opacity: .9; }
-.card.r-epic { --glow: rgba(146, 131, 184, .25); }
-.card.r-legendary { --glow: rgba(181, 81, 63, .35); }
-.card.r-legendary::after { animation-duration: 6s; opacity: .6; }
+/* カードの状態の線は細く */
 .card.playable, .card.selectable { outline-width: .14em; outline-color: var(--verdant); }
 .card.selected { outline-width: .2em; outline-color: var(--gold); }
 .card.targetable { outline-width: .2em; animation-duration: 1.4s; }
 .card.attacking { outline-width: .2em; outline-color: var(--crimson); }
-.card .ribbon { font-weight: 500; letter-spacing: .12em; background: rgba(11, 13, 18, .88); }
 
 /* 詳細・一覧・結果・ログ */
-.preview .info { border-radius: 6px; background: rgba(14, 16, 22, .97); }
+.preview .info { border-radius: 6px; background: rgba(22, 18, 12, .97); }
 .preview .info .kw svg { fill: var(--gold); }
 .gallery { border-radius: 8px; }
 .gallery h2 { font-family: var(--font-display); font-weight: 600; letter-spacing: .3em; color: var(--text); }
@@ -482,18 +496,24 @@ body { letter-spacing: .02em; }
 .result h2 { font-family: var(--font-display); font-weight: 600; font-size: 44px; letter-spacing: .4em; padding-left: .4em; }
 .result.win h2 { color: var(--gold); }
 .log-panel li.turn { color: var(--gold); letter-spacing: .1em; }
-.card.back {
-  background:
-    repeating-linear-gradient(45deg, rgba(194, 164, 107, .14) 0 1px, transparent 1px 7px),
-    repeating-linear-gradient(-45deg, rgba(194, 164, 107, .14) 0 1px, transparent 1px 7px),
-    #161a22;
-  box-shadow: inset 0 0 0 1px var(--gold-deep), inset 0 0 0 3px #161a22, inset 0 0 0 4px rgba(194, 164, 107, .35), 0 3px 6px rgba(0,0,0,.5);
-  border-radius: 4px;
-}
 @media (max-width: 640px) {
   .command .actions .btn { letter-spacing: .02em; padding: 9px 6px; white-space: nowrap; font-size: 13px; }
   .btn-big { letter-spacing: .25em; padding: 12px 32px 12px 36px; }
 }
+
+/* ヴィンテージの仕上げ：紙のざらつきと周辺減光、二重罫の盤面 */
+body::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 50; opacity: .07; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(140% 100% at 50% 40%, transparent 55%, rgba(0,0,0,.55) 100%);
+}
+.screen { position: relative; z-index: 1; }
+.battlefield { border: 3px double color-mix(in srgb, var(--gold) 45%, transparent); background: linear-gradient(180deg, rgba(184,151,90,.03), rgba(0,0,0,0)), var(--felt); }
+.command, .deck-choice .face, .howto, .gallery, .result, .preview .info { border-color: color-mix(in srgb, var(--gold) 35%, var(--line)); }
+.topbar { background: rgba(14, 12, 10, .92); border-bottom-color: color-mix(in srgb, var(--gold) 35%, var(--line)); }
 
 </style>
 <!-- タイトル画面 -->
@@ -535,8 +555,8 @@ body { letter-spacing: .02em; }
           <li>クリーチャーは出したターンは攻撃できない（<b>速攻</b>を除く）。攻撃すると行動済みになり、相手のターンにブロックできない。</li>
           <li>攻撃されたら、攻撃1体につき1体でブロックできる。ブロックすると互いの攻撃力ぶんダメージを与え合う。</li>
           <li>ダメージはターン終了時に回復する。倒すならそのターンのうちに。</li>
-          <li><b>対応</b>カードは、相手の攻撃宣言後・ブロック前にも1枚使える。マナを残してターンを終えよう。</li>
-          <li><b>飛行</b>は飛行でしか止められない。<b>先制</b>は先にダメージを与える。<b>警戒</b>は攻撃しても行動済みにならない。</li>
+          <li><b>応手</b>カードは、相手の攻撃宣言後・ブロック前にも1枚使える。マナを残してターンを終えよう。</li>
+          <li><b>天翔</b>は天翔でしか止められない。<b>一閃</b>は先にダメージを与える。<b>不寝番</b>は攻撃しても行動済みにならない。</li>
           <li>後攻は「マナの雫」（0マナ：このターンマナ+1、1枚引く）を受け取る。</li>
         </ul>
       </details>
@@ -624,7 +644,7 @@ function makeConfig(overrides = {}) {
 //   type      : 'creature' | 'spell'
 //   cost      : マナコスト
 //   attack/hp : クリーチャーのみ
-//   keywords  : 能力キーワード（'haste' = 速攻, 'quick' = 対応）
+//   keywords  : 能力キーワード（'haste' = 速攻, 'quick' = 応手）
 //   effect    : スペルの効果 { type, ...params }（effects.js のキー）
 //   triggers  : 誘発能力 [{ on: 'summon' | 'turnStart' | 'turnEnd', effect }]
 //   rarity    : レア度（表示用）'common' | 'rare' | 'epic' | 'legendary'。強いカードほど高い
@@ -639,10 +659,10 @@ const RARITIES = Object.freeze({
 
 const KEYWORDS = Object.freeze({
   haste: { name: '速攻', text: '召喚したターンから攻撃できる。' },
-  flying: { name: '飛行', text: '飛行を持つクリーチャーでしかブロックできない。' },
-  firstStrike: { name: '先制', text: '戦闘で、先制を持たないクリーチャーより先にダメージを与える。' },
-  vigilance: { name: '警戒', text: '攻撃しても行動済みにならない（相手のターンにブロックできる）。' },
-  quick: { name: '対応', text: '相手の攻撃宣言後、ブロック宣言の前にも使える。' },
+  flying: { name: '天翔', text: '天翔を持つクリーチャーでしかブロックできない。' },
+  firstStrike: { name: '一閃', text: '戦闘で、一閃を持たないクリーチャーより先にダメージを与える。' },
+  vigilance: { name: '不寝番', text: '攻撃しても行動済みにならない（相手のターンにブロックできる）。' },
+  quick: { name: '応手', text: '相手の攻撃宣言後、ブロック宣言の前にも使える。' },
 });
 
 // effect.target を持つクリーチャーは「召喚時：対象を選んで効果」。対象がいなければ不発で召喚できる。
@@ -734,7 +754,7 @@ function hasKeyword(card, kw) {
 const DECKS = Object.freeze({
   swift: {
     name: '疾風（速攻型）',
-    text: '低コストのクリーチャーと速攻・飛行で一気にライフを削る。',
+    text: '低コストのクリーチャーと速攻・天翔で一気にライフを削る。',
     counts: {
       c_rider: 3, c_scout: 3, c_wolf: 3, c_messenger: 2, c_warrior: 3, c_hawk: 3,
       c_pikeman: 1, c_salamander: 2, c_general: 2, s_fireball: 3, s_might: 3, s_rally: 2,
@@ -1014,15 +1034,15 @@ function resolveEffect(state, playerIndex, effect, target, source) {
 // state.awaiting は「次に誰が何を決める必要があるか」を表す。
 //   { player, step: 'mulligan' } : ゲーム開始時の手札引き直し（先攻→後攻の順）
 //   { player, step: 'main' }     : 手番プレイヤーのメインフェイズ
-//   { player, step: 'response' } : 攻撃宣言後、防御側が対応カードを使えるタイミング
+//   { player, step: 'response' } : 攻撃宣言後、防御側が応手カードを使えるタイミング
 //   { player, step: 'block' }    : 防御側プレイヤーのブロック宣言
 //
 // アクション:
 //   { type: 'mulligan', handIndices: [i, ...] }         引き直すカード（空配列 = そのまま）
-//   { type: 'playCard', handIndex, target? }            メインフェイズ／対応（対応カードのみ）
+//   { type: 'playCard', handIndex, target? }            メインフェイズ／応手（応手カードのみ）
 //   { type: 'attack', attackers: [uid, ...] }           メインフェイズ → バトルフェイズへ
 //   { type: 'endTurn' }                                 メインフェイズ（攻撃せず終了）
-//   { type: 'pass' }                                    対応しない
+//   { type: 'pass' }                                    応手しない
 //   { type: 'declareBlocks', blocks: [{attacker, blocker}] }  ブロック宣言（空配列 = ブロックなし）
 
 
@@ -1207,7 +1227,7 @@ function canBlock(state, creature) {
     && (state.config.exhaustedCanBlock || !creature.exhausted);
 }
 
-/** blocker が attacker をブロックできるか（飛行は飛行でしかブロックできない） */
+/** blocker が attacker をブロックできるか（天翔は天翔でしかブロックできない） */
 function canBlockAttacker(state, blocker, attacker) {
   if (!canBlock(state, blocker)) return false;
   if (hasKeyword(getCard(attacker.cardId), 'flying') && !hasKeyword(getCard(blocker.cardId), 'flying')) return false;
@@ -1226,7 +1246,7 @@ function playability(state, playerIndex, handIndex) {
   }
   const card = getCard(cardId);
   if (aw.step === 'response' && !hasKeyword(card, 'quick')) {
-    return { ok: false, reason: '相手のターン中は「対応」カードしか使えません' };
+    return { ok: false, reason: '相手のターン中は「応手」カードしか使えません' };
   }
   if (card.cost > p.mana) return { ok: false, reason: 'マナが足りません' };
   if (card.type === 'creature' && p.board.length >= state.config.boardLimit) {
@@ -1342,19 +1362,19 @@ function declareAttack(state, playerIndex, { attackers }) {
   }
   for (const uid of attackers) {
     const c = board.find((x) => x.uid === uid);
-    if (!hasKeyword(getCard(c.cardId), 'vigilance')) c.exhausted = true; // 警戒は行動済みにならない
+    if (!hasKeyword(getCard(c.cardId), 'vigilance')) c.exhausted = true; // 不寝番は行動済みにならない
   }
   state.combat = { attackers: [...attackers], blocks: {} };
   log(state, 'attack', { player: playerIndex, attackers: [...attackers] });
 
-  // 4. バトルフェイズ: 防御側に対応の機会 → ブロック宣言
+  // 4. バトルフェイズ: 防御側に応手の機会 → ブロック宣言
   const defender = opponentOf(playerIndex);
   if (hasResponse(state, defender)) state.awaiting = { player: defender, step: 'response' };
   else proceedToBlock(state);
   return { ok: true };
 }
 
-/** 防御側が今使える対応カードを持っているか（持っていなければ確認を出さない） */
+/** 防御側が今使える応手カードを持っているか（持っていなければ確認を出さない） */
 function hasResponse(state, playerIndex) {
   const saved = state.awaiting;
   state.awaiting = { player: playerIndex, step: 'response' };
@@ -1363,7 +1383,7 @@ function hasResponse(state, playerIndex) {
   return any;
 }
 
-/** 対応カードを1枚使う。再対応はなく、解決後はブロック宣言へ進む。 */
+/** 応手カードを1枚使う。再応手はなく、解決後はブロック宣言へ進む。 */
 function respond(state, playerIndex, action) {
   const res = playCard(state, playerIndex, action);
   if (!res.ok) return res;
@@ -1372,7 +1392,7 @@ function respond(state, playerIndex, action) {
 }
 
 function proceedToBlock(state) {
-  // 対応で除去された攻撃クリーチャーは戦闘から外れる
+  // 応手で除去された攻撃クリーチャーは戦闘から外れる
   const atkBoard = state.players[state.activePlayer].board;
   state.combat.attackers = state.combat.attackers.filter((uid) => atkBoard.some((c) => c.uid === uid));
   if (state.combat.attackers.length === 0) {
@@ -1395,7 +1415,7 @@ function declareBlocks(state, playerIndex, { blocks = [] }) {
     if (!b) return fail('自分のクリーチャーではありません');
     if (!canBlock(state, b)) return fail(`${b.name} はブロックできません`);
     const atk = state.players[state.activePlayer].board.find((x) => x.uid === attacker);
-    if (!canBlockAttacker(state, b, atk)) return fail(`${atk.name} は飛行を持つため、飛行でしかブロックできません`);
+    if (!canBlockAttacker(state, b, atk)) return fail(`${atk.name} は天翔を持つため、天翔でしかブロックできません`);
     if (usedBlockers.has(blocker)) return fail('1体のクリーチャーは1回しかブロックできません');
     if (blockedAttackers.has(attacker)) return fail('1体の攻撃に対するブロッカーは1体までです');
     usedBlockers.add(blocker);
@@ -1422,7 +1442,7 @@ function resolveCombat(state) {
   const firstStrike = (c) => hasKeyword(getCard(c.cardId), 'firstStrike');
   const pairs = state.combat.attackers.map((uid) => ({ a: uid, b: state.combat.blocks[uid] }));
 
-  // 先制を持つクリーチャーが先にダメージを与え、その後に残りが与える。各段階の中では同時。
+  // 一閃を持つクリーチャーが先にダメージを与え、その後に残りが与える。各段階の中では同時。
   for (const isFirst of [true, false]) {
     const pending = [];
     for (const { a: aUid, b: bUid } of pairs) {
@@ -1477,7 +1497,7 @@ const WEIGHTS = {
   firstStrike: 1.0,
   vigilance: 0.6,
   hand: 1.6, // 手札1枚
-  quickHoldBonus: 1.2, // 対応カードを手札に持っていることの価値（相手ターンに使える）
+  quickHoldBonus: 1.2, // 応手カードを手札に持っていることの価値（相手ターンに使える）
 };
 
 // ---------------------------------------------------------------------------
@@ -1533,8 +1553,8 @@ function tryAction(state, me, actor, action) {
  * awaiting.player の次の1アクションを決めて返す（適用はしない）
  * @param {{level?: 'hard'|'normal'|'easy', random?: () => number}} opts
  *   hard  : 全力（評価＋先読み）
- *   normal: 対応を半分見逃す、ブロックは簡易判断、攻撃は上位3候補からランダム
- *   easy  : 対応しない、カードを出し渋ることがある、ブロックを見逃すことがある、攻撃は上位5候補からランダム
+ *   normal: 応手を半分見逃す、ブロックは簡易判断、攻撃は上位3候補からランダム
+ *   easy  : 応手しない、カードを出し渋ることがある、ブロックを見逃すことがある、攻撃は上位5候補からランダム
  */
 function chooseAction(state, opts = {}) {
   const me = state.awaiting.player;
@@ -1632,7 +1652,7 @@ function chooseAttack(state, me, rnd = null, pool = 3) {
   return scored[0].action;
 }
 
-/** 相手の対応なし・相手は簡易ブロックを行うと仮定して戦闘を最後まで進めて評価 */
+/** 相手の応手なし・相手は簡易ブロックを行うと仮定して戦闘を最後まで進めて評価 */
 function scoreAfterCombat(s, me) {
   let guard = 10;
   while (s.winner === null && s.awaiting && s.awaiting.player !== s.activePlayer && guard--) {
@@ -1645,7 +1665,7 @@ function scoreAfterCombat(s, me) {
   return evaluate(s, me);
 }
 
-/** 対応: 使わない場合と、使える対応カード×対象のすべてを比較 */
+/** 応手: 使わない場合と、使える応手カード×対象のすべてを比較 */
 function chooseResponse(state, me) {
   let best = { type: 'pass' };
   let bestScore = afterResponseScore(tryAction(state, me, me, best), me);
@@ -1707,7 +1727,7 @@ function searchBlocks(state, me) {
   return best ?? [];
 }
 
-/** 戦闘1対1の結果予測（先制考慮） */
+/** 戦闘1対1の結果予測（一閃考慮） */
 function fight(a, b) {
   const fa = hasKeyword(getCard(a.cardId), 'firstStrike');
   const fb = hasKeyword(getCard(b.cardId), 'firstStrike');
@@ -2086,7 +2106,7 @@ function buildCard(card, stats = null) {
   const size = longestWord >= 12 ? ' xlong' : longestWord >= 9 || en.length > 13 ? ' long' : '';
   title.append(el('div', `c-en${size}`, en));
   if (card.type === 'spell') title.append(el('div', 'c-type', 'SPELL'));
-  node.append(art, el('div', 'c-shade'), title);
+  node.append(art, el('div', 'c-shade'), el('div', 'c-corners'), title);
   if (card.keywords?.length) {
     const marks = el('div', 'c-marks');
     for (const k of card.keywords) {
@@ -2298,15 +2318,15 @@ function renderCommand(me) {
     actions.append(button(n ? `${n}枚引き直す` : 'このまま始める', () => act({ type: 'mulligan', handIndices: [...ui.mulligan] }), 'btn-gold'));
   } else if (aw.step === 'response') {
     msg.textContent = `${nm(game.activePlayer)}が${game.combat.attackers.length}体で攻撃してきた`;
-    sub.textContent = 'ブロックの前に「対応」カードを1枚使えます。';
-    actions.append(button('対応しない', () => act({ type: 'pass' }), 'btn-gold'));
+    sub.textContent = 'ブロックの前に「応手」カードを1枚使えます。';
+    actions.append(button('見送る', () => act({ type: 'pass' }), 'btn-gold'));
   } else if (aw.step === 'main') {
     const ready = game.players[aw.player].board.filter((c) => canAttack(game, c));
     msg.textContent = ui.attackers.size ? `${ui.attackers.size}体で攻撃する` : 'あなたのターン';
     sub.textContent = ready.length
       ? '光っている手札を使う／攻撃するクリーチャーを選ぶ'
       : '光っている手札を使ってから、ターンを終了';
-    if (game.players[aw.player].hand.some((id) => hasKeyword(getCard(id), 'quick'))) sub.textContent += '（対応カードはマナを残すと相手の攻撃時にも使える）';
+    if (game.players[aw.player].hand.some((id) => hasKeyword(getCard(id), 'quick'))) sub.textContent += '（応手カードはマナを残すと相手の攻撃時にも使える）';
     const all = button('全員で攻撃', () => { ready.forEach((c) => ui.attackers.add(c.uid)); render(); });
     all.disabled = ready.length === 0 || ui.attackers.size === ready.length;
     const atk = button(ui.attackers.size ? `攻撃する（${ui.attackers.size}体）` : '攻撃する', () => act({ type: 'attack', attackers: [...ui.attackers] }), 'btn-crimson');
@@ -2316,7 +2336,7 @@ function renderCommand(me) {
     const blocks = [...ui.blocks].map(([attacker, blocker]) => ({ attacker, blocker }));
     const incoming = game.combat.attackers.filter((uid) => !ui.blocks.has(uid)).reduce((s, uid) => s + (creatureByUid(uid)?.attack ?? 0), 0);
     msg.textContent = ui.blocker === null ? 'ブロックするクリーチャーを選ぶ' : '止める相手（金色）を選ぶ';
-    sub.textContent = `このままだと${incoming}ダメージを受ける（ライフ${game.players[aw.player].life}）。飛行は飛行でしか止められない。`;
+    sub.textContent = `このままだと${incoming}ダメージを受ける（ライフ${game.players[aw.player].life}）。天翔は天翔でしか止められない。`;
     if (incoming >= game.players[aw.player].life) sub.classList.add('danger');
     actions.append(
       button('選び直す', () => { ui.blocks.clear(); ui.blocker = null; render(); }),
@@ -2362,7 +2382,7 @@ function describe(e) {
     case 'gameStart': return `ゲーム開始。先攻は${nm(e.firstPlayer)}`;
     case 'turnStart': return `―― ${nm(e.player)}のターン（${e.turnOfPlayer}ターン目） ――`;
     case 'summon': return `${nm(e.player)}：${e.name}を召喚`;
-    case 'castSpell': return `${nm(e.player)}：${e.name}を使用${e.response ? '（対応）' : ''}`;
+    case 'castSpell': return `${nm(e.player)}：${e.name}を使用${e.response ? '（応手）' : ''}`;
     case 'attack': return `${nm(e.player)}：${e.attackers.length}体で攻撃`;
     case 'blocks': return e.blocks.length ? `${nm(e.player)}：${e.blocks.length}体でブロック` : `${nm(e.player)}：ブロックしない`;
     case 'damage': return `${e.sourceName ? `${e.sourceName}→` : ''}${nm(e.owner)}の${e.targetName}に${e.amount}ダメージ`;
@@ -2374,7 +2394,7 @@ function describe(e) {
     case 'bonusCard': return `${nm(e.player)}は後攻なので「マナの雫」を受け取った`;
     case 'destroyed': return `${nm(e.owner)}の${e.name}は破壊された`;
     case 'mulligan': return e.count ? `${nm(e.player)}：${e.count}枚引き直した` : `${nm(e.player)}：手札をそのままにした`;
-    case 'pass': return `${nm(e.player)}：対応しない`;
+    case 'pass': return `${nm(e.player)}：応手を見送った`;
     case 'combatCancelled': return '攻撃クリーチャーがいなくなり、戦闘は終了';
     case 'burn': return `${nm(e.player)}は手札がいっぱいで、引いたカードが捨て札へ`;
     case 'deckOut': return `${nm(e.player)}は山札切れでカードを引けない`;
@@ -2443,6 +2463,6 @@ $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logP
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
 showTitle();
 
-document.getElementById('build').textContent = "v0.3 build 5f64b48";
+document.getElementById('build').textContent = "v0.3 build 736a47f";
 })();
 </script>
