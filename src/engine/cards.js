@@ -49,7 +49,7 @@ const CARD_LIST = [
   { id: 'c_warrior', name: '鉄槌の戦士', nameEn: 'Hammer Warrior', rarity: 'common', type: 'creature', cost: 3, attack: 3, hp: 3 },
   { id: 'c_rider', name: '疾風の騎手', nameEn: 'Gale Rider', rarity: 'rare', type: 'creature', cost: 3, attack: 3, hp: 3, keywords: ['haste'] },
   { id: 'c_pikeman', name: '槍衾の衛兵', nameEn: 'Pike Guard', rarity: 'rare', type: 'creature', cost: 3, attack: 2, hp: 3, keywords: ['firstStrike'] },
-  { id: 'c_hawk', name: '嵐の鷹', nameEn: 'Storm Hawk', rarity: 'rare', type: 'creature', cost: 3, attack: 3, hp: 2, keywords: ['flying'] },
+  { id: 'c_hawk', name: '嵐の鷹', nameEn: 'Storm Hawk', rarity: 'rare', type: 'creature', cost: 3, attack: 3, hp: 3, keywords: ['flying'] },
   {
     id: 'c_salamander', name: '火吹きトカゲ', nameEn: 'Fire Salamander', rarity: 'rare', type: 'creature', cost: 3, attack: 2, hp: 2,
     effect: { type: 'damage', amount: 1, target: 'character' },
@@ -76,8 +76,8 @@ const CARD_LIST = [
   },
   {
     id: 's_rally', name: '鬨の声', nameEn: 'War Cry', rarity: 'epic', type: 'spell', cost: 2,
-    effect: { type: 'buffTempAll', attack: 2, hp: 0 },
-    text: '自分のクリーチャーすべてはターン終了時まで+2/+0。',
+    effect: { type: 'buffTempAll', attack: 2, hp: 1 },
+    text: '自分のクリーチャーすべてはターン終了時まで+2/+1。',
   },
   {
     id: 's_fireball', name: '火球', nameEn: 'Fireball', rarity: 'epic', type: 'spell', cost: 3,

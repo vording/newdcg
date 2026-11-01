@@ -100,7 +100,11 @@ export function chooseAction(state, opts = {}) {
     case 'block': {
       if (level === 'hard') return { type: 'declareBlocks', blocks: chooseBlocks(state, me) };
       let blocks = quickBlocks(state, me);
-      if (level === 'easy') blocks = blocks.filter(() => rnd() < 0.6);
+      if (level === 'easy') {
+        // ブロックを見逃すことがある。ただし見逃すと負ける場面では見逃さない
+        const lax = blocks.filter(() => rnd() < 0.6);
+        if (unblockedDamage(state, lax) < state.players[me].life) blocks = lax;
+      }
       return { type: 'declareBlocks', blocks };
     }
     default: {
@@ -252,6 +256,7 @@ function searchBlocks(state, me) {
       pick.forEach((b, k) => { if (b !== null) blocks.push({ attacker: attackers[k].uid, blocker: b }); });
       const s = tryAction(state, me, me, { type: 'declareBlocks', blocks });
       if (!s) return;
+      finishCombat(s, me, false); // 戦闘ダメージまで進めてから評価する（致死を見逃さない）
       const score = evaluate(s, me);
       if (score > bestScore) { bestScore = score; best = blocks; }
       return;
@@ -291,19 +296,41 @@ function quickBlocks(state, me) {
   const blocks = [];
   let incoming = attackers.reduce((s, a) => s + a.attack, 0);
   const take = (b) => available.splice(available.indexOf(b), 1);
+  // ブロックで止まるダメージ（蹂躙は、ブロッカーの残りHPを超えたぶんが通る）
+  const stopped = (a, b) => (hasKeyword(getCard(a.cardId), 'trample') && !b.shield ? Math.min(a.attack, Math.max(b.hp - b.damage, 0)) : a.attack);
   for (const a of attackers) {
     const legal = available.filter((b) => canBlockAttacker(state, b, a));
     const good = legal.find((b) => { const r = fight(a, b); return r.aDies && !r.bDies; })
       ?? legal.find((b) => !fight(a, b).bDies)
       ?? legal.find((b) => { const r = fight(a, b); return r.aDies && creatureValue(a) >= creatureValue(b); });
-    if (good) { blocks.push({ attacker: a.uid, blocker: good.uid }); take(good); incoming -= a.attack; }
+    if (good) { blocks.push({ attacker: a.uid, blocker: good.uid }); take(good); incoming -= stopped(a, good); }
   }
   for (const a of attackers) {
     if (incoming < state.players[me].life) break;
     if (blocks.some((x) => x.attacker === a.uid)) continue;
-    const chump = available.filter((b) => canBlockAttacker(state, b, a)).sort((x, y) => creatureValue(x) - creatureValue(y))[0];
+    // 安いブロッカーから。蹂躙で止めきれず死ぬなら、より多く止められるものを選ぶ
+    const cands = available.filter((b) => canBlockAttacker(state, b, a)).sort((x, y) => creatureValue(x) - creatureValue(y));
+    const life = state.players[me].life;
+    const chump = cands.find((b) => incoming - stopped(a, b) < life)
+      ?? cands.sort((x, y) => stopped(a, y) - stopped(a, x))[0];
     if (!chump) continue;
-    blocks.push({ attacker: a.uid, blocker: chump.uid }); take(chump); incoming -= a.attack;
+    blocks.push({ attacker: a.uid, blocker: chump.uid }); take(chump); incoming -= stopped(a, chump);
   }
   return blocks;
+}
+
+/** このブロックの割り当てで、自分が受ける戦闘ダメージの見積もり（蹂躙のはみ出しを含む） */
+export function unblockedDamage(state, blocks) {
+  const atkBoard = state.players[state.activePlayer].board;
+  const defBoard = state.players[1 - state.activePlayer].board;
+  let dmg = 0;
+  for (const uid of state.combat.attackers) {
+    const a = atkBoard.find((c) => c.uid === uid);
+    if (!a) continue;
+    const blk = blocks.find((x) => x.attacker === uid);
+    const b = blk && defBoard.find((c) => c.uid === blk.blocker);
+    if (!b) dmg += a.attack;
+    else if (hasKeyword(getCard(a.cardId), 'trample') && !b.shield) dmg += Math.max(0, a.attack - Math.max(b.hp - b.damage, 0));
+  }
+  return dmg;
 }
