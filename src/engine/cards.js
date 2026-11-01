@@ -111,7 +111,7 @@ const CARD_LIST = [
   { id: 'c_archer', name: '見張り塔の弓兵', nameEn: 'Tower Archer', rarity: 'common', type: 'creature', cost: 2, attack: 2, hp: 1,
     effect: { type: 'damage', amount: 1, target: 'enemyCreature' }, text: '召喚時：相手のクリーチャー1体に1ダメージ。' },
   { id: 'c_boar', name: '突進する猪', nameEn: 'Charging Boar', rarity: 'common', type: 'creature', cost: 3, attack: 4, hp: 2, keywords: ['trample'] },
-  { id: 'c_duelist', name: '双剣の決闘士', nameEn: 'Twinblade Duelist', rarity: 'rare', type: 'creature', cost: 3, attack: 2, hp: 2, keywords: ['firstStrike', 'deathtouch'] },
+  { id: 'c_duelist', name: '毒刃の剣士', nameEn: 'Venomblade', rarity: 'rare', type: 'creature', cost: 3, attack: 2, hp: 2, keywords: ['firstStrike', 'deathtouch'] },
   { id: 'c_assassin', name: '影の暗殺者', nameEn: 'Shadow Assassin', rarity: 'rare', type: 'creature', cost: 3, attack: 2, hp: 1, keywords: ['haste', 'deathtouch'] },
   { id: 'c_packleader', name: '群れの長', nameEn: 'Pack Leader', rarity: 'rare', type: 'creature', cost: 4, attack: 2, hp: 3,
     triggers: [{ on: 'summon', effect: { type: 'summonToken', cardId: 't_pup', count: 2 } }], text: '召喚時：狼の子（1/1・速攻）を2体呼び出す。' },
@@ -121,7 +121,7 @@ const CARD_LIST = [
     triggers: [{ on: 'death', effect: { type: 'summonToken', cardId: 't_ash', count: 1 } }], text: '遺志：灰の雛（2/2・天翔）を呼び出す。' },
   { id: 'c_bloodlord', name: '吸血公', nameEn: 'Blood Lord', rarity: 'epic', type: 'creature', cost: 6, attack: 4, hp: 4, keywords: ['lifesteal'] },
   { id: 'c_colossus', name: '鋼鉄の巨像', nameEn: 'Iron Colossus', rarity: 'rare', type: 'creature', cost: 6, attack: 6, hp: 6, keywords: ['trample'] },
-  { id: 'c_lionking', name: '黄金の獅子王', nameEn: 'Golden Lion King', rarity: 'legendary', type: 'creature', cost: 8, attack: 7, hp: 7, keywords: ['trample', 'ward'] },
+  { id: 'c_lionking', name: '巨獣ベヒモス', nameEn: 'Behemoth', rarity: 'legendary', type: 'creature', cost: 8, attack: 7, hp: 7, keywords: ['trample', 'ward'] },
   // スペル
   { id: 's_snare', name: '足止めの網', nameEn: 'Snare Net', rarity: 'common', type: 'spell', cost: 1,
     effect: { type: 'exhaust', target: 'enemyCreature' }, text: '相手のクリーチャー1体を行動済みにする（このターン、ブロックできない）。' },
@@ -170,7 +170,7 @@ export const DECKS = Object.freeze({
   },
   fortress: {
     name: '城塞（防御型）',
-    text: '加護と除去で耐え、古竜と獅子王で決める。',
+    text: '加護と除去で耐え、古竜とベヒモスで決める。',
     counts: {
       c_shield: 2, c_sister: 3, c_viper: 2, c_pikeman: 3, c_knight: 2, c_warden: 3, c_dragon: 2, c_lionking: 1,
       s_arrow: 3, s_ward: 2, s_lance: 2, s_wave: 2, s_judgment: 2, s_insight: 1,

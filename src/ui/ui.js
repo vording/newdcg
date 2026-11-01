@@ -21,8 +21,8 @@ const GLYPH = {
   c_general: '将', c_dragon: '竜', s_arrow: '矢', s_might: '力', s_rally: '鬨', s_fireball: '炎',
   s_insight: '泉', s_wave: '波', s_coin: '雫', s_mend: '癒',
   c_imp: '鬼', c_bat: '蝠', c_viper: '蛇', c_sister: '祈', c_gravekeeper: '墓', c_archer: '弓', c_boar: '猪',
-  c_duelist: '決', c_assassin: '影', c_packleader: '長', c_paladin: '誓', c_warden: '守', c_phoenix: '鳳',
-  c_bloodlord: '血', c_colossus: '像', c_lionking: '獅', s_snare: '網', s_ward: '護', s_lance: '雷',
+  c_duelist: '刃', c_assassin: '影', c_packleader: '長', c_paladin: '誓', c_warden: '守', c_phoenix: '鳳',
+  c_bloodlord: '血', c_colossus: '像', c_lionking: '獣', s_snare: '網', s_ward: '護', s_lance: '雷',
   s_recall: '還', s_prayer: '祷', s_judgment: '断', t_pup: '仔', t_ash: '灰',
 };
 const DECK_TYPE = { swift: '速攻型', fortress: '防御型', balance: '標準型', night: '遺志・吸命型' };
