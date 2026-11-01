@@ -491,3 +491,4 @@ body { letter-spacing: .02em; }
 .topbar { background: rgba(14, 12, 10, .92); border-bottom-color: color-mix(in srgb, var(--gold) 35%, var(--line)); }
 
 .card .mark.spent { opacity: .3; }
+.card .gem.cost.discount { border-color: #8fd0a0; color: #d8ffe0; }

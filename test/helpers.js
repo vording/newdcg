@@ -30,3 +30,9 @@ export function ok(res) {
   if (!res.ok) throw new Error(`action failed: ${res.error}`);
   return res;
 }
+
+/** 残っている瞬発の機会をすべて見送る */
+export function passResponses(state) {
+  let guard = 10;
+  while (state.awaiting?.step === 'response' && guard--) ok(applyAction(state, state.awaiting.player, { type: 'pass' }));
+}

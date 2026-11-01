@@ -494,6 +494,7 @@ body { letter-spacing: .02em; }
 .topbar { background: rgba(14, 12, 10, .92); border-bottom-color: color-mix(in srgb, var(--gold) 35%, var(--line)); }
 
 .card .mark.spent { opacity: .3; }
+.card .gem.cost.discount { border-color: #8fd0a0; color: #d8ffe0; }
 
 </style>
 <!-- タイトル画面 -->
@@ -535,7 +536,7 @@ body { letter-spacing: .02em; }
           <li>クリーチャーは出したターンは攻撃できない（<b>速攻</b>を除く）。攻撃すると行動済みになり、相手のターンにブロックできない。</li>
           <li>攻撃されたら、攻撃1体につき1体でブロックできる。ブロックすると互いの攻撃力ぶんダメージを与え合う。</li>
           <li>ダメージはターン終了時に回復する。倒すならそのターンのうちに。</li>
-          <li><b>瞬発</b>カードは、相手の攻撃宣言後・ブロック前にも1枚使える。マナを残してターンを終えよう。</li>
+          <li><b>瞬発</b>カードは戦闘中にも使える：相手の攻撃宣言の後、ブロックが決まった後（攻める側→守る側）。1回に何枚でも使え、<b>相手のターン中はコスト−1</b>。瞬発クリーチャーは攻撃に合わせて呼び出してブロックできる。マナを残してターンを終えよう。</li>
           <li><b>天翔</b>は天翔でしか止められない。<b>先制攻撃</b>は先にダメージを与える。<b>番人</b>は攻撃しても行動済みにならない。<b>速攻</b>は出したターンに攻撃できる。</li>
           <li><b>吸命</b>は与えたダメージぶんライフ回復。<b>必殺</b>はダメージを与えたクリーチャーを倒す。<b>蹂躙</b>はブロックされても余りのダメージが通る。<b>加護</b>は1回だけダメージを防ぐ。<b>遺志</b>は倒れたときに効果が出る。</li>
           <li>後攻は「マナの雫」（0マナ：このターンマナ+1、1枚引く）を受け取る。</li>
@@ -604,6 +605,8 @@ const DEFAULT_CONFIG = Object.freeze({
   damageResetsAtTurnEnd: true,
   // 後攻がゲーム開始時（マリガン後）に受け取るカード（null = なし）。先攻有利の補正。
   secondPlayerBonusCard: 's_coin',
+  // 構え：相手のターン中に使う瞬発カードのコスト軽減量
+  quickDiscount: 1,
   // ライフの上限（null = 上限なし。回復・吸命で初期ライフを超えて増やせる）
   lifeCap: null,
   // Q9【決定】手札上限10枚。超えて引いたカードは墓地へ（null = 上限なし）
@@ -645,7 +648,7 @@ const KEYWORDS = Object.freeze({
   flying: { name: '天翔', text: '天翔を持つクリーチャーでしかブロックできない。' },
   firstStrike: { name: '先制攻撃', text: '戦闘で、先制攻撃を持たないクリーチャーより先にダメージを与える。' },
   vigilance: { name: '番人', text: '攻撃しても行動済みにならない（相手のターンにブロックできる）。' },
-  quick: { name: '瞬発', text: '相手の攻撃宣言後、ブロック宣言の前にも使える。' },
+  quick: { name: '瞬発', text: '戦闘中にも使える（攻撃宣言の後／ブロック宣言の後）。相手のターン中に使うとコストが1下がる。瞬発クリーチャーは相手の攻撃に合わせて呼び出し、ブロックに使える。' },
   lifesteal: { name: '吸命', text: 'このクリーチャーが与えたダメージと同じだけ、自分のライフを回復する。' },
   deathtouch: { name: '必殺', text: 'このクリーチャーからダメージを受けたクリーチャーは破壊される。' },
   trample: { name: '蹂躙', text: '攻撃してブロックされても、ブロックしたクリーチャーを倒して余ったダメージを相手プレイヤーに与える。' },
@@ -746,14 +749,24 @@ const CARD_LIST = [
     effect: { type: 'exhaust', target: 'enemyCreature' }, text: '相手のクリーチャー1体を行動済みにする（このターン、ブロックできない）。' },
   { id: 's_ward', name: '守護の祝福', nameEn: 'Blessing of Ward', rarity: 'rare', type: 'spell', cost: 1, keywords: ['quick'],
     effect: { type: 'grantShield', target: 'friendlyCreature' }, text: '自分のクリーチャー1体に加護を与える。' },
-  { id: 's_lance', name: '雷の槍', nameEn: 'Thunder Lance', rarity: 'common', type: 'spell', cost: 2,
+  { id: 's_lance', name: '雷の槍', nameEn: 'Thunder Lance', rarity: 'common', type: 'spell', cost: 2, keywords: ['quick'],
     effect: { type: 'damage', amount: 2, target: 'enemyCreature' }, text: '相手のクリーチャー1体に2ダメージを与える。' },
   { id: 's_recall', name: '送還の風', nameEn: 'Recall Wind', rarity: 'rare', type: 'spell', cost: 2,
     effect: { type: 'bounce', target: 'creature' }, text: 'クリーチャー1体を持ち主の手札に戻す。' },
   { id: 's_prayer', name: '癒しの祈り', nameEn: 'Healing Prayer', rarity: 'common', type: 'spell', cost: 3,
     effect: { type: 'gainLife', amount: 4, draw: 1 }, text: '自分のライフを4回復し、カードを1枚引く。' },
-  { id: 's_judgment', name: '断罪の剣', nameEn: 'Sword of Judgment', rarity: 'epic', type: 'spell', cost: 5,
-    effect: { type: 'destroy', target: 'enemyCreature' }, text: '相手のクリーチャー1体を破壊する。' },
+  { id: 's_judgment', name: '断罪の剣', nameEn: 'Sword of Judgment', rarity: 'legendary', type: 'spell', cost: 6,
+    effect: { type: 'destroyAll' }, text: '場のクリーチャーをすべて破壊する（自分のクリーチャーも。加護も無視する）。' },
+  // --- 瞬発（v0.5） ---
+  { id: 'c_ambusher', name: '伏兵の槍兵', nameEn: 'Ambush Spearman', rarity: 'common', type: 'creature', cost: 2, attack: 2, hp: 3, keywords: ['quick'] },
+  { id: 'c_owl', name: '夜番の梟', nameEn: 'Night Owl', rarity: 'rare', type: 'creature', cost: 3, attack: 2, hp: 3, keywords: ['quick', 'flying'] },
+  { id: 'c_stalker', name: '闇潜みの刺客', nameEn: 'Gloom Stalker', rarity: 'epic', type: 'creature', cost: 3, attack: 2, hp: 2, keywords: ['quick', 'deathtouch'] },
+  { id: 's_riposte', name: '返し刃', nameEn: 'Riposte', rarity: 'common', type: 'spell', cost: 1, keywords: ['quick'],
+    effect: { type: 'buffTemp', attack: 3, hp: 0, target: 'friendlyCreature' }, text: '自分のクリーチャー1体はターン終了時まで+3/+0。' },
+  { id: 's_sidestep', name: '見切り', nameEn: 'Sidestep', rarity: 'rare', type: 'spell', cost: 2, keywords: ['quick'],
+    effect: { type: 'bounce', target: 'attackingCreature' }, text: '攻撃している相手のクリーチャー1体を持ち主の手札に戻す。' },
+  { id: 's_veil', name: '霧隠れ', nameEn: 'Mist Veil', rarity: 'common', type: 'spell', cost: 1, keywords: ['quick'],
+    effect: { type: 'bounce', target: 'friendlyCreature' }, text: '自分のクリーチャー1体を手札に戻す。' },
   // トークン（効果で呼び出されるだけで、デッキには入れられない）
   { id: 't_pup', name: '狼の子', nameEn: 'Wolf Pup', rarity: 'common', type: 'creature', cost: 1, attack: 1, hp: 1, keywords: ['haste'], token: true },
   { id: 't_ash', name: '灰の雛', nameEn: 'Ash Hatchling', rarity: 'common', type: 'creature', cost: 2, attack: 2, hp: 2, keywords: ['flying'], token: true },
@@ -792,7 +805,7 @@ const DECKS = Object.freeze({
     text: '加護と除去で耐え、古竜とベヒモスで決める。',
     counts: {
       c_shield: 2, c_sister: 3, c_viper: 2, c_pikeman: 3, c_knight: 2, c_warden: 3, c_dragon: 2, c_lionking: 1,
-      s_arrow: 3, s_ward: 2, s_lance: 2, s_wave: 2, s_judgment: 2, s_insight: 1,
+      s_arrow: 3, s_ward: 2, s_lance: 2, s_wave: 2, s_judgment: 1, s_insight: 2,
     },
   },
   balance: {
@@ -811,6 +824,14 @@ const DECKS = Object.freeze({
       c_imp: 2, c_gravekeeper: 3, c_bat: 3, c_messenger: 2, c_salamander: 2, c_warrior: 1,
       c_phoenix: 2, c_paladin: 2, c_bloodlord: 1, c_assassin: 1, c_archer: 1,
       s_prayer: 1, s_lance: 3, s_recall: 2, s_ward: 2, s_judgment: 1, s_insight: 1,
+    },
+  },
+  shadow: {
+    name: '影刃（瞬発型）',
+    text: 'マナを残して構え、相手の攻撃に瞬発で切り返す。',
+    counts: {
+      c_ambusher: 3, c_owl: 3, c_stalker: 2, c_pikeman: 2, c_messenger: 2, c_knight: 2, c_dragon: 1, c_apprentice: 1,
+      s_arrow: 3, s_riposte: 3, s_sidestep: 3, s_lance: 3, s_ward: 2,
     },
   },
 });
@@ -1112,6 +1133,13 @@ const EFFECTS = {
       log(state, 'destroyEffect', { target: c.uid, targetName: c.name, owner: c.owner });
     },
   },
+  /** 場のクリーチャーをすべて破壊する（双方。加護は無視） */
+  destroyAll: {
+    resolve(state) {
+      for (const p of state.players) for (const c of p.board) c.damage = Math.max(c.damage, c.hp);
+      log(state, 'destroyAllEffect', {});
+    },
+  },
   /** 加護を与える */
   grantShield: {
     resolve(state, playerIndex, params, target) {
@@ -1191,7 +1219,7 @@ function resolveEffect(state, playerIndex, effect, target, source) {
 // state.awaiting は「次に誰が何を決める必要があるか」を表す。
 //   { player, step: 'mulligan' } : ゲーム開始時の手札引き直し（先攻→後攻の順）
 //   { player, step: 'main' }     : 手番プレイヤーのメインフェイズ
-//   { player, step: 'response' } : 攻撃宣言後、防御側が瞬発カードを使えるタイミング
+//   { player, step: 'response', window } : 戦闘中に瞬発カードを使える機会（'attack' | 'blockA' | 'blockD'）
 //   { player, step: 'block' }    : 防御側プレイヤーのブロック宣言
 //
 // アクション:
@@ -1199,7 +1227,7 @@ function resolveEffect(state, playerIndex, effect, target, source) {
 //   { type: 'playCard', handIndex, target? }            メインフェイズ／瞬発（瞬発カードのみ）
 //   { type: 'attack', attackers: [uid, ...] }           メインフェイズ → バトルフェイズへ
 //   { type: 'endTurn' }                                 メインフェイズ（攻撃せず終了）
-//   { type: 'pass' }                                    瞬発しない
+//   { type: 'pass' }                                    この機会の瞬発を終える
 //   { type: 'declareBlocks', blocks: [{attacker, blocker}] }  ブロック宣言（空配列 = ブロックなし）
 
 
@@ -1404,6 +1432,16 @@ function canBlockAttacker(state, blocker, attacker) {
   return true;
 }
 
+/**
+ * 実際に支払うコスト。
+ * 構え：相手のターン中に使う瞬発カードはコストが config.quickDiscount 下がる（0未満にはならない）。
+ */
+function effectiveCost(state, playerIndex, card) {
+  const onOpponentsTurn = state.activePlayer !== playerIndex && state.awaiting?.step === 'response';
+  if (onOpponentsTurn && hasKeyword(card, 'quick')) return Math.max(0, card.cost - state.config.quickDiscount);
+  return card.cost;
+}
+
 /** 手札のカードが今プレイ可能か。不可なら理由を返す。 */
 function playability(state, playerIndex, handIndex) {
   const p = state.players[playerIndex];
@@ -1418,7 +1456,7 @@ function playability(state, playerIndex, handIndex) {
   if (aw.step === 'response' && !hasKeyword(card, 'quick')) {
     return { ok: false, reason: '相手のターン中は「瞬発」カードしか使えません' };
   }
-  if (card.cost > p.mana) return { ok: false, reason: 'マナが足りません' };
+  if (effectiveCost(state, playerIndex, card) > p.mana) return { ok: false, reason: 'マナが足りません' };
   if (card.type === 'creature' && p.board.length >= state.config.boardLimit) {
     return { ok: false, reason: `場のクリーチャーが上限（${state.config.boardLimit}体）です` };
   }
@@ -1463,7 +1501,7 @@ function applyAction(state, playerIndex, action) {
     case 'pass':
       if (aw.step !== 'response') return fail('今はパスできません');
       log(state, 'pass', { player: playerIndex });
-      proceedToBlock(state);
+      advanceWindow(state, aw.window ?? 'attack');
       return { ok: true };
     case 'attack': return aw.step === 'main' ? declareAttack(state, playerIndex, action) : fail('今は攻撃できません');
     case 'endTurn':
@@ -1489,7 +1527,7 @@ function playCard(state, playerIndex, { handIndex, target = null }) {
   const targets = targetsForHandCard(state, playerIndex, handIndex);
   if (!targets.some((t) => sameTarget(t, target))) return fail('その対象は選べません');
 
-  p.mana -= card.cost;
+  p.mana -= effectiveCost(state, playerIndex, card);
   p.hand.splice(handIndex, 1);
 
   if (card.type === 'creature') {
@@ -1527,25 +1565,54 @@ function declareAttack(state, playerIndex, { attackers }) {
 
   // 4. バトルフェイズ: 防御側に瞬発の機会 → ブロック宣言
   const defender = opponentOf(playerIndex);
-  if (hasResponse(state, defender)) state.awaiting = { player: defender, step: 'response' };
-  else proceedToBlock(state);
+  void defender;
+  openWindow(state, 'attack');
   return { ok: true };
 }
 
-/** 防御側が今使える瞬発カードを持っているか（持っていなければ確認を出さない） */
-function hasResponse(state, playerIndex) {
+// ---------------------------------------------------------------------------
+// 瞬発の機会（戦闘中に3回）
+//   'attack' : 攻撃宣言の後・ブロック宣言の前 … 防御側
+//   'blockA' : ブロック宣言の後・ダメージの前 … 攻撃側
+//   'blockD' : その直後 … 防御側
+// 各機会では、マナが続く限り瞬発カード（スペル・クリーチャー）を何枚でも使える。
+// 使える瞬発カードがなければ確認を出さずに次へ進む。相手の瞬発に割り込む「再対応」はない。
+// ---------------------------------------------------------------------------
+
+const WINDOW_PLAYER = { attack: 'defender', blockA: 'attacker', blockD: 'defender' };
+
+function windowPlayer(state, window) {
+  return WINDOW_PLAYER[window] === 'attacker' ? state.activePlayer : opponentOf(state.activePlayer);
+}
+
+/** そのプレイヤーが今使える瞬発カードを持っているか */
+function hasResponse(state, playerIndex, window = 'attack') {
   const saved = state.awaiting;
-  state.awaiting = { player: playerIndex, step: 'response' };
+  state.awaiting = { player: playerIndex, step: 'response', window };
   const any = state.players[playerIndex].hand.some((_, i) => playability(state, playerIndex, i).ok);
   state.awaiting = saved;
   return any;
 }
 
-/** 瞬発カードを1枚使う。再瞬発はなく、解決後はブロック宣言へ進む。 */
+function openWindow(state, window) {
+  const player = windowPlayer(state, window);
+  if (hasResponse(state, player, window)) state.awaiting = { player, step: 'response', window };
+  else advanceWindow(state, window);
+}
+
+function advanceWindow(state, window) {
+  if (window === 'attack') proceedToBlock(state);
+  else if (window === 'blockA') openWindow(state, 'blockD');
+  else resolveCombat(state);
+}
+
+/** 瞬発カードを使う。まだ使えるカードがあれば同じ機会が続き、なければ次へ進む */
 function respond(state, playerIndex, action) {
+  const window = state.awaiting.window;
   const res = playCard(state, playerIndex, action);
-  if (!res.ok) return res;
-  if (state.winner === null) proceedToBlock(state);
+  if (!res.ok || state.winner !== null) return res;
+  if (hasResponse(state, playerIndex, window)) state.awaiting = { player: playerIndex, step: 'response', window };
+  else advanceWindow(state, window);
   return res;
 }
 
@@ -1589,7 +1656,7 @@ function declareBlocks(state, playerIndex, { blocks = [] }) {
   }
   log(state, 'blocks', { player: playerIndex, blocks: blocks.map((b) => ({ ...b })) });
 
-  resolveCombat(state);
+  openWindow(state, 'blockA');
   return { ok: true };
 }
 
@@ -1673,6 +1740,7 @@ const WEIGHTS = {
   lastWill: 1.2,
   hand: 1.6, // 手札1枚
   quickHoldBonus: 1.2, // 瞬発カードを手札に持っていることの価値（相手ターンに使える）
+  quickReserve: 2.0, // 瞬発カードを使えるだけのマナを残していることの価値（構え）
 };
 
 // ---------------------------------------------------------------------------
@@ -1709,7 +1777,8 @@ function evaluate(state, me) {
   if (state.winner === me) return 100000;
   if (state.winner === 'draw') return 0;
   if (state.winner !== null) return -100000;
-  const side = (p) => lifeValue(p.life) + p.board.reduce((s, c) => s + creatureValue(c), 0) + handValue(p.hand);
+  const reserve = (p) => (p.hand.some((id) => hasKeyword(getCard(id), 'quick') && getCard(id).cost <= p.mana) ? WEIGHTS.quickReserve : 0);
+  const side = (p) => lifeValue(p.life) + p.board.reduce((s, c) => s + creatureValue(c), 0) + handValue(p.hand) + reserve(p);
   return side(state.players[me]) - side(state.players[1 - me]);
 }
 
@@ -1835,15 +1904,26 @@ function chooseAttack(state, me, rnd = null, pool = 3) {
 
 /** 相手の瞬発なし・相手は簡易ブロックを行うと仮定して戦闘を最後まで進めて評価 */
 function scoreAfterCombat(s, me) {
-  let guard = 10;
-  while (s.winner === null && s.awaiting && s.awaiting.player !== s.activePlayer && guard--) {
-    const p = s.awaiting.player;
-    const action = s.awaiting.step === 'block'
-      ? { type: 'declareBlocks', blocks: quickBlocks(s, p) }
-      : { type: 'pass' };
-    applyAction(s, p, action);
-  }
+  finishCombat(s, me, false);
   return evaluate(s, me);
+}
+
+/**
+ * 戦闘を最後まで進める（先読み用）。残りの瞬発の機会はすべて見送り、
+ * ブロックは自分なら全探索（deep=true のとき）、相手なら簡易判断で行う。
+ */
+function finishCombat(s, me, deep) {
+  let guard = 12;
+  while (s.winner === null && s.combat && s.awaiting && guard--) {
+    const p = s.awaiting.player;
+    let action;
+    if (s.awaiting.step === 'block') {
+      action = { type: 'declareBlocks', blocks: p === me && deep ? searchBlocks(s, me) : quickBlocks(s, p) };
+    } else if (s.awaiting.step === 'response') {
+      action = { type: 'pass' };
+    } else break;
+    if (!applyAction(s, p, action).ok) break;
+  }
 }
 
 /** 瞬発: 使わない場合と、使える瞬発カード×対象のすべてを比較 */
@@ -1864,9 +1944,7 @@ function chooseResponse(state, me) {
 }
 
 function afterResponseScore(s, me) {
-  if (s.awaiting?.step === 'block' && s.awaiting.player === me) {
-    applyAction(s, me, { type: 'declareBlocks', blocks: searchBlocks(s, me) });
-  }
+  finishCombat(s, me, true);
   return evaluate(s, me);
 }
 
@@ -2023,8 +2101,9 @@ const GLYPH = {
   c_duelist: '刃', c_assassin: '影', c_packleader: '長', c_paladin: '誓', c_warden: '守', c_phoenix: '鳳',
   c_bloodlord: '血', c_colossus: '像', c_lionking: '獣', s_snare: '網', s_ward: '護', s_lance: '雷',
   s_recall: '還', s_prayer: '祷', s_judgment: '断', t_pup: '仔', t_ash: '灰',
+  c_ambusher: '伏', c_owl: '梟', c_stalker: '潜', s_riposte: '返', s_sidestep: '切', s_veil: '霧',
 };
-const DECK_TYPE = { swift: '速攻型', fortress: '防御型', balance: '標準型', night: '遺志・吸命型' };
+const DECK_TYPE = { swift: '速攻型', fortress: '防御型', balance: '標準型', night: '遺志・吸命型', shadow: '瞬発型' };
 
 let game = null;
 let mode = 'cpu';
@@ -2301,7 +2380,7 @@ function markSvg(k) {
 }
 
 /** カード面を作る（全面イラスト＋英語名）。stats を渡すとクリーチャーの攻撃力・HPを差し替えて表示する */
-function buildCard(card, stats = null) {
+function buildCard(card, stats = null, opts = {}) {
   const node = el('div', `card ${card.type} r-${card.rarity}`);
   const art = el('div', 'c-art');
   if (ART[card.id]) {
@@ -2334,7 +2413,8 @@ function buildCard(card, stats = null) {
     }
     node.append(marks);
   }
-  node.append(el('div', 'gem cost', String(card.cost)));
+  const costNow = opts.cost ?? card.cost;
+  node.append(el('div', `gem cost${costNow < card.cost ? ' discount' : ''}`, String(costNow)));
   if (card.type === 'creature') {
     const s = stats ?? { atk: card.attack, hp: card.hp, atkCls: '', hpCls: '' };
     node.append(el('div', `gem atk ${s.atkCls}`, String(s.atk)), el('div', `gem hp ${s.hpCls}`, String(s.hp)));
@@ -2393,7 +2473,7 @@ function buildCardStatic(card, stats = null) {
 
 function renderHandCard(pi, cardId, handIndex) {
   const card = getCard(cardId);
-  const node = buildCard(card);
+  const node = buildCard(card, null, { cost: effectiveCost(game, pi, card) });
   // 同じカードが複数あっても区別できるよう「何枚目か」を含めたキーにする
   const nth = game.players[pi].hand.slice(0, handIndex).filter((id) => id === cardId).length;
   node.dataset.key = `h${pi}-${cardId}-${nth}`;
@@ -2534,8 +2614,18 @@ function renderCommand(me) {
     const n = ui.mulligan.size;
     actions.append(button(n ? `${n}枚引き直す` : 'このまま始める', () => act({ type: 'mulligan', handIndices: [...ui.mulligan] }), 'btn-gold'));
   } else if (aw.step === 'response') {
-    msg.textContent = `${nm(game.activePlayer)}が${game.combat.attackers.length}体で攻撃してきた`;
-    sub.textContent = 'ブロックの前に「瞬発」カードを1枚使えます。';
+    const n = game.combat.attackers.length;
+    const mine = game.activePlayer === aw.player;
+    if (aw.window === 'attack') {
+      msg.textContent = `${nm(game.activePlayer)}が${n}体で攻撃してきた`;
+      sub.textContent = 'ブロックの前に瞬発カードを使える（何枚でも）。瞬発クリーチャーを呼べば、そのままブロックに使える。相手のターン中はコスト−1。';
+    } else if (mine) {
+      msg.textContent = 'ブロックが決まった。ダメージの前に瞬発カードを使える';
+      sub.textContent = '攻撃しているクリーチャーを強化するなら今。';
+    } else {
+      msg.textContent = 'ダメージの前に瞬発カードを使える';
+      sub.textContent = 'ブロックしたクリーチャーを守る・強化するなら今。相手のターン中はコスト−1。';
+    }
     actions.append(button('見送る', () => act({ type: 'pass' }), 'btn-gold'));
   } else if (aw.step === 'main') {
     const ready = game.players[aw.player].board.filter((c) => canAttack(game, c));
@@ -2612,6 +2702,7 @@ function describe(e) {
     case 'deathtouch': return `${e.sourceName}の必殺で${nm(e.owner)}の${e.targetName}が倒れる`;
     case 'lastWill': return `${nm(e.owner)}の${e.name}の遺志が発動`;
     case 'exhausted': return `${nm(e.owner)}の${e.targetName}は行動済みになった`;
+    case 'destroyAllEffect': return '断罪：場のクリーチャーがすべて破壊される';
     case 'destroyEffect': return `${nm(e.owner)}の${e.targetName}を破壊`;
     case 'shieldGranted': return `${nm(e.owner)}の${e.targetName}に加護`;
     case 'bounced': return `${nm(e.owner)}の${e.targetName}が手札に戻った`;
@@ -2688,6 +2779,6 @@ $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logP
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
 showTitle();
 
-document.getElementById('build').textContent = "v0.3 build bb7a20c";
+document.getElementById('build').textContent = "v0.3 build 61619c9";
 })();
 </script>

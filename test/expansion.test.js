@@ -1,12 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { applyAction } from '../src/engine/index.js';
-import { newGame, ok, put, setHand } from './helpers.js';
+import { newGame, ok, put, setHand, passResponses } from './helpers.js';
 
 const attack = (s, ...uids) => applyAction(s, s.activePlayer, { type: 'attack', attackers: uids });
 const block = (s, blocks) => {
   if (s.awaiting?.step === 'response') ok(applyAction(s, s.awaiting.player, { type: 'pass' }));
-  return applyAction(s, 1 - s.activePlayer, { type: 'declareBlocks', blocks });
+  const res = applyAction(s, 1 - s.activePlayer, { type: 'declareBlocks', blocks });
+  if (res.ok) passResponses(s);
+  return res;
 };
 
 test('吸命: 与えたダメージぶんライフ回復（20を超えて増える）', () => {
@@ -94,10 +96,10 @@ test('遺志: 破壊時に効果（小鬼は相手に1ダメージ、墓守は1�
 
 test('遺志: 不死鳥は灰の雛（トークン）を残し、トークンは捨て札に行かない', () => {
   const s = newGame();
-  const ph = put(s, 1, 'c_phoenix');
-  s.players[0].mana = 5;
+  put(s, 1, 'c_phoenix');
+  s.players[0].mana = 6;
   setHand(s, 0, ['s_judgment']);
-  ok(applyAction(s, 0, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: ph.uid } }));
+  ok(applyAction(s, 0, { type: 'playCard', handIndex: 0 }));
   assert.equal(s.players[1].board.length, 1);
   assert.equal(s.players[1].board[0].cardId, 't_ash');
   const before = s.players[1].graveyard.length;
@@ -141,4 +143,18 @@ test('送還の風: 手札に戻す／守護の祝福: 加護を与える／癒�
   ok(applyAction(s, 0, { type: 'playCard', handIndex: 0 }));
   assert.equal(s.players[0].life, 14);
   assert.equal(s.players[0].hand.length, 1);
+});
+
+test('断罪の剣: 場のクリーチャーをすべて破壊する（自分の側も、加護も無視）', () => {
+  const s = newGame();
+  put(s, 0, 'c_warrior');
+  put(s, 1, 'c_warden', { shield: true });
+  put(s, 1, 'c_gravekeeper');
+  s.players[0].mana = 6;
+  setHand(s, 0, ['s_judgment']);
+  const handBefore = s.players[1].hand.length;
+  ok(applyAction(s, 0, { type: 'playCard', handIndex: 0 }));
+  assert.equal(s.players[0].board.length, 0);
+  assert.equal(s.players[1].board.length, 0);
+  assert.equal(s.players[1].hand.length, handBefore + 1); // 墓守の遺志で1枚
 });

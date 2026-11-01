@@ -28,6 +28,8 @@ export const DEFAULT_CONFIG = Object.freeze({
   damageResetsAtTurnEnd: true,
   // 後攻がゲーム開始時（マリガン後）に受け取るカード（null = なし）。先攻有利の補正。
   secondPlayerBonusCard: 's_coin',
+  // 構え：相手のターン中に使う瞬発カードのコスト軽減量
+  quickDiscount: 1,
   // ライフの上限（null = 上限なし。回復・吸命で初期ライフを超えて増やせる）
   lifeCap: null,
   // Q9【決定】手札上限10枚。超えて引いたカードは墓地へ（null = 上限なし）

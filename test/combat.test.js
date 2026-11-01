@@ -1,12 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { applyAction } from '../src/engine/index.js';
-import { newGame, ok, put, setHand } from './helpers.js';
+import { newGame, ok, put, setHand, passResponses } from './helpers.js';
 
 const attack = (s, ...uids) => applyAction(s, s.activePlayer, { type: 'attack', attackers: uids });
 const block = (s, blocks) => {
   if (s.awaiting?.step === 'response') ok(applyAction(s, s.awaiting.player, { type: 'pass' }));
-  return applyAction(s, 1 - s.activePlayer, { type: 'declareBlocks', blocks });
+  const res = applyAction(s, 1 - s.activePlayer, { type: 'declareBlocks', blocks });
+  if (res.ok) passResponses(s);
+  return res;
 };
 
 test('ブロックなし: 攻撃力分のダメージをプレイヤーへ。攻撃後は行動済み、ターン終了', () => {

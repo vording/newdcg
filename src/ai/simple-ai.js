@@ -22,6 +22,7 @@ export const WEIGHTS = {
   lastWill: 1.2,
   hand: 1.6, // 手札1枚
   quickHoldBonus: 1.2, // 瞬発カードを手札に持っていることの価値（相手ターンに使える）
+  quickReserve: 2.0, // 瞬発カードを使えるだけのマナを残していることの価値（構え）
 };
 
 // ---------------------------------------------------------------------------
@@ -58,7 +59,8 @@ export function evaluate(state, me) {
   if (state.winner === me) return 100000;
   if (state.winner === 'draw') return 0;
   if (state.winner !== null) return -100000;
-  const side = (p) => lifeValue(p.life) + p.board.reduce((s, c) => s + creatureValue(c), 0) + handValue(p.hand);
+  const reserve = (p) => (p.hand.some((id) => hasKeyword(getCard(id), 'quick') && getCard(id).cost <= p.mana) ? WEIGHTS.quickReserve : 0);
+  const side = (p) => lifeValue(p.life) + p.board.reduce((s, c) => s + creatureValue(c), 0) + handValue(p.hand) + reserve(p);
   return side(state.players[me]) - side(state.players[1 - me]);
 }
 
@@ -184,15 +186,26 @@ function chooseAttack(state, me, rnd = null, pool = 3) {
 
 /** 相手の瞬発なし・相手は簡易ブロックを行うと仮定して戦闘を最後まで進めて評価 */
 function scoreAfterCombat(s, me) {
-  let guard = 10;
-  while (s.winner === null && s.awaiting && s.awaiting.player !== s.activePlayer && guard--) {
-    const p = s.awaiting.player;
-    const action = s.awaiting.step === 'block'
-      ? { type: 'declareBlocks', blocks: quickBlocks(s, p) }
-      : { type: 'pass' };
-    applyAction(s, p, action);
-  }
+  finishCombat(s, me, false);
   return evaluate(s, me);
+}
+
+/**
+ * 戦闘を最後まで進める（先読み用）。残りの瞬発の機会はすべて見送り、
+ * ブロックは自分なら全探索（deep=true のとき）、相手なら簡易判断で行う。
+ */
+function finishCombat(s, me, deep) {
+  let guard = 12;
+  while (s.winner === null && s.combat && s.awaiting && guard--) {
+    const p = s.awaiting.player;
+    let action;
+    if (s.awaiting.step === 'block') {
+      action = { type: 'declareBlocks', blocks: p === me && deep ? searchBlocks(s, me) : quickBlocks(s, p) };
+    } else if (s.awaiting.step === 'response') {
+      action = { type: 'pass' };
+    } else break;
+    if (!applyAction(s, p, action).ok) break;
+  }
 }
 
 /** 瞬発: 使わない場合と、使える瞬発カード×対象のすべてを比較 */
@@ -213,9 +226,7 @@ function chooseResponse(state, me) {
 }
 
 function afterResponseScore(s, me) {
-  if (s.awaiting?.step === 'block' && s.awaiting.player === me) {
-    applyAction(s, me, { type: 'declareBlocks', blocks: searchBlocks(s, me) });
-  }
+  finishCombat(s, me, true);
   return evaluate(s, me);
 }
 

@@ -112,6 +112,13 @@ export const EFFECTS = {
       log(state, 'destroyEffect', { target: c.uid, targetName: c.name, owner: c.owner });
     },
   },
+  /** 場のクリーチャーをすべて破壊する（双方。加護は無視） */
+  destroyAll: {
+    resolve(state) {
+      for (const p of state.players) for (const c of p.board) c.damage = Math.max(c.damage, c.hp);
+      log(state, 'destroyAllEffect', {});
+    },
+  },
   /** 加護を与える */
   grantShield: {
     resolve(state, playerIndex, params, target) {

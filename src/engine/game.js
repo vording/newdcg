@@ -7,7 +7,7 @@
 // state.awaiting は「次に誰が何を決める必要があるか」を表す。
 //   { player, step: 'mulligan' } : ゲーム開始時の手札引き直し（先攻→後攻の順）
 //   { player, step: 'main' }     : 手番プレイヤーのメインフェイズ
-//   { player, step: 'response' } : 攻撃宣言後、防御側が瞬発カードを使えるタイミング
+//   { player, step: 'response', window } : 戦闘中に瞬発カードを使える機会（'attack' | 'blockA' | 'blockD'）
 //   { player, step: 'block' }    : 防御側プレイヤーのブロック宣言
 //
 // アクション:
@@ -15,7 +15,7 @@
 //   { type: 'playCard', handIndex, target? }            メインフェイズ／瞬発（瞬発カードのみ）
 //   { type: 'attack', attackers: [uid, ...] }           メインフェイズ → バトルフェイズへ
 //   { type: 'endTurn' }                                 メインフェイズ（攻撃せず終了）
-//   { type: 'pass' }                                    瞬発しない
+//   { type: 'pass' }                                    この機会の瞬発を終える
 //   { type: 'declareBlocks', blocks: [{attacker, blocker}] }  ブロック宣言（空配列 = ブロックなし）
 
 import { getCard, hasKeyword, validateDeck } from './cards.js';
@@ -223,6 +223,16 @@ export function canBlockAttacker(state, blocker, attacker) {
   return true;
 }
 
+/**
+ * 実際に支払うコスト。
+ * 構え：相手のターン中に使う瞬発カードはコストが config.quickDiscount 下がる（0未満にはならない）。
+ */
+export function effectiveCost(state, playerIndex, card) {
+  const onOpponentsTurn = state.activePlayer !== playerIndex && state.awaiting?.step === 'response';
+  if (onOpponentsTurn && hasKeyword(card, 'quick')) return Math.max(0, card.cost - state.config.quickDiscount);
+  return card.cost;
+}
+
 /** 手札のカードが今プレイ可能か。不可なら理由を返す。 */
 export function playability(state, playerIndex, handIndex) {
   const p = state.players[playerIndex];
@@ -237,7 +247,7 @@ export function playability(state, playerIndex, handIndex) {
   if (aw.step === 'response' && !hasKeyword(card, 'quick')) {
     return { ok: false, reason: '相手のターン中は「瞬発」カードしか使えません' };
   }
-  if (card.cost > p.mana) return { ok: false, reason: 'マナが足りません' };
+  if (effectiveCost(state, playerIndex, card) > p.mana) return { ok: false, reason: 'マナが足りません' };
   if (card.type === 'creature' && p.board.length >= state.config.boardLimit) {
     return { ok: false, reason: `場のクリーチャーが上限（${state.config.boardLimit}体）です` };
   }
@@ -282,7 +292,7 @@ export function applyAction(state, playerIndex, action) {
     case 'pass':
       if (aw.step !== 'response') return fail('今はパスできません');
       log(state, 'pass', { player: playerIndex });
-      proceedToBlock(state);
+      advanceWindow(state, aw.window ?? 'attack');
       return { ok: true };
     case 'attack': return aw.step === 'main' ? declareAttack(state, playerIndex, action) : fail('今は攻撃できません');
     case 'endTurn':
@@ -308,7 +318,7 @@ function playCard(state, playerIndex, { handIndex, target = null }) {
   const targets = targetsForHandCard(state, playerIndex, handIndex);
   if (!targets.some((t) => sameTarget(t, target))) return fail('その対象は選べません');
 
-  p.mana -= card.cost;
+  p.mana -= effectiveCost(state, playerIndex, card);
   p.hand.splice(handIndex, 1);
 
   if (card.type === 'creature') {
@@ -346,25 +356,54 @@ function declareAttack(state, playerIndex, { attackers }) {
 
   // 4. バトルフェイズ: 防御側に瞬発の機会 → ブロック宣言
   const defender = opponentOf(playerIndex);
-  if (hasResponse(state, defender)) state.awaiting = { player: defender, step: 'response' };
-  else proceedToBlock(state);
+  void defender;
+  openWindow(state, 'attack');
   return { ok: true };
 }
 
-/** 防御側が今使える瞬発カードを持っているか（持っていなければ確認を出さない） */
-export function hasResponse(state, playerIndex) {
+// ---------------------------------------------------------------------------
+// 瞬発の機会（戦闘中に3回）
+//   'attack' : 攻撃宣言の後・ブロック宣言の前 … 防御側
+//   'blockA' : ブロック宣言の後・ダメージの前 … 攻撃側
+//   'blockD' : その直後 … 防御側
+// 各機会では、マナが続く限り瞬発カード（スペル・クリーチャー）を何枚でも使える。
+// 使える瞬発カードがなければ確認を出さずに次へ進む。相手の瞬発に割り込む「再対応」はない。
+// ---------------------------------------------------------------------------
+
+const WINDOW_PLAYER = { attack: 'defender', blockA: 'attacker', blockD: 'defender' };
+
+function windowPlayer(state, window) {
+  return WINDOW_PLAYER[window] === 'attacker' ? state.activePlayer : opponentOf(state.activePlayer);
+}
+
+/** そのプレイヤーが今使える瞬発カードを持っているか */
+export function hasResponse(state, playerIndex, window = 'attack') {
   const saved = state.awaiting;
-  state.awaiting = { player: playerIndex, step: 'response' };
+  state.awaiting = { player: playerIndex, step: 'response', window };
   const any = state.players[playerIndex].hand.some((_, i) => playability(state, playerIndex, i).ok);
   state.awaiting = saved;
   return any;
 }
 
-/** 瞬発カードを1枚使う。再瞬発はなく、解決後はブロック宣言へ進む。 */
+function openWindow(state, window) {
+  const player = windowPlayer(state, window);
+  if (hasResponse(state, player, window)) state.awaiting = { player, step: 'response', window };
+  else advanceWindow(state, window);
+}
+
+function advanceWindow(state, window) {
+  if (window === 'attack') proceedToBlock(state);
+  else if (window === 'blockA') openWindow(state, 'blockD');
+  else resolveCombat(state);
+}
+
+/** 瞬発カードを使う。まだ使えるカードがあれば同じ機会が続き、なければ次へ進む */
 function respond(state, playerIndex, action) {
+  const window = state.awaiting.window;
   const res = playCard(state, playerIndex, action);
-  if (!res.ok) return res;
-  if (state.winner === null) proceedToBlock(state);
+  if (!res.ok || state.winner !== null) return res;
+  if (hasResponse(state, playerIndex, window)) state.awaiting = { player: playerIndex, step: 'response', window };
+  else advanceWindow(state, window);
   return res;
 }
 
@@ -408,7 +447,7 @@ function declareBlocks(state, playerIndex, { blocks = [] }) {
   }
   log(state, 'blocks', { player: playerIndex, blocks: blocks.map((b) => ({ ...b })) });
 
-  resolveCombat(state);
+  openWindow(state, 'blockA');
   return { ok: true };
 }
 

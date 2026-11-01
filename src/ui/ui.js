@@ -1,7 +1,7 @@
 // ブラウザUI（ゲーム名は未定）。ゲームロジックは src/engine のみが持ち、ここは表示と入力の変換だけを行う。
 import {
   applyAction, canAttack, canBlock, canBlockAttacker, createGame, DECKS, deckList, getCard, hasKeyword,
-  KEYWORDS, RARITIES, CARDS, playability, sameTarget, targetsForHandCard,
+  KEYWORDS, RARITIES, CARDS, effectiveCost, playability, sameTarget, targetsForHandCard,
 } from '../engine/index.js';
 import { chooseAction } from '../ai/simple-ai.js';
 import { ART } from './art-data.js';
@@ -24,8 +24,9 @@ const GLYPH = {
   c_duelist: '刃', c_assassin: '影', c_packleader: '長', c_paladin: '誓', c_warden: '守', c_phoenix: '鳳',
   c_bloodlord: '血', c_colossus: '像', c_lionking: '獣', s_snare: '網', s_ward: '護', s_lance: '雷',
   s_recall: '還', s_prayer: '祷', s_judgment: '断', t_pup: '仔', t_ash: '灰',
+  c_ambusher: '伏', c_owl: '梟', c_stalker: '潜', s_riposte: '返', s_sidestep: '切', s_veil: '霧',
 };
-const DECK_TYPE = { swift: '速攻型', fortress: '防御型', balance: '標準型', night: '遺志・吸命型' };
+const DECK_TYPE = { swift: '速攻型', fortress: '防御型', balance: '標準型', night: '遺志・吸命型', shadow: '瞬発型' };
 
 let game = null;
 let mode = 'cpu';
@@ -302,7 +303,7 @@ function markSvg(k) {
 }
 
 /** カード面を作る（全面イラスト＋英語名）。stats を渡すとクリーチャーの攻撃力・HPを差し替えて表示する */
-function buildCard(card, stats = null) {
+function buildCard(card, stats = null, opts = {}) {
   const node = el('div', `card ${card.type} r-${card.rarity}`);
   const art = el('div', 'c-art');
   if (ART[card.id]) {
@@ -335,7 +336,8 @@ function buildCard(card, stats = null) {
     }
     node.append(marks);
   }
-  node.append(el('div', 'gem cost', String(card.cost)));
+  const costNow = opts.cost ?? card.cost;
+  node.append(el('div', `gem cost${costNow < card.cost ? ' discount' : ''}`, String(costNow)));
   if (card.type === 'creature') {
     const s = stats ?? { atk: card.attack, hp: card.hp, atkCls: '', hpCls: '' };
     node.append(el('div', `gem atk ${s.atkCls}`, String(s.atk)), el('div', `gem hp ${s.hpCls}`, String(s.hp)));
@@ -394,7 +396,7 @@ function buildCardStatic(card, stats = null) {
 
 function renderHandCard(pi, cardId, handIndex) {
   const card = getCard(cardId);
-  const node = buildCard(card);
+  const node = buildCard(card, null, { cost: effectiveCost(game, pi, card) });
   // 同じカードが複数あっても区別できるよう「何枚目か」を含めたキーにする
   const nth = game.players[pi].hand.slice(0, handIndex).filter((id) => id === cardId).length;
   node.dataset.key = `h${pi}-${cardId}-${nth}`;
@@ -535,8 +537,18 @@ function renderCommand(me) {
     const n = ui.mulligan.size;
     actions.append(button(n ? `${n}枚引き直す` : 'このまま始める', () => act({ type: 'mulligan', handIndices: [...ui.mulligan] }), 'btn-gold'));
   } else if (aw.step === 'response') {
-    msg.textContent = `${nm(game.activePlayer)}が${game.combat.attackers.length}体で攻撃してきた`;
-    sub.textContent = 'ブロックの前に「瞬発」カードを1枚使えます。';
+    const n = game.combat.attackers.length;
+    const mine = game.activePlayer === aw.player;
+    if (aw.window === 'attack') {
+      msg.textContent = `${nm(game.activePlayer)}が${n}体で攻撃してきた`;
+      sub.textContent = 'ブロックの前に瞬発カードを使える（何枚でも）。瞬発クリーチャーを呼べば、そのままブロックに使える。相手のターン中はコスト−1。';
+    } else if (mine) {
+      msg.textContent = 'ブロックが決まった。ダメージの前に瞬発カードを使える';
+      sub.textContent = '攻撃しているクリーチャーを強化するなら今。';
+    } else {
+      msg.textContent = 'ダメージの前に瞬発カードを使える';
+      sub.textContent = 'ブロックしたクリーチャーを守る・強化するなら今。相手のターン中はコスト−1。';
+    }
     actions.append(button('見送る', () => act({ type: 'pass' }), 'btn-gold'));
   } else if (aw.step === 'main') {
     const ready = game.players[aw.player].board.filter((c) => canAttack(game, c));
@@ -613,6 +625,7 @@ function describe(e) {
     case 'deathtouch': return `${e.sourceName}の必殺で${nm(e.owner)}の${e.targetName}が倒れる`;
     case 'lastWill': return `${nm(e.owner)}の${e.name}の遺志が発動`;
     case 'exhausted': return `${nm(e.owner)}の${e.targetName}は行動済みになった`;
+    case 'destroyAllEffect': return '断罪：場のクリーチャーがすべて破壊される';
     case 'destroyEffect': return `${nm(e.owner)}の${e.targetName}を破壊`;
     case 'shieldGranted': return `${nm(e.owner)}の${e.targetName}に加護`;
     case 'bounced': return `${nm(e.owner)}の${e.targetName}が手札に戻った`;
