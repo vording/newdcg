@@ -4,6 +4,7 @@ import {
   KEYWORDS, RARITIES, CARDS, playability, sameTarget, targetsForHandCard,
 } from '../engine/index.js';
 import { chooseAction } from '../ai/simple-ai.js';
+import { ART } from './art-data.js';
 
 const $ = (sel) => document.querySelector(sel);
 const el = (tag, cls, text) => {
@@ -219,7 +220,16 @@ function markSvg(k) {
 function buildCard(card, stats = null) {
   const node = el('div', `card ${card.type} r-${card.rarity}`);
   const art = el('div', 'c-art');
-  art.append(el('div', 'c-glyph', GLYPH[card.id] ?? ''));
+  if (ART[card.id]) {
+    const img = el('img');
+    img.src = ART[card.id];
+    img.alt = '';
+    img.draggable = false;
+    art.append(img);
+    node.classList.add('has-art');
+  } else {
+    art.append(el('div', 'c-glyph', GLYPH[card.id] ?? ''));
+  }
   const title = el('div', 'c-title');
   const en = card.nameEn ?? card.name;
   const longestWord = Math.max(...en.split(' ').map((w) => w.length));
@@ -549,7 +559,7 @@ function showGallery() {
   const box = el('div', 'gallery');
   const head = el('div', 'gallery-head');
   head.append(el('h2', '', 'カード一覧'), button('閉じる', () => { ov.hidden = true; }));
-  box.append(head, el('p', 'hint', 'カーソルを合わせる（スマホは長押し）と日本語名と効果が見られます。縁の色はレア度。イラストは未作成。'));
+  box.append(head, el('p', 'hint', 'カーソルを合わせる（スマホは長押し）と日本語名と効果が見られます。縁の色はレア度。イラストは一部のみ（ほかは仮の背景）。'));
   const inDecks = new Set(Object.values(DECKS).flatMap((d) => Object.keys(d.counts)));
   const all = Object.values(CARDS).filter((c) => inDecks.has(c.id) || c.token);
   for (const r of Object.keys(RARITIES).sort((a, b) => RARITIES[b].order - RARITIES[a].order)) {

@@ -5,6 +5,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createHash } from 'node:crypto';
+import { buildArt } from './build-art.js';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -14,10 +15,12 @@ const outArg = args.find((a) => a !== '--full');
 const out = outArg ?? (full ? `${root}index.html` : `${root}dist/dcg.html`);
 const read = (p) => readFileSync(root + p, 'utf8');
 
+buildArt();
+
 // 依存順。各モジュールの import / export を取り除いて1つのモジュールスコープに連結する。
 const modules = [
   'src/engine/config.js', 'src/engine/cards.js', 'src/engine/state.js', 'src/engine/effects.js',
-  'src/engine/game.js', 'src/ai/simple-ai.js', 'src/ui/ui.js',
+  'src/engine/game.js', 'src/ai/simple-ai.js', 'src/ui/art-data.js', 'src/ui/ui.js',
 ];
 const strip = (src) => src
   .replace(/^import[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, '')
