@@ -761,7 +761,7 @@ const CARD_LIST = [
   { id: 'c_ambusher', name: '伏兵の槍兵', nameEn: 'Ambush Spearman', rarity: 'common', type: 'creature', cost: 2, attack: 2, hp: 3, keywords: ['quick'] },
   { id: 'c_owl', name: '夜番の梟', nameEn: 'Night Owl', rarity: 'rare', type: 'creature', cost: 3, attack: 2, hp: 3, keywords: ['quick', 'flying'] },
   { id: 'c_stalker', name: '闇潜みの刺客', nameEn: 'Gloom Stalker', rarity: 'epic', type: 'creature', cost: 3, attack: 2, hp: 2, keywords: ['quick', 'deathtouch'] },
-  { id: 's_riposte', name: '返し刃', nameEn: 'Riposte', rarity: 'common', type: 'spell', cost: 1, keywords: ['quick'],
+  { id: 's_riposte', name: '返し刃', nameEn: 'Reversal Edge', rarity: 'common', type: 'spell', cost: 1, keywords: ['quick'],
     effect: { type: 'buffTemp', attack: 3, hp: 0, target: 'friendlyCreature' }, text: '自分のクリーチャー1体はターン終了時まで+3/+0。' },
   { id: 's_sidestep', name: '見切り', nameEn: 'Sidestep', rarity: 'rare', type: 'spell', cost: 2, keywords: ['quick'],
     effect: { type: 'bounce', target: 'attackingCreature' }, text: '攻撃している相手のクリーチャー1体を持ち主の手札に戻す。' },
@@ -2779,6 +2779,6 @@ $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logP
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
 showTitle();
 
-document.getElementById('build').textContent = "v0.3 build 61619c9";
+document.getElementById('build').textContent = "v0.3 build e3f2072";
 })();
 </script>
