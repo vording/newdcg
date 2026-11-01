@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Shippori+Mincho+B1:wght@600;800&family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap');
 
 /* 夜の軍議卓：紺の卓、金の王冠、青いマナ（チャージ）、赤い攻撃。カードは羊皮紙。
    単一のダークな世界観で統一する（ライト/ダークの切り替えはしない）。 */
@@ -24,6 +24,7 @@
 
   --font-display: 'Dela Gothic One', 'Hiragino Sans', 'Yu Gothic', sans-serif;
   --font-title: 'Cinzel', 'Times New Roman', serif;
+  --font-ja-name: 'Shippori Mincho B1', 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif;
   --font-body: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', system-ui, sans-serif;
   --cw-hand: 126px;
   --cw-board: 116px;
@@ -288,7 +289,7 @@ button { font: inherit; color: inherit; }
   width: 100%; background: rgba(14, 18, 38, .96); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,.5); display: grid; gap: 6px;
 }
-.preview .info .ja { font-family: var(--font-display); font-size: 18px; line-height: 1.2; }
+.preview .info .ja { font-family: var(--font-ja-name); font-weight: 800; font-size: 20px; line-height: 1.3; letter-spacing: .08em; }
 .preview .info .en { font-family: var(--font-title); font-weight: 700; font-size: 12px; color: var(--muted); }
 .preview .info .meta { font-size: 11px; color: var(--muted); }
 .preview .info .kw { display: grid; grid-template-columns: 22px 1fr; gap: 6px; align-items: start; font-size: 12px; }
