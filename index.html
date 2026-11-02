@@ -755,7 +755,7 @@ const CARD_LIST = [
     text: '召喚時：カードを1枚引く。',
   },
   { id: 'c_warrior', name: '鉄槌の戦士', nameEn: 'Hammer Warrior', rarity: 'common', type: 'creature', cost: 5, attack: 3, hp: 3 },
-  { id: 'c_rider', name: '疾風の騎手', nameEn: 'Gale Rider', rarity: 'rare', type: 'creature', cost: 6, attack: 3, hp: 3, keywords: ['haste'] },
+  { id: 'c_rider', name: '疾風の騎手', nameEn: 'Gale Rider', rarity: 'rare', type: 'creature', cost: 5, attack: 3, hp: 3, keywords: ['haste'] },
   { id: 'c_pikeman', name: '槍衾の衛兵', nameEn: 'Pike Guard', rarity: 'rare', type: 'creature', cost: 5, attack: 2, hp: 3, keywords: ['firstStrike'] },
   { id: 'c_hawk', name: '嵐の鷹', nameEn: 'Storm Hawk', rarity: 'rare', type: 'creature', cost: 6, attack: 3, hp: 3, keywords: ['flying'] },
   {
@@ -845,8 +845,8 @@ const CARD_LIST = [
     effect: { type: 'destroyAll' }, text: '場のクリーチャーをすべて破壊する（自分のクリーチャーも。加護も無視する）。' },
   // --- 瞬発（v0.5） ---
   { id: 'c_ambusher', name: '伏兵の槍兵', nameEn: 'Ambush Spearman', rarity: 'common', type: 'creature', cost: 3, attack: 2, hp: 3, keywords: ['quick'] },
-  { id: 'c_owl', name: '夜番の梟', nameEn: 'Night Owl', rarity: 'rare', type: 'creature', cost: 6, attack: 2, hp: 3, keywords: ['quick', 'flying'] },
-  { id: 'c_stalker', name: '闇潜みの刺客', nameEn: 'Gloom Stalker', rarity: 'epic', type: 'creature', cost: 5, attack: 2, hp: 2, keywords: ['quick', 'deathtouch'] },
+  { id: 'c_owl', name: '夜番の梟', nameEn: 'Night Owl', rarity: 'rare', type: 'creature', cost: 5, attack: 2, hp: 3, keywords: ['quick', 'flying'] },
+  { id: 'c_stalker', name: '闇潜みの刺客', nameEn: 'Gloom Stalker', rarity: 'epic', type: 'creature', cost: 5, attack: 3, hp: 2, keywords: ['quick', 'deathtouch'] },
   { id: 's_riposte', name: '返し刃', nameEn: 'Counterstroke', rarity: 'common', type: 'spell', cost: 1, keywords: ['quick'],
     effect: { type: 'buffTemp', attack: 3, hp: 0, target: 'friendlyCreature' }, text: '自分のクリーチャー1体はターン終了時まで+3/+0。' },
   { id: 's_sidestep', name: '見切り', nameEn: 'Sidestep', rarity: 'rare', type: 'spell', cost: 3, keywords: ['quick'],
@@ -916,8 +916,8 @@ const DECKS = Object.freeze({
     name: '影刃（瞬発型）',
     text: 'マナを残して構え、相手の攻撃に瞬発で切り返す。',
     counts: {
-      c_ambusher: 3, c_owl: 3, c_stalker: 3, c_pikeman: 2, c_messenger: 2, c_knight: 2, c_dragon: 1,
-      s_arrow: 3, s_riposte: 3, s_sidestep: 3, s_lance: 3, s_ward: 2,
+      c_ambusher: 3, c_owl: 3, c_stalker: 3, c_pikeman: 2, c_messenger: 2, c_duelist: 2, c_dragon: 1,
+      s_arrow: 2, s_riposte: 3, s_sidestep: 3, s_lance: 3, s_ward: 2, s_insight: 1,
     },
   },
 });
@@ -3212,7 +3212,7 @@ $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logP
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
 showTitle();
 
-document.getElementById('build').textContent = "v0.3 build a04d049";
+document.getElementById('build').textContent = "v0.3 build fd42a14";
 })();
 </script>
 </body>
