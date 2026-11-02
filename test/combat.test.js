@@ -46,7 +46,7 @@ test('ダメージはターン終了時に全回復する（デフォルト）',
 test('ダメージはターン中は残る（同じターン内の火球と組み合わせ）', () => {
   const s = newGame();
   const golem = put(s, 1, 'c_golem', { attack: 3 }); // 3/6
-  s.players[0].mana = 6;
+  s.players[0].mana = 12;
   setHand(s, 0, ['s_fireball', 's_fireball']);
   ok(applyAction(s, 0, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: golem.uid } }));
   assert.equal(golem.damage, 3);

@@ -71,7 +71,7 @@ test('瞬発で剛力の薬: ブロッカーを強化して返り討ち', () => 
   const a = put(s, 0, 'c_warrior'); // 3/3
   const b = put(s, 1, 'c_pikeman'); // 2/3 先制攻撃
   setHand(s, 1, ['s_might']);
-  s.players[1].mana = 1;
+  s.players[1].mana = 2;
   ok(attack(s, a.uid));
   assert.equal(s.awaiting.step, 'response');
   ok(applyAction(s, 1, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: b.uid } }));
@@ -83,7 +83,7 @@ test('瞬発で剛力の薬: ブロッカーを強化して返り討ち', () => 
 test('召喚時に対象を選ぶクリーチャー（火吹きトカゲ）', () => {
   const s = newGame();
   const e = put(s, 1, 'c_assassin'); // 2/1
-  s.players[0].mana = 3;
+  s.players[0].mana = 6;
   setHand(s, 0, ['c_salamander']);
   assert.equal(applyAction(s, 0, { type: 'playCard', handIndex: 0 }).ok, false); // 対象が必要
   ok(applyAction(s, 0, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: e.uid } }));
@@ -95,7 +95,7 @@ test('炎の波: 相手のクリーチャーすべてに2ダメージ', () => {
   const s = newGame();
   put(s, 1, 'c_scout'); put(s, 1, 'c_apprentice'); const g = put(s, 1, 'c_golem');
   const mine = put(s, 0, 'c_scout');
-  s.players[0].mana = 4;
+  s.players[0].mana = 8;
   setHand(s, 0, ['s_wave']);
   ok(applyAction(s, 0, { type: 'playCard', handIndex: 0 }));
   assert.deepEqual(s.players[1].board, [g]);
@@ -105,7 +105,7 @@ test('炎の波: 相手のクリーチャーすべてに2ダメージ', () => {
 test('戦場の将軍: 他の自分のクリーチャーに永続+1/+1', () => {
   const s = newGame();
   const c = put(s, 0, 'c_apprentice');
-  s.players[0].mana = 5;
+  s.players[0].mana = 10;
   setHand(s, 0, ['c_general']);
   ok(applyAction(s, 0, { type: 'playCard', handIndex: 0 }));
   ok(applyAction(s, 0, { type: 'endTurn' }));
@@ -115,7 +115,7 @@ test('戦場の将軍: 他の自分のクリーチャーに永続+1/+1', () => {
 
 test('マナの雫: このターンだけマナ+1', () => {
   const s = newGame();
-  setHand(s, 0, ['s_coin', 'c_shield']);
+  setHand(s, 0, ['s_coin', 'c_scout']);
   assert.equal(playability(s, 0, 1).ok, false);
   ok(applyAction(s, 0, { type: 'playCard', handIndex: 0 }));
   assert.equal(s.players[0].mana, 2);

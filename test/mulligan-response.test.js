@@ -42,7 +42,7 @@ test('瞬発: 瞬発カードがなければ確認なしでブロック宣言へ
 });
 
 test('瞬発: マナが足りなければ確認なし（構えの軽減後でも足りない）', () => {
-  const { s, a } = attackSetup(['s_lance'], 0); // 2コスト → 相手ターン中は1
+  const { s, a } = attackSetup(['s_lance'], 2); // 4コスト → 相手ターン中は3
   ok(applyAction(s, 0, { type: 'attack', attackers: [a.uid] }));
   assert.equal(s.awaiting.step, 'block');
 });
@@ -61,7 +61,7 @@ test('瞬発: 迎撃で攻撃クリーチャーを倒すと戦闘から外れ、
   const { s, a, a2 } = attackSetup(['s_arrow', 's_mend'], 2);
   ok(applyAction(s, 0, { type: 'attack', attackers: [a.uid, a2.uid] }));
   ok(applyAction(s, 1, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: a2.uid } }));
-  assert.equal(s.players[1].mana, 2); // 構え：相手ターン中は1コスト軽減（1→0）
+  assert.equal(s.players[1].mana, 1); // 構え：相手ターン中は1コスト軽減（迎撃の矢 2→1）
   // 1回の瞬発で使えるのは1枚。解決後すぐブロック宣言へ（再瞬発なし）
   assert.deepEqual(s.awaiting, { player: 1, step: 'block' });
   assert.deepEqual(s.combat.attackers, [a.uid]);
@@ -70,7 +70,7 @@ test('瞬発: 迎撃で攻撃クリーチャーを倒すと戦闘から外れ、
 });
 
 test('瞬発: 攻撃クリーチャーが全滅したら戦闘は終わりターン終了', () => {
-  const { s, a2 } = attackSetup(['s_arrow'], 1);
+  const { s, a2 } = attackSetup(['s_arrow'], 1); // 2コスト → 相手ターン中は1
   ok(applyAction(s, 0, { type: 'attack', attackers: [a2.uid] }));
   ok(applyAction(s, 1, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: a2.uid } }));
   assert.deepEqual(s.awaiting, { player: 1, step: 'main' });
@@ -119,8 +119,8 @@ test('瞬発の機会: ブロック宣言の後に攻撃側→防御側の順で
 test('瞬発クリーチャー: 相手の攻撃に合わせて呼び出し、そのままブロックできる', () => {
   const s = newGame();
   const a = put(s, 0, 'c_warrior');
-  setHand(s, 1, ['c_ambusher']); // 2コスト → 相手ターン中は1
-  s.players[1].mana = 1;
+  setHand(s, 1, ['c_ambusher']); // 3コスト → 相手ターン中は2
+  s.players[1].mana = 2;
   ok(applyAction(s, 0, { type: 'attack', attackers: [a.uid] }));
   ok(applyAction(s, 1, { type: 'playCard', handIndex: 0 }));
   const amb = s.players[1].board[0];
@@ -133,12 +133,12 @@ test('構え: 瞬発カードのコスト軽減は相手のターン中だけ', 
   const s = newGame();
   setHand(s, 0, ['s_lance']);
   put(s, 1, 'c_scout');
-  s.players[0].mana = 1;
+  s.players[0].mana = 3; // 雷の槍は4コスト。相手ターンなら3で足りるが、自分のターンは4必要
   assert.equal(applyAction(s, 0, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: s.players[1].board[0].uid } }).ok, false);
 });
 
 test('瞬発の機会では、マナが続く限り何枚でも使える', () => {
-  const { s, a, a2 } = attackSetup(['s_arrow', 's_arrow'], 0); // 1コスト → 0
+  const { s, a, a2 } = attackSetup(['s_arrow', 's_arrow'], 2); // 2コスト → 相手ターン中は1。2枚で2
   ok(applyAction(s, 0, { type: 'attack', attackers: [a.uid, a2.uid] }));
   ok(applyAction(s, 1, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: a2.uid } }));
   assert.equal(s.awaiting.step, 'response');

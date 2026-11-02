@@ -400,9 +400,17 @@ function renderSeat(pi, isFront) {
 
   const mana = el('div', 'mana');
   mana.setAttribute('aria-label', `マナ ${p.mana}/${p.maxMana}`);
-  const pips = Math.max(p.maxMana, p.mana);
-  for (let i = 0; i < pips; i++) mana.append(el('span', `pip${i < p.mana ? (i >= p.maxMana ? ' extra' : ' full') : ''}`));
+  // 最大20マナになるので、粒を並べず「◆ 数字」と細いゲージで表す
+  mana.append(el('span', 'pip full'));
   mana.append(el('span', 'mana-num', `${p.mana}/${p.maxMana}`));
+  const gauge = el('span', 'mana-gauge');
+  const cap = game.config.maxMana;
+  const fill = el('span', 'mana-fill');
+  fill.style.width = `${Math.min(100, (p.mana / cap) * 100)}%`;
+  const max = el('span', 'mana-max');
+  max.style.width = `${Math.min(100, (p.maxMana / cap) * 100)}%`;
+  gauge.append(max, fill);
+  mana.append(gauge);
 
   const piles = el('div', 'piles', `山札 ${p.deck.length}　手札 ${p.hand.length}　捨て札 ${p.graveyard.length}`);
   seat.append(life, who, mana, piles);

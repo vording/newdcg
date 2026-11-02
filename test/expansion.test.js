@@ -64,7 +64,7 @@ test('加護: 最初のダメージを1回だけ無効にする', () => {
 
 test('加護は必殺も防ぐ／加護は召喚時に付く', () => {
   const s = newGame();
-  s.players[0].mana = 5;
+  s.players[0].mana = 10;
   setHand(s, 0, ['c_warden']);
   ok(applyAction(s, 0, { type: 'playCard', handIndex: 0 }));
   const w = s.players[0].board[0];
@@ -81,12 +81,12 @@ test('遺志: 破壊時に効果（小鬼は相手に1ダメージ、墓守は1�
   const s = newGame();
   const imp = put(s, 0, 'c_imp');
   const gk = put(s, 0, 'c_gravekeeper');
-  s.players[0].mana = 3;
+  s.players[0].mana = 6;
   setHand(s, 0, []);
-  s.players[1].mana = 6;
+  s.players[1].mana = 12;
   ok(applyAction(s, 0, { type: 'endTurn' }));
   setHand(s, 1, ['s_wave']);
-  s.players[1].mana = 4;
+  s.players[1].mana = 8;
   ok(applyAction(s, 1, { type: 'playCard', handIndex: 0 }));
   assert.equal(s.players[0].board.length, 0);
   assert.equal(s.players[1].life, 19);
@@ -97,13 +97,13 @@ test('遺志: 破壊時に効果（小鬼は相手に1ダメージ、墓守は1�
 test('遺志: 不死鳥は灰の雛（トークン）を残し、トークンは捨て札に行かない', () => {
   const s = newGame();
   put(s, 1, 'c_phoenix');
-  s.players[0].mana = 6;
+  s.players[0].mana = 12;
   setHand(s, 0, ['s_judgment']);
   ok(applyAction(s, 0, { type: 'playCard', handIndex: 0 }));
   assert.equal(s.players[1].board.length, 1);
   assert.equal(s.players[1].board[0].cardId, 't_ash');
   const before = s.players[1].graveyard.length;
-  s.players[0].mana = 3;
+  s.players[0].mana = 6;
   setHand(s, 0, ['s_fireball']);
   ok(applyAction(s, 0, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: s.players[1].board[0].uid } }));
   assert.equal(s.players[1].graveyard.length, before);
@@ -112,7 +112,7 @@ test('遺志: 不死鳥は灰の雛（トークン）を残し、トークンは
 test('群れの長: 狼の子を2体呼び出す（場の上限まで）', () => {
   const s = newGame();
   for (let i = 0; i < 3; i++) put(s, 0, 'c_apprentice');
-  s.players[0].mana = 4;
+  s.players[0].mana = 8;
   setHand(s, 0, ['c_packleader']);
   ok(applyAction(s, 0, { type: 'playCard', handIndex: 0 }));
   assert.equal(s.players[0].board.length, 5); // 3 + 長 + 子1体（上限）
@@ -131,7 +131,7 @@ test('足止めの網: 相手を行動済みにしてブロックさせない', 
 test('送還の風: 手札に戻す／守護の祝福: 加護を与える／癒しの祈り: 回復とドロー', () => {
   const s = newGame();
   const e = put(s, 1, 'c_golem');
-  s.players[0].mana = 10;
+  s.players[0].mana = 20;
   s.players[0].life = 10;
   const mine = put(s, 0, 'c_warrior');
   setHand(s, 0, ['s_recall', 's_ward', 's_prayer']);
@@ -150,7 +150,7 @@ test('断罪の剣: 場のクリーチャーをすべて破壊する（自分の
   put(s, 0, 'c_warrior');
   put(s, 1, 'c_warden', { shield: true });
   put(s, 1, 'c_gravekeeper');
-  s.players[0].mana = 6;
+  s.players[0].mana = 12;
   setHand(s, 0, ['s_judgment']);
   const handBefore = s.players[1].hand.length;
   ok(applyAction(s, 0, { type: 'playCard', handIndex: 0 }));

@@ -127,9 +127,9 @@ export function step(state) {
 
 function chooseMulligan(state, me) {
   const hand = state.players[me].hand.map(getCard);
-  const cheap = hand.filter((c) => c.cost <= 3).length;
+  const cheap = hand.filter((c) => c.cost <= 6).length;
   // 序盤に出せるカードが少なければ重いカードを戻す
-  return hand.map((c, i) => ((c.cost >= 5 || (cheap < 2 && c.cost >= 4)) ? i : -1)).filter((i) => i >= 0);
+  return hand.map((c, i) => ((c.cost >= 10 || (cheap < 2 && c.cost >= 8)) ? i : -1)).filter((i) => i >= 0);
 }
 
 function playCandidates(state, me) {
@@ -161,12 +161,12 @@ function bestPlay(state, me, allowManaCombo) {
       const next = bestPlay(s, me, false);
       if (!next) continue;
       const s2 = tryAction(s, me, me, next.action);
-      gain = evaluate(s2, me) - base + 0.15 * getCard(s.players[me].hand[next.action.handIndex]).cost;
+      gain = evaluate(s2, me) - base + 0.075 * getCard(s.players[me].hand[next.action.handIndex]).cost;
       // 同じカードがマナなしでも出せるなら使う意味はない
       if (playability(state, me, state.players[me].hand.indexOf(s.players[me].hand[next.action.handIndex])).ok) continue;
     } else {
       // マナを使い切ることにも少し価値を置く（テンポ）
-      gain = evaluate(s, me) - base + 0.15 * card.cost;
+      gain = evaluate(s, me) - base + 0.075 * card.cost;
     }
     if (gain > bestGain) { bestGain = gain; best = action; }
   }

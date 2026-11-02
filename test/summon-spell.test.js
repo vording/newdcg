@@ -23,7 +23,7 @@ test('マナ不足のカードは使えない', () => {
 
 test('速攻は召喚したターンに攻撃できる', () => {
   const s = newGame();
-  s.players[0].mana = 2;
+  s.players[0].mana = 4;
   setHand(s, 0, ['c_wolf']);
   ok(applyAction(s, 0, { type: 'playCard', handIndex: 0 }));
   const uid = s.players[0].board[0].uid;
@@ -42,7 +42,7 @@ test('配置上限5体を超えて召喚できない', () => {
 
 test('召喚時効果: 伝令の鳥で1枚引く', () => {
   const s = newGame();
-  s.players[0].mana = 2;
+  s.players[0].mana = 4;
   setHand(s, 0, ['c_messenger']);
   ok(applyAction(s, 0, { type: 'playCard', handIndex: 0 }));
   assert.equal(s.players[0].hand.length, 1);
@@ -51,7 +51,7 @@ test('召喚時効果: 伝令の鳥で1枚引く', () => {
 test('スペル: 火球でクリーチャー・プレイヤーにダメージ。不正対象は拒否', () => {
   const s = newGame();
   const enemy = put(s, 1, 'c_golem');
-  s.players[0].mana = 6;
+  s.players[0].mana = 12;
   setHand(s, 0, ['s_fireball', 's_fireball']);
   assert.equal(applyAction(s, 0, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: 999 } }).ok, false);
   ok(applyAction(s, 0, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: enemy.uid } }));

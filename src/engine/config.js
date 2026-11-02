@@ -10,10 +10,10 @@ export const DEFAULT_CONFIG = Object.freeze({
   openingHandFirst: 4,
   openingHandSecond: 5,
   drawPerTurn: 1,
-  maxMana: 10,
+  maxMana: 20,
   // 毎ターンの最大マナの増え方。先攻の1ターン目だけ別の値にできる（null = 同じ）
-  manaPerTurn: 1,
-  firstPlayerFirstTurnMana: null,
+  manaPerTurn: 2,
+  firstPlayerFirstTurnMana: 1, // 先攻は奇数（1,3,5…）、後攻は偶数（2,4,6…）のマナで戦う
   boardLimit: 5, // 暫定
 
   // --- 確認済みのルール（docs/open-questions.md 参照） ---
