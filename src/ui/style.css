@@ -567,3 +567,11 @@ body { letter-spacing: .02em; }
 .mana-gauge .mana-max { position: absolute; inset: 0 auto 0 0; background: rgba(138, 166, 168, .3); }
 .mana-gauge .mana-fill { position: absolute; inset: 0 auto 0 0; background: var(--charge); transition: width .3s ease; }
 @media (max-width: 480px) { .mana-gauge { width: 56px; } }
+
+/* 更新情報（タイトル画面に小さく） */
+.updates { width: 100%; max-width: 560px; text-align: left; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.updates h2 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 500; font-size: 12px; letter-spacing: .3em; color: var(--gold); text-align: center; }
+.updates ul { margin: 0; padding: 8px 12px; list-style: none; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.updates li { display: flex; gap: 10px; }
+.updates li + li { margin-top: 2px; }
+.updates time { flex: none; min-width: 2.6em; color: var(--text); font-variant-numeric: tabular-nums; }

@@ -571,6 +571,14 @@ body { letter-spacing: .02em; }
 .mana-gauge .mana-fill { position: absolute; inset: 0 auto 0 0; background: var(--charge); transition: width .3s ease; }
 @media (max-width: 480px) { .mana-gauge { width: 56px; } }
 
+/* 更新情報（タイトル画面に小さく） */
+.updates { width: 100%; max-width: 560px; text-align: left; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.updates h2 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 500; font-size: 12px; letter-spacing: .3em; color: var(--gold); text-align: center; }
+.updates ul { margin: 0; padding: 8px 12px; list-style: none; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.updates li { display: flex; gap: 10px; }
+.updates li + li { margin-top: 2px; }
+.updates time { flex: none; min-width: 2.6em; color: var(--text); font-variant-numeric: tabular-nums; }
+
 </style>
 <!-- タイトル画面 -->
   <section id="title" class="screen title-screen">
@@ -602,6 +610,15 @@ body { letter-spacing: .02em; }
         <button id="soundBtnTitle" type="button" class="btn sound-toggle" aria-pressed="true">♪ 音：入</button>
       </div>
 
+      <section class="updates" aria-label="更新情報">
+        <h2>更新情報</h2>
+        <ul>
+          <li><time>11/2</time>マナが毎ターン2ずつ増えるルールに（先攻は奇数・後攻は偶数）。全カードのコストを見直し。後攻の「マナの雫」は廃止</li>
+          <li><time>11/2</time>影刃（瞬発型）を強化：夜番の梟 5コスト、闇潜みの刺客 3/2、デッキ構成を見直し</li>
+          <li><time>11/2</time>CPUが負ける攻撃をきちんとブロックするように。嵐の鷹 3/3、鬨の声 +2/+1</li>
+          <li><time>11/1</time>攻撃中のカードを赤く強調、ダメージなどの演出と効果音を追加、スマホの長押しメニューを抑止</li>
+        </ul>
+      </section>
       <details class="howto">
         <summary>遊び方</summary>
         <ul>
@@ -3206,6 +3223,6 @@ $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logP
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
 showTitle();
 
-document.getElementById('build').textContent = "v0.3 build fd42a14";
+document.getElementById('build').textContent = "v0.3 build 3c2f74c";
 })();
 </script>
