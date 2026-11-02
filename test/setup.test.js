@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, testDeck, validateDeck, DEFAULT_CONFIG } from '../src/engine/index.js';
-import { newGame } from './helpers.js';
+import { applyAction, createGame, testDeck, validateDeck, DEFAULT_CONFIG } from '../src/engine/index.js';
+import { newGame, ok } from './helpers.js';
 
 test('テストデッキは構築ルールを満たす', () => {
   assert.deepEqual(validateDeck(testDeck(), DEFAULT_CONFIG), []);
@@ -15,15 +15,22 @@ test('不正なデッキは拒否される（枚数・同名上限）', () => {
   assert.throws(() => createGame({ decks: [d.slice(1), d] }));
 });
 
-test('初期状態: ライフ20、先攻4枚+1ドロー、後攻5枚+マナの雫', () => {
-  const s = newGame();
+test('初期状態: 先攻ライフ20・4枚+1ドロー、後攻ライフ23・5枚（マナの雫なし）', () => {
+  const s = createGame({ decks: [testDeck(), testDeck()], seed: 42, firstPlayer: 0 });
+  for (const p of [0, 1]) ok(applyAction(s, p, { type: 'mulligan', handIndices: [] }));
   assert.equal(s.players[0].life, 20);
-  assert.equal(s.players[1].life, 20);
+  assert.equal(s.players[1].life, 23);
   assert.equal(s.players[0].hand.length, 5); // 4枚 + 1ターン目ドロー
-  assert.equal(s.players[1].hand.length, 6);
-  assert.ok(s.players[1].hand.includes('s_coin'));
+  assert.equal(s.players[1].hand.length, 5);
+  assert.ok(!s.players[1].hand.includes('s_coin'));
   assert.equal(s.players[0].deck.length + s.players[0].hand.length, 30);
   assert.deepEqual(s.awaiting, { player: 0, step: 'main' });
+});
+
+test('設定で「マナの雫」を後攻に配る方式にも戻せる', () => {
+  const s = newGame();
+  assert.equal(s.players[1].life, 20);
+  assert.ok(s.players[1].hand.includes('s_coin'));
 });
 
 test('マナの雫はデッキに入れられない', () => {

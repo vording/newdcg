@@ -603,7 +603,7 @@ body { letter-spacing: .02em; }
       <details class="howto">
         <summary>遊び方</summary>
         <ul>
-          <li>相手のライフ（20）を0にすれば勝ち。山札が尽きてカードを引けなくなっても負け。</li>
+          <li>相手のライフを0にすれば勝ち。山札が尽きてカードを引けなくなっても負け。</li>
           <li>マナは毎ターン1ずつ増え（最大10）、ターン開始時に満タンになる。</li>
           <li>クリーチャーは出したターンは攻撃できない（<b>速攻</b>を除く）。攻撃すると行動済みになり、相手のターンにブロックできない。</li>
           <li>攻撃されたら、攻撃1体につき1体でブロックできる。ブロックすると互いの攻撃力ぶんダメージを与え合う。</li>
@@ -611,7 +611,7 @@ body { letter-spacing: .02em; }
           <li><b>瞬発</b>カードは戦闘中にも使える：相手の攻撃宣言の後、ブロックが決まった後（攻める側→守る側）。1回に何枚でも使え、<b>相手のターン中はコスト−1</b>。瞬発クリーチャーは攻撃に合わせて呼び出してブロックできる。マナを残してターンを終えよう。</li>
           <li><b>天翔</b>は天翔でしか止められない。<b>先制攻撃</b>は先にダメージを与える。<b>番人</b>は攻撃しても行動済みにならない。<b>速攻</b>は出したターンに攻撃できる。</li>
           <li><b>吸命</b>は与えたダメージぶんライフ回復。<b>必殺</b>はダメージを与えたクリーチャーを倒す。<b>蹂躙</b>はブロックされても余りのダメージが通る。<b>加護</b>は1回だけダメージを防ぐ。<b>遺志</b>は倒れたときに効果が出る。</li>
-          <li>後攻は「マナの雫」（0マナ：このターンマナ+1、1枚引く）を受け取る。</li>
+          <li>後攻はライフ23で始まる（先攻は20）。</li>
         </ul>
       </details>
       <p class="build"><small id="build"></small></p>
@@ -677,7 +677,9 @@ const DEFAULT_CONFIG = Object.freeze({
   // クリーチャーのダメージ: true = 毎ターン終了時に全回復（MTG方式） / false = 蓄積する（仕様書v0.3 §8）
   damageResetsAtTurnEnd: true,
   // 後攻がゲーム開始時（マリガン後）に受け取るカード（null = なし）。先攻有利の補正。
-  secondPlayerBonusCard: 's_coin',
+  secondPlayerBonusCard: null,
+  // 後攻の初期ライフへの上乗せ（先攻有利の補正）
+  secondPlayerLifeBonus: 3,
   // 構え：相手のターン中に使う瞬発カードのコスト軽減量
   quickDiscount: 1,
   // ライフの上限（null = 上限なし。回復・吸命で初期ライフを超えて増やせる）
@@ -1345,6 +1347,7 @@ function createGame({ decks, seed = Date.now(), firstPlayer = null, config = {},
 
   const first = firstPlayer ?? (nextRandom(state) < 0.5 ? 0 : 1);
   state.firstPlayer = first;
+  state.players[opponentOf(first)].life += cfg.secondPlayerLifeBonus ?? 0;
   for (const p of state.players) shuffle(state, p.deck);
   drawCards(state, first, cfg.openingHandFirst);
   drawCards(state, opponentOf(first), cfg.openingHandSecond);
@@ -3009,7 +3012,7 @@ function renderCommand(me) {
     actions.append(button('やめる', () => { ui.targeting = null; render(); }));
   } else if (aw.step === 'mulligan') {
     msg.textContent = '最初の手札です。引き直すカードを選んでください';
-    sub.textContent = (game.firstPlayer === aw.player ? 'あなたは先攻です。' : 'あなたは後攻です。開始時に「マナの雫」を受け取ります。') + '引き直しは1回だけ。';
+    sub.textContent = (game.firstPlayer === aw.player ? 'あなたは先攻です。' : `あなたは後攻です。${game.config.secondPlayerBonusCard ? '開始時に「マナの雫」を受け取ります。' : `ライフ${game.players[aw.player].life}で始まります。`}`) + '引き直しは1回だけ。';
     const n = ui.mulligan.size;
     actions.append(button(n ? `${n}枚引き直す` : 'このまま始める', () => act({ type: 'mulligan', handIndices: [...ui.mulligan] }), 'btn-gold'));
   } else if (aw.step === 'response') {
@@ -3186,7 +3189,7 @@ $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logP
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
 showTitle();
 
-document.getElementById('build').textContent = "v0.3 build 907b188";
+document.getElementById('build').textContent = "v0.3 build b97b002";
 })();
 </script>
 </body>

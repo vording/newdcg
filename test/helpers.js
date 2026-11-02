@@ -1,8 +1,11 @@
 import { applyAction, createGame, getCard, testDeck } from '../src/engine/index.js';
 
+/** ルールの個別テスト用：後攻の補正なし（両者ライフ20、マナの雫なし）。先後の補正そのものは setup.test.js で確認する */
+const NEUTRAL = { secondPlayerLifeBonus: 0, secondPlayerBonusCard: 's_coin' };
+
 /** 引き直しなし（両者キープ）で開始したゲーム。先攻はプレイヤー0。 */
 export function newGame(config = {}, seed = 42) {
-  const s = createGame({ decks: [testDeck(), testDeck()], seed, firstPlayer: 0, config });
+  const s = createGame({ decks: [testDeck(), testDeck()], seed, firstPlayer: 0, config: { ...NEUTRAL, ...config } });
   if (s.awaiting?.step === 'mulligan') {
     ok(applyAction(s, 0, { type: 'mulligan', handIndices: [] }));
     ok(applyAction(s, 1, { type: 'mulligan', handIndices: [] }));

@@ -63,6 +63,7 @@ export function createGame({ decks, seed = Date.now(), firstPlayer = null, confi
 
   const first = firstPlayer ?? (nextRandom(state) < 0.5 ? 0 : 1);
   state.firstPlayer = first;
+  state.players[opponentOf(first)].life += cfg.secondPlayerLifeBonus ?? 0;
   for (const p of state.players) shuffle(state, p.deck);
   drawCards(state, first, cfg.openingHandFirst);
   drawCards(state, opponentOf(first), cfg.openingHandSecond);

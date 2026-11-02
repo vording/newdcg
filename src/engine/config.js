@@ -27,7 +27,9 @@ export const DEFAULT_CONFIG = Object.freeze({
   // クリーチャーのダメージ: true = 毎ターン終了時に全回復（MTG方式） / false = 蓄積する（仕様書v0.3 §8）
   damageResetsAtTurnEnd: true,
   // 後攻がゲーム開始時（マリガン後）に受け取るカード（null = なし）。先攻有利の補正。
-  secondPlayerBonusCard: 's_coin',
+  secondPlayerBonusCard: null,
+  // 後攻の初期ライフへの上乗せ（先攻有利の補正）
+  secondPlayerLifeBonus: 3,
   // 構え：相手のターン中に使う瞬発カードのコスト軽減量
   quickDiscount: 1,
   // ライフの上限（null = 上限なし。回復・吸命で初期ライフを超えて増やせる）
