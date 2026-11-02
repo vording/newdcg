@@ -611,7 +611,7 @@ body { letter-spacing: .02em; }
           <li><b>瞬発</b>カードは戦闘中にも使える：相手の攻撃宣言の後、ブロックが決まった後（攻める側→守る側）。1回に何枚でも使え、<b>相手のターン中はコスト−1</b>。瞬発クリーチャーは攻撃に合わせて呼び出してブロックできる。マナを残してターンを終えよう。</li>
           <li><b>天翔</b>は天翔でしか止められない。<b>先制攻撃</b>は先にダメージを与える。<b>番人</b>は攻撃しても行動済みにならない。<b>速攻</b>は出したターンに攻撃できる。</li>
           <li><b>吸命</b>は与えたダメージぶんライフ回復。<b>必殺</b>はダメージを与えたクリーチャーを倒す。<b>蹂躙</b>はブロックされても余りのダメージが通る。<b>加護</b>は1回だけダメージを防ぐ。<b>遺志</b>は倒れたときに効果が出る。</li>
-          <li>後攻はライフ23で始まる（先攻は20）。</li>
+          <li>先攻は手札4枚、後攻は手札5枚で始まる。</li>
         </ul>
       </details>
       <p class="build"><small id="build"></small></p>
@@ -661,6 +661,9 @@ const DEFAULT_CONFIG = Object.freeze({
   openingHandSecond: 5,
   drawPerTurn: 1,
   maxMana: 10,
+  // 毎ターンの最大マナの増え方。先攻の1ターン目だけ別の値にできる（null = 同じ）
+  manaPerTurn: 1,
+  firstPlayerFirstTurnMana: null,
   boardLimit: 5, // 暫定
 
   // --- 確認済みのルール（docs/open-questions.md 参照） ---
@@ -679,7 +682,7 @@ const DEFAULT_CONFIG = Object.freeze({
   // 後攻がゲーム開始時（マリガン後）に受け取るカード（null = なし）。先攻有利の補正。
   secondPlayerBonusCard: null,
   // 後攻の初期ライフへの上乗せ（先攻有利の補正）
-  secondPlayerLifeBonus: 3,
+  secondPlayerLifeBonus: 0,
   // 構え：相手のターン中に使う瞬発カードのコスト軽減量
   quickDiscount: 1,
   // ライフの上限（null = 上限なし。回復・吸命で初期ライフを超えて増やせる）
@@ -1398,8 +1401,12 @@ function startTurn(state, playerIndex) {
   p.turnsTaken += 1;
   log(state, 'turnStart', { player: playerIndex, turnOfPlayer: p.turnsTaken });
 
-  // 1. 開始フェイズ: 最大マナ+1、マナ全回復、クリーチャーのリフレッシュ、開始時効果
-  p.maxMana = Math.min(p.maxMana + 1, state.config.maxMana);
+  // 1. 開始フェイズ: 最大マナ増加、マナ全回復、クリーチャーのリフレッシュ、開始時効果
+  //    （増える量は manaPerTurn。先攻の1ターン目だけ firstPlayerFirstTurnMana にできる）
+  const cfg = state.config;
+  const firstOfFirst = playerIndex === state.firstPlayer && p.turnsTaken === 1;
+  const gain = firstOfFirst && cfg.firstPlayerFirstTurnMana != null ? cfg.firstPlayerFirstTurnMana : cfg.manaPerTurn;
+  p.maxMana = Math.min(p.maxMana + gain, cfg.maxMana);
   p.mana = p.maxMana;
   for (const c of p.board) {
     c.exhausted = false;
@@ -3012,7 +3019,7 @@ function renderCommand(me) {
     actions.append(button('やめる', () => { ui.targeting = null; render(); }));
   } else if (aw.step === 'mulligan') {
     msg.textContent = '最初の手札です。引き直すカードを選んでください';
-    sub.textContent = (game.firstPlayer === aw.player ? 'あなたは先攻です。' : `あなたは後攻です。${game.config.secondPlayerBonusCard ? '開始時に「マナの雫」を受け取ります。' : `ライフ${game.players[aw.player].life}で始まります。`}`) + '引き直しは1回だけ。';
+    sub.textContent = (game.firstPlayer === aw.player ? 'あなたは先攻です。' : `あなたは後攻です。${game.config.secondPlayerBonusCard ? '開始時に「マナの雫」を受け取ります。' : ''}`) + '引き直しは1回だけ。';
     const n = ui.mulligan.size;
     actions.append(button(n ? `${n}枚引き直す` : 'このまま始める', () => act({ type: 'mulligan', handIndices: [...ui.mulligan] }), 'btn-gold'));
   } else if (aw.step === 'response') {
@@ -3189,7 +3196,7 @@ $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logP
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
 showTitle();
 
-document.getElementById('build').textContent = "v0.3 build b97b002";
+document.getElementById('build').textContent = "v0.3 build bc482c9";
 })();
 </script>
 </body>

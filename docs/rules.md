@@ -75,7 +75,7 @@
 | 遺志 | 破壊されたときに効果が発動する。 |
 
 ## 8. 先攻・後攻の補正
-- 後攻は初期ライフ +3（23で開始）。（以前は「マナの雫」を受け取る方式だったが、後攻が勝ちすぎたため変更。設定 `secondPlayerBonusCard` で戻せる）
+- 後攻への追加の補正はなし（「マナの雫」・ライフ補正は廃止。設定 `secondPlayerBonusCard` / `secondPlayerLifeBonus` で戻せる）。マナの増え方を「毎ターン+2、先攻1ターン目だけ+1」にする案を検討中（設定 `manaPerTurn` / `firstPlayerFirstTurnMana`）。
   - AI同士の計測で先攻勝率が約66%→約52%になった（docs/balance-report.md）。
 
 ## 9. カード一覧（デッキ用48種＋マナの雫＋トークン2種。レア度は強さの目安）

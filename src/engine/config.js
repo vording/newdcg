@@ -11,6 +11,9 @@ export const DEFAULT_CONFIG = Object.freeze({
   openingHandSecond: 5,
   drawPerTurn: 1,
   maxMana: 10,
+  // 毎ターンの最大マナの増え方。先攻の1ターン目だけ別の値にできる（null = 同じ）
+  manaPerTurn: 1,
+  firstPlayerFirstTurnMana: null,
   boardLimit: 5, // 暫定
 
   // --- 確認済みのルール（docs/open-questions.md 参照） ---
@@ -29,7 +32,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   // 後攻がゲーム開始時（マリガン後）に受け取るカード（null = なし）。先攻有利の補正。
   secondPlayerBonusCard: null,
   // 後攻の初期ライフへの上乗せ（先攻有利の補正）
-  secondPlayerLifeBonus: 3,
+  secondPlayerLifeBonus: 0,
   // 構え：相手のターン中に使う瞬発カードのコスト軽減量
   quickDiscount: 1,
   // ライフの上限（null = 上限なし。回復・吸命で初期ライフを超えて増やせる）

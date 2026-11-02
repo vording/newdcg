@@ -15,16 +15,25 @@ test('不正なデッキは拒否される（枚数・同名上限）', () => {
   assert.throws(() => createGame({ decks: [d.slice(1), d] }));
 });
 
-test('初期状態: 先攻ライフ20・4枚+1ドロー、後攻ライフ23・5枚（マナの雫なし）', () => {
+test('初期状態: 両者ライフ20、先攻4枚+1ドロー、後攻5枚（マナの雫なし）', () => {
   const s = createGame({ decks: [testDeck(), testDeck()], seed: 42, firstPlayer: 0 });
   for (const p of [0, 1]) ok(applyAction(s, p, { type: 'mulligan', handIndices: [] }));
   assert.equal(s.players[0].life, 20);
-  assert.equal(s.players[1].life, 23);
+  assert.equal(s.players[1].life, 20);
   assert.equal(s.players[0].hand.length, 5); // 4枚 + 1ターン目ドロー
   assert.equal(s.players[1].hand.length, 5);
   assert.ok(!s.players[1].hand.includes('s_coin'));
   assert.equal(s.players[0].deck.length + s.players[0].hand.length, 30);
   assert.deepEqual(s.awaiting, { player: 0, step: 'main' });
+});
+
+test('マナの増え方は設定で変えられる（毎ターン+2、先攻1ターン目だけ+1）', () => {
+  const s = newGame({ manaPerTurn: 2, firstPlayerFirstTurnMana: 1, maxMana: 20 });
+  assert.equal(s.players[0].maxMana, 1);
+  ok(applyAction(s, 0, { type: 'endTurn' }));
+  assert.equal(s.players[1].maxMana, 2);
+  ok(applyAction(s, 1, { type: 'endTurn' }));
+  assert.equal(s.players[0].maxMana, 3);
 });
 
 test('設定で「マナの雫」を後攻に配る方式にも戻せる', () => {

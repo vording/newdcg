@@ -114,8 +114,12 @@ function startTurn(state, playerIndex) {
   p.turnsTaken += 1;
   log(state, 'turnStart', { player: playerIndex, turnOfPlayer: p.turnsTaken });
 
-  // 1. 開始フェイズ: 最大マナ+1、マナ全回復、クリーチャーのリフレッシュ、開始時効果
-  p.maxMana = Math.min(p.maxMana + 1, state.config.maxMana);
+  // 1. 開始フェイズ: 最大マナ増加、マナ全回復、クリーチャーのリフレッシュ、開始時効果
+  //    （増える量は manaPerTurn。先攻の1ターン目だけ firstPlayerFirstTurnMana にできる）
+  const cfg = state.config;
+  const firstOfFirst = playerIndex === state.firstPlayer && p.turnsTaken === 1;
+  const gain = firstOfFirst && cfg.firstPlayerFirstTurnMana != null ? cfg.firstPlayerFirstTurnMana : cfg.manaPerTurn;
+  p.maxMana = Math.min(p.maxMana + gain, cfg.maxMana);
   p.mana = p.maxMana;
   for (const c of p.board) {
     c.exhausted = false;

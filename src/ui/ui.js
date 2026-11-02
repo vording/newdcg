@@ -693,7 +693,7 @@ function renderCommand(me) {
     actions.append(button('やめる', () => { ui.targeting = null; render(); }));
   } else if (aw.step === 'mulligan') {
     msg.textContent = '最初の手札です。引き直すカードを選んでください';
-    sub.textContent = (game.firstPlayer === aw.player ? 'あなたは先攻です。' : `あなたは後攻です。${game.config.secondPlayerBonusCard ? '開始時に「マナの雫」を受け取ります。' : `ライフ${game.players[aw.player].life}で始まります。`}`) + '引き直しは1回だけ。';
+    sub.textContent = (game.firstPlayer === aw.player ? 'あなたは先攻です。' : `あなたは後攻です。${game.config.secondPlayerBonusCard ? '開始時に「マナの雫」を受け取ります。' : ''}`) + '引き直しは1回だけ。';
     const n = ui.mulligan.size;
     actions.append(button(n ? `${n}枚引き直す` : 'このまま始める', () => act({ type: 'mulligan', handIndices: [...ui.mulligan] }), 'btn-gold'));
   } else if (aw.step === 'response') {
