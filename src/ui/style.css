@@ -608,3 +608,8 @@ body { letter-spacing: .02em; }
   -webkit-text-stroke: .03em #140b05;
   filter: drop-shadow(0 .08em 0 #0b0603) drop-shadow(0 0 .3em rgba(0, 0, 0, .9));
 }
+
+/* カード一覧：デッキに入っていないカードの印 */
+.gallery-grid > div { position: relative; }
+.gallery-tag { margin-top: 4px; text-align: center; font-size: 11px; letter-spacing: .2em; color: var(--muted); }
+.gallery-grid > .off-deck .card { opacity: .85; }

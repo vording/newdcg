@@ -898,9 +898,9 @@ function showGallery() {
   const box = el('div', 'gallery');
   const head = el('div', 'gallery-head');
   head.append(el('h2', '', 'カード一覧'), button('閉じる', () => { ov.hidden = true; }));
-  box.append(head, el('p', 'hint', 'カーソルを合わせる（スマホは長押し）と日本語名と効果が見られます。縁の色はレア度。'));
+  box.append(head, el('p', 'hint', 'カーソルを合わせる（スマホは長押し）と日本語名と効果が見られます。縁の色はレア度。「デッキ外」は今の構築済みデッキに入っていないカード。'));
   const inDecks = new Set(Object.values(DECKS).flatMap((d) => Object.keys(d.counts)));
-  const all = Object.values(CARDS).filter((c) => inDecks.has(c.id) || c.token);
+  const all = Object.values(CARDS); // デッキに入っていないカードも含めてすべて
   for (const r of Object.keys(RARITIES).sort((a, b) => RARITIES[b].order - RARITIES[a].order)) {
     const cards = all.filter((c) => c.rarity === r).sort((a, b) => a.cost - b.cost);
     if (!cards.length) continue;
@@ -909,6 +909,8 @@ function showGallery() {
     for (const c of cards) {
       const cell = el('div');
       cell.append(buildCard(c));
+      const tag = c.id === 's_coin' ? '未使用' : c.token ? 'トークン' : !inDecks.has(c.id) ? 'デッキ外' : '';
+      if (tag) { cell.classList.add('off-deck'); cell.append(el('div', 'gallery-tag', tag)); }
       grid.append(cell);
     }
     box.append(grid);

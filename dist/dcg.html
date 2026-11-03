@@ -612,6 +612,11 @@ body { letter-spacing: .02em; }
   filter: drop-shadow(0 .08em 0 #0b0603) drop-shadow(0 0 .3em rgba(0, 0, 0, .9));
 }
 
+/* カード一覧：デッキに入っていないカードの印 */
+.gallery-grid > div { position: relative; }
+.gallery-tag { margin-top: 4px; text-align: center; font-size: 11px; letter-spacing: .2em; color: var(--muted); }
+.gallery-grid > .off-deck .card { opacity: .85; }
+
 </style>
 <!-- タイトル画面 -->
   <section id="title" class="screen title-screen">
@@ -647,6 +652,7 @@ body { letter-spacing: .02em; }
       <section class="updates" aria-label="更新情報">
         <h2>更新情報</h2>
         <ul>
+          <li><time>11/3</time>カード一覧に、デッキに入っていないカード（群れの長・霧隠れ・癒しの光など）も表示</li>
           <li><time>11/3</time>レジェンドのカード名を、カードごとの専用フォント・配色のロゴ風に</li>
           <li><time>11/3</time>CPU戦の連勝記録を追加（強さごとに、今の連勝と最高記録を表示）</li>
           <li><time>11/2</time>マナが毎ターン2ずつ増えるルールに（先攻は奇数・後攻は偶数）。全カードのコストを見直し。後攻の「マナの雫」は廃止</li>
@@ -3279,9 +3285,9 @@ function showGallery() {
   const box = el('div', 'gallery');
   const head = el('div', 'gallery-head');
   head.append(el('h2', '', 'カード一覧'), button('閉じる', () => { ov.hidden = true; }));
-  box.append(head, el('p', 'hint', 'カーソルを合わせる（スマホは長押し）と日本語名と効果が見られます。縁の色はレア度。'));
+  box.append(head, el('p', 'hint', 'カーソルを合わせる（スマホは長押し）と日本語名と効果が見られます。縁の色はレア度。「デッキ外」は今の構築済みデッキに入っていないカード。'));
   const inDecks = new Set(Object.values(DECKS).flatMap((d) => Object.keys(d.counts)));
-  const all = Object.values(CARDS).filter((c) => inDecks.has(c.id) || c.token);
+  const all = Object.values(CARDS); // デッキに入っていないカードも含めてすべて
   for (const r of Object.keys(RARITIES).sort((a, b) => RARITIES[b].order - RARITIES[a].order)) {
     const cards = all.filter((c) => c.rarity === r).sort((a, b) => a.cost - b.cost);
     if (!cards.length) continue;
@@ -3290,6 +3296,8 @@ function showGallery() {
     for (const c of cards) {
       const cell = el('div');
       cell.append(buildCard(c));
+      const tag = c.id === 's_coin' ? '未使用' : c.token ? 'トークン' : !inDecks.has(c.id) ? 'デッキ外' : '';
+      if (tag) { cell.classList.add('off-deck'); cell.append(el('div', 'gallery-tag', tag)); }
       grid.append(cell);
     }
     box.append(grid);
@@ -3316,6 +3324,6 @@ $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logP
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
 showTitle();
 
-document.getElementById('build').textContent = "v0.3 build 2f95e8b";
+document.getElementById('build').textContent = "v0.3 build 8bb39b0";
 })();
 </script>
