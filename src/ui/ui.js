@@ -516,7 +516,7 @@ function markSvg(k) {
 
 /** カード面を作る（全面イラスト＋英語名）。stats を渡すとクリーチャーの攻撃力・HPを差し替えて表示する */
 function buildCard(card, stats = null, opts = {}) {
-  const node = el('div', `card ${card.type} r-${card.rarity}`);
+  const node = el('div', `card ${card.type} r-${card.rarity} cid-${card.id}`);
   const art = el('div', 'c-art');
   if (ART[card.id]) {
     const img = el('img');

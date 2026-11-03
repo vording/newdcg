@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>カードバトル（タイトル未定）</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Shippori+Mincho+B1:wght@500;600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=UnifrakturMaguntia&family=Uncial+Antiqua&family=Metal+Mania&family=Shippori+Mincho+B1:wght@500;600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap');
 
 /* 夜の書斎と戦卓：炭色に近い紺の卓、くすんだ真鍮、象牙色の文字。
    見出しは明朝、数字と英字は碑文風のセリフ体。彩度と光沢を抑え、落ち着いた大人のトーンに統一する。
@@ -588,6 +588,34 @@ body { letter-spacing: .02em; }
 .result .streak { font-family: var(--font-display); letter-spacing: .1em; color: var(--text); }
 .result .streak.record { color: var(--gold); font-weight: 600; }
 
+/* ---------- レジェンド：カードごとに専用のロゴ風カード名 ----------
+   文字にグラデーションを流し込み（background-clip: text）、縁取りと影で浮き上がらせる */
+.card.r-legendary .c-en {
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: none; letter-spacing: .02em; line-height: 1;
+}
+/* 断罪の剣：聖なる黒字体、白金に光る */
+.card.cid-s_judgment .c-en {
+  font-family: 'UnifrakturMaguntia', var(--font-title); font-weight: 400; font-size: 1.5em;
+  background-image: linear-gradient(180deg, #fffbe8 0%, #f6e3a1 45%, #c9a24f 70%, #fff4c9 100%);
+  -webkit-text-stroke: .035em #3a2806;
+  filter: drop-shadow(0 0 .06em #1a1203) drop-shadow(0 0 .12em rgba(0, 0, 0, .85)) drop-shadow(0 0 .35em rgba(255, 226, 140, .6));
+}
+/* 古竜：古い写本の字体、炎のグラデーション */
+.card.cid-c_dragon .c-en {
+  font-family: 'Uncial Antiqua', var(--font-title); font-weight: 400; font-size: 1.32em; letter-spacing: .04em;
+  background-image: linear-gradient(180deg, #ffe08a 0%, #ff9a3c 40%, #e0461f 70%, #8f1d12 100%);
+  -webkit-text-stroke: .025em #2a0905;
+  filter: drop-shadow(0 0 .2em rgba(255, 110, 40, .55)) drop-shadow(0 .07em .1em rgba(0, 0, 0, .95));
+}
+/* 巨獣ベヒモス：荒々しい字体、骨と錆の色 */
+.card.cid-c_lionking .c-en {
+  font-family: 'Metal Mania', var(--font-title); font-weight: 400; font-size: 1.75em; letter-spacing: .03em;
+  background-image: linear-gradient(180deg, #fff6e2 0%, #e2cda6 45%, #b07a45 75%, #6b3b1d 100%);
+  -webkit-text-stroke: .03em #140b05;
+  filter: drop-shadow(0 .08em 0 #0b0603) drop-shadow(0 0 .3em rgba(0, 0, 0, .9));
+}
+
 </style>
 </head>
 <body>
@@ -625,6 +653,7 @@ body { letter-spacing: .02em; }
       <section class="updates" aria-label="更新情報">
         <h2>更新情報</h2>
         <ul>
+          <li><time>11/3</time>レジェンドのカード名を、カードごとの専用フォント・配色のロゴ風に</li>
           <li><time>11/3</time>CPU戦の連勝記録を追加（強さごとに、今の連勝と最高記録を表示）</li>
           <li><time>11/2</time>マナが毎ターン2ずつ増えるルールに（先攻は奇数・後攻は偶数）。全カードのコストを見直し。後攻の「マナの雫」は廃止</li>
           <li><time>11/2</time>影刃（瞬発型）を強化：夜番の梟 5コスト、闇潜みの刺客 3/2、デッキ構成を見直し</li>
@@ -2874,7 +2903,7 @@ function markSvg(k) {
 
 /** カード面を作る（全面イラスト＋英語名）。stats を渡すとクリーチャーの攻撃力・HPを差し替えて表示する */
 function buildCard(card, stats = null, opts = {}) {
-  const node = el('div', `card ${card.type} r-${card.rarity}`);
+  const node = el('div', `card ${card.type} r-${card.rarity} cid-${card.id}`);
   const art = el('div', 'c-art');
   if (ART[card.id]) {
     const img = el('img');
@@ -3293,7 +3322,7 @@ $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logP
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
 showTitle();
 
-document.getElementById('build').textContent = "v0.3 build 1cae729";
+document.getElementById('build').textContent = "v0.3 build 8e4f3c1";
 })();
 </script>
 </body>
