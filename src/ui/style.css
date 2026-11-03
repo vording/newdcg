@@ -575,3 +575,8 @@ body { letter-spacing: .02em; }
 .updates li { display: flex; gap: 10px; }
 .updates li + li { margin-top: 2px; }
 .updates time { flex: none; min-width: 2.6em; color: var(--text); font-variant-numeric: tabular-nums; }
+
+/* 連勝記録 */
+.streak-info { margin: 0; font-size: 13px; letter-spacing: .15em; color: var(--muted); font-variant-numeric: tabular-nums; }
+.result .streak { font-family: var(--font-display); letter-spacing: .1em; color: var(--text); }
+.result .streak.record { color: var(--gold); font-weight: 600; }

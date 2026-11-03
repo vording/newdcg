@@ -35,7 +35,9 @@ let level = 'easy';
 let deckNames = ['', ''];
 let ui;
 let seenLog = 0;
-let fxSeen = 0; // 演出・効果音を出し終えたログの位置
+let fxSeen = 0;
+let resultRecorded = false;
+let lastStreak = null; // この対戦の勝敗を連勝記録に反映したか // 演出・効果音を出し終えたログの位置
 let feed = [];
 let fresh = new Set();
 
@@ -64,12 +66,57 @@ function buildTitle() {
   $('#setup').addEventListener('submit', (e) => { e.preventDefault(); startGame(); });
 }
 
+// ---------------------------------------------------------------------------
+// 連勝記録（CPU戦のみ。強さごとに、このブラウザに保存）
+// ---------------------------------------------------------------------------
+
+const STREAK_KEY = 'dcg-streaks';
+const LEVEL_NAME = { easy: 'やさしい', normal: 'ふつう', hard: 'つよい' };
+function loadStreaks() {
+  try { return JSON.parse(localStorage.getItem(STREAK_KEY)) ?? {}; } catch { return {}; }
+}
+function saveStreaks(all) {
+  try { localStorage.setItem(STREAK_KEY, JSON.stringify(all)); } catch { /* 保存できない環境では記録しない */ }
+}
+function streakOf(lv) {
+  const r = loadStreaks()[lv];
+  return { cur: r?.cur ?? 0, best: r?.best ?? 0 };
+}
+/** 勝ちなら連勝+1（最高記録を更新）、負け・引き分け・中断なら0に戻す。更新前後を返す */
+function recordStreak(lv, won) {
+  const all = loadStreaks();
+  const before = streakOf(lv);
+  const cur = won ? before.cur + 1 : 0;
+  const after = { cur, best: Math.max(before.best, cur) };
+  all[lv] = after;
+  saveStreaks(all);
+  return { before, after };
+}
+function renderStreakInfo() {
+  const box = $('#streakInfo');
+  if (!box) return;
+  const lv = new FormData($('#setup')).get('level');
+  const isCpu = new FormData($('#setup')).get('mode') === 'cpu';
+  const { cur, best } = streakOf(lv);
+  box.hidden = !isCpu;
+  box.textContent = `${LEVEL_NAME[lv]}の連勝：${cur}　最高：${best}`;
+}
+/** CPU戦の途中で抜けると連勝が途切れる */
+function leaveGame() {
+  const inProgress = game && mode === 'cpu' && game.winner === null && !resultRecorded;
+  if (inProgress && streakOf(level).cur > 0
+    && !confirm(`対戦を中断すると、${LEVEL_NAME[level]}の連勝（${streakOf(level).cur}）が途切れます。タイトルへ戻りますか？`)) return;
+  if (inProgress) { recordStreak(level, false); resultRecorded = true; }
+  showTitle();
+}
+
 function showTitle() {
   clearTimeout(cpuTimer);
   $('#overlay').hidden = true;
   $('#logPanel').hidden = true;
   $('#game').hidden = true;
   $('#title').hidden = false;
+  renderStreakInfo();
 }
 
 function pickDeck(value) {
@@ -89,7 +136,7 @@ function startGame() {
     seed: Date.now(),
     names: mode === 'cpu' ? ['あなた', 'CPU'] : ['プレイヤー1', 'プレイヤー2'],
   });
-  seenLog = 0; fxSeen = 0; feed = []; fresh = new Set();
+  seenLog = 0; fxSeen = 0; feed = []; fresh = new Set(); resultRecorded = false;
   resetUi();
   $('#title').hidden = true;
   $('#game').hidden = false;
@@ -764,6 +811,14 @@ function renderOverlay() {
   box.append(el('h2', '', title));
   box.append(el('p', '', mode === 'cpu' && won ? '見事な勝利だ。' : mode === 'cpu' ? 'CPUの勝ち。次の一局で。' : '見事な戦いだった。'));
   box.append(el('p', '', `${Math.ceil(game.turn / 2)}ターンで決着　あなた：${deckNames[0]}／相手：${deckNames[1]}`));
+  if (mode === 'cpu') {
+    if (!resultRecorded) { lastStreak = recordStreak(level, won); resultRecorded = true; }
+    const { before, after } = lastStreak;
+    const line = won
+      ? `${LEVEL_NAME[level]}で${after.cur}連勝${after.cur > before.best ? '（最高記録更新！）' : `（最高 ${after.best}）`}`
+      : before.cur > 0 ? `連勝は${before.cur}で途切れた（最高 ${after.best}）` : `${LEVEL_NAME[level]}の最高記録：${after.best}連勝`;
+    box.append(el('p', `streak${won && after.cur > before.best ? ' record' : ''}`, line));
+  }
   const actions = el('div', 'actions');
   actions.append(button('もう一度', startGame, 'btn-gold'), button('タイトルへ', showTitle));
   box.append(actions);
@@ -873,7 +928,9 @@ document.addEventListener('click', (e) => { if (e.target.closest('button:not(.so
 // カードの長押しで画像保存などのメニューを出さない
 document.addEventListener('contextmenu', (e) => { if (e.target.closest('.card, .preview, .gallery')) e.preventDefault(); });
 document.addEventListener('dragstart', (e) => { if (e.target.closest('.card')) e.preventDefault(); });
-$('#menuBtn').addEventListener('click', showTitle);
+$('#menuBtn').addEventListener('click', leaveGame);
+for (const r of document.querySelectorAll('#setup input[name=level], #setup input[name=mode]')) r.addEventListener('change', renderStreakInfo);
+renderStreakInfo();
 $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logPanel').hidden; renderLog(); });
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
 showTitle();
