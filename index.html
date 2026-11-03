@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>カードバトル（タイトル未定）</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=UnifrakturMaguntia&family=Uncial+Antiqua&family=Bowlby+One+SC&family=Shippori+Mincho+B1:wght@500;600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=UnifrakturMaguntia&family=Uncial+Antiqua&family=Metal+Mania&family=Shippori+Mincho+B1:wght@500;600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap');
 
 /* 夜の書斎と戦卓：炭色に近い紺の卓、くすんだ真鍮、象牙色の文字。
    見出しは明朝、数字と英字は碑文風のセリフ体。彩度と光沢を抑え、落ち着いた大人のトーンに統一する。
@@ -608,11 +608,11 @@ body { letter-spacing: .02em; }
   -webkit-text-stroke: .025em #2a0905;
   filter: drop-shadow(0 0 .2em rgba(255, 110, 40, .55)) drop-shadow(0 .07em .1em rgba(0, 0, 0, .95));
 }
-/* 巨獣ベヒモス：太く荒々しい字体、骨と錆の色 */
+/* 巨獣ベヒモス：荒々しい字体、骨と錆の色 */
 .card.cid-c_lionking .c-en {
-  font-family: 'Bowlby One SC', var(--font-title); font-weight: 400; font-size: 1.3em; letter-spacing: .02em;
+  font-family: 'Metal Mania', var(--font-title); font-weight: 400; font-size: 1.75em; letter-spacing: .03em;
   background-image: linear-gradient(180deg, #fff6e2 0%, #e2cda6 45%, #b07a45 75%, #6b3b1d 100%);
-  -webkit-text-stroke: .02em #140b05;
+  -webkit-text-stroke: .03em #140b05;
   filter: drop-shadow(0 .08em 0 #0b0603) drop-shadow(0 0 .3em rgba(0, 0, 0, .9));
 }
 
@@ -3322,7 +3322,7 @@ $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logP
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
 showTitle();
 
-document.getElementById('build').textContent = "v0.3 build 14b8067";
+document.getElementById('build').textContent = "v0.3 build 2f95e8b";
 })();
 </script>
 </body>
