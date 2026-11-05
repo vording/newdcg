@@ -85,11 +85,14 @@ test('瞬発カードは自分のメインフェイズにも使える（剛力�
   assert.equal(mine.attack, 4);
 });
 
-test('迎撃の矢は攻撃中のクリーチャーしか対象にできない（メインフェイズでは使えない）', () => {
+test('迎撃の矢：自分のターンにも使え、相手のクリーチャーに2ダメージ（攻撃中なら3）', () => {
   const s = newGame();
-  put(s, 1, 'c_scout');
+  const t = put(s, 1, 'c_warrior'); // 3/3
   setHand(s, 0, ['s_arrow']);
-  assert.equal(applyAction(s, 0, { type: 'playCard', handIndex: 0, target: null }).ok, false);
+  s.players[0].mana = 2;
+  assert.equal(applyAction(s, 0, { type: 'playCard', handIndex: 0, target: null }).ok, false); // 対象が必要
+  ok(applyAction(s, 0, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: t.uid } }));
+  assert.equal(t.damage, 2); // 攻撃中ではないので2
 });
 
 test('瞬発の機会: ブロック宣言の後に攻撃側→防御側の順で使える', () => {
@@ -143,5 +146,7 @@ test('瞬発の機会では、マナが続く限り何枚でも使える', () =>
   ok(applyAction(s, 1, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: a2.uid } }));
   assert.equal(s.awaiting.step, 'response');
   ok(applyAction(s, 1, { type: 'playCard', handIndex: 0, target: { kind: 'creature', uid: a.uid } }));
-  assert.equal(s.awaiting.step, 'block');
+  // 攻撃中なら3ダメージ：斥候も戦士も倒れ、攻撃クリーチャーがいなくなって戦闘終了
+  assert.equal(s.players[0].board.length, 0);
+  assert.equal(s.combat, null);
 });

@@ -460,6 +460,8 @@ function renderSeat(pi, isFront) {
   mana.append(gauge);
 
   const piles = el('div', 'piles', `山札 ${p.deck.length}　手札 ${p.hand.length}　捨て札 ${p.graveyard.length}`);
+  const g = pi === viewer() && game.activePlayer !== pi && game.winner === null ? guardInfo(pi) : null;
+  if (g?.ready) mana.append(el('span', 'guard-badge', '構え'));
   seat.append(life, who, mana, piles);
   return seat;
 }
@@ -622,6 +624,10 @@ function renderHandCard(pi, cardId, handIndex) {
     onKey(node, toggle);
     return node;
   }
+  // 瞬発カードは、相手のターンに使うときのコスト（構え）を自分のターン中に小さく示す
+  if (hasKeyword(card, 'quick') && game.activePlayer === pi && game.config.quickDiscount > 0) {
+    node.append(el('div', 'c-guard', `相手番 ${Math.max(0, card.cost - game.config.quickDiscount)}`));
+  }
   const check = playability(game, pi, handIndex);
   if (isHumanTurn() && check.ok && ui.targeting === null) {
     node.classList.add('playable');
@@ -727,6 +733,16 @@ function button(label, onClick, cls = '') {
   return b;
 }
 
+/** 手札の瞬発カードのうち、相手のターンに一番安く使えるもの（構え）の情報 */
+function guardInfo(pi) {
+  const p = game.players[pi];
+  const quick = p.hand.map(getCard).filter((c) => hasKeyword(c, 'quick') && c.id !== 's_coin');
+  if (!quick.length) return null;
+  const cost = (c) => Math.max(0, c.cost - game.config.quickDiscount);
+  const cheapest = quick.reduce((a, b) => (cost(b) < cost(a) ? b : a));
+  return { name: cheapest.name, cost: cost(cheapest), ready: p.mana >= cost(cheapest) };
+}
+
 function renderCommand(me) {
   const box = el('div', 'command');
   const left = el('div');
@@ -771,7 +787,10 @@ function renderCommand(me) {
     sub.textContent = ready.length
       ? '光っている手札を使う／攻撃するクリーチャーを選ぶ'
       : '光っている手札を使ってから、ターンを終了';
-    if (game.players[aw.player].hand.some((id) => hasKeyword(getCard(id), 'quick'))) sub.textContent += '（瞬発カードはマナを残すと相手の攻撃時にも使える）';
+    const guard = guardInfo(aw.player);
+    if (guard) sub.textContent += guard.ready
+      ? `　◆${game.players[aw.player].mana}を残してターンを終えると、相手の攻撃に「${guard.name}」などで構えられる`
+      : `　瞬発は相手のターンならコスト−1（「${guard.name}」は◆${guard.cost}残せば構えられる）`;
     const all = button('全員で攻撃', () => { ready.forEach((c) => ui.attackers.add(c.uid)); render(); });
     all.disabled = ready.length === 0 || ui.attackers.size === ready.length;
     const atk = button(ui.attackers.size ? `攻撃する（${ui.attackers.size}体）` : '攻撃する', () => act({ type: 'attack', attackers: [...ui.attackers] }), 'btn-crimson');

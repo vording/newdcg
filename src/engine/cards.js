@@ -66,8 +66,8 @@ const CARD_LIST = [
   // --- スペル ---
   {
     id: 's_arrow', name: '迎撃の矢', nameEn: 'Intercept Arrow', rarity: 'rare', type: 'spell', cost: 2, keywords: ['quick'],
-    effect: { type: 'damage', amount: 2, target: 'attackingCreature' },
-    text: '攻撃している相手のクリーチャー1体に2ダメージを与える。',
+    effect: { type: 'damage', amount: 2, amountIfAttacking: 3, target: 'enemyCreature' },
+    text: '相手のクリーチャー1体に2ダメージを与える。攻撃しているクリーチャーなら3ダメージ。',
   },
   {
     id: 's_might', name: '剛力の薬', nameEn: 'Potion of Might', rarity: 'rare', type: 'spell', cost: 1, keywords: ['quick'],
@@ -182,8 +182,8 @@ export const DECKS = Object.freeze({
     name: '城塞（防御型）',
     text: '加護と除去で耐え、古竜とベヒモスで決める。',
     counts: {
-      c_ambusher: 1, c_shield: 1, c_sister: 3, c_viper: 2, c_pikeman: 3, c_knight: 2, c_warden: 3, c_dragon: 2, c_lionking: 1,
-      s_arrow: 3, s_ward: 2, s_lance: 2, s_wave: 2, s_judgment: 1, s_insight: 1, s_sidestep: 1,
+      c_ambusher: 1, c_shield: 2, c_sister: 3, c_viper: 2, c_pikeman: 3, c_knight: 2, c_warden: 3, c_dragon: 2, c_lionking: 1,
+      s_arrow: 1, s_ward: 2, s_lance: 2, s_wave: 2, s_judgment: 1, s_insight: 2, s_sidestep: 1,
     },
   },
   balance: {

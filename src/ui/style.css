@@ -613,3 +613,14 @@ body { letter-spacing: .02em; }
 .gallery-grid > div { position: relative; }
 .gallery-tag { margin-top: 4px; text-align: center; font-size: 11px; letter-spacing: .2em; color: var(--muted); }
 .gallery-grid > .off-deck .card { opacity: .85; }
+
+/* 構え（瞬発）：手札の相手ターン中コストと、構えている表示 */
+.card .c-guard {
+  position: absolute; left: 4%; top: 24%; z-index: 4; padding: .12em .45em; border-radius: .6em;
+  font-size: .64em; font-weight: 700; letter-spacing: .04em; white-space: nowrap;
+  background: rgba(14, 10, 6, .85); color: #cfe3e6; border: .08em solid var(--charge);
+}
+.guard-badge {
+  margin-left: 8px; padding: 1px 8px; border-radius: 10px; font-size: 11px; letter-spacing: .2em;
+  color: var(--night); background: var(--charge); font-weight: 700;
+}

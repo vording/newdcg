@@ -617,6 +617,17 @@ body { letter-spacing: .02em; }
 .gallery-tag { margin-top: 4px; text-align: center; font-size: 11px; letter-spacing: .2em; color: var(--muted); }
 .gallery-grid > .off-deck .card { opacity: .85; }
 
+/* 構え（瞬発）：手札の相手ターン中コストと、構えている表示 */
+.card .c-guard {
+  position: absolute; left: 4%; top: 24%; z-index: 4; padding: .12em .45em; border-radius: .6em;
+  font-size: .64em; font-weight: 700; letter-spacing: .04em; white-space: nowrap;
+  background: rgba(14, 10, 6, .85); color: #cfe3e6; border: .08em solid var(--charge);
+}
+.guard-badge {
+  margin-left: 8px; padding: 1px 8px; border-radius: 10px; font-size: 11px; letter-spacing: .2em;
+  color: var(--night); background: var(--charge); font-weight: 700;
+}
+
 </style>
 <!-- タイトル画面 -->
   <section id="title" class="screen title-screen">
@@ -652,6 +663,7 @@ body { letter-spacing: .02em; }
       <section class="updates" aria-label="更新情報">
         <h2>更新情報</h2>
         <ul>
+          <li><time>11/5</time>影刃を使いやすく：迎撃の矢は相手のクリーチャーならいつでも2ダメージ（攻撃中なら3）。手札の瞬発カードに相手ターン中のコスト、マナを残すと構えられる案内を表示</li>
           <li><time>11/3</time>カード一覧に、デッキに入っていないカード（群れの長・霧隠れ・癒しの光など）も表示</li>
           <li><time>11/3</time>レジェンドのカード名を、カードごとの専用フォント・配色のロゴ風に</li>
           <li><time>11/3</time>CPU戦の連勝記録を追加（強さごとに、今の連勝と最高記録を表示）</li>
@@ -827,8 +839,8 @@ const CARD_LIST = [
   // --- スペル ---
   {
     id: 's_arrow', name: '迎撃の矢', nameEn: 'Intercept Arrow', rarity: 'rare', type: 'spell', cost: 2, keywords: ['quick'],
-    effect: { type: 'damage', amount: 2, target: 'attackingCreature' },
-    text: '攻撃している相手のクリーチャー1体に2ダメージを与える。',
+    effect: { type: 'damage', amount: 2, amountIfAttacking: 3, target: 'enemyCreature' },
+    text: '相手のクリーチャー1体に2ダメージを与える。攻撃しているクリーチャーなら3ダメージ。',
   },
   {
     id: 's_might', name: '剛力の薬', nameEn: 'Potion of Might', rarity: 'rare', type: 'spell', cost: 1, keywords: ['quick'],
@@ -943,8 +955,8 @@ const DECKS = Object.freeze({
     name: '城塞（防御型）',
     text: '加護と除去で耐え、古竜とベヒモスで決める。',
     counts: {
-      c_ambusher: 1, c_shield: 1, c_sister: 3, c_viper: 2, c_pikeman: 3, c_knight: 2, c_warden: 3, c_dragon: 2, c_lionking: 1,
-      s_arrow: 3, s_ward: 2, s_lance: 2, s_wave: 2, s_judgment: 1, s_insight: 1, s_sidestep: 1,
+      c_ambusher: 1, c_shield: 2, c_sister: 3, c_viper: 2, c_pikeman: 3, c_knight: 2, c_warden: 3, c_dragon: 2, c_lionking: 1,
+      s_arrow: 1, s_ward: 2, s_lance: 2, s_wave: 2, s_judgment: 1, s_insight: 2, s_sidestep: 1,
     },
   },
   balance: {
@@ -1175,8 +1187,10 @@ function shuffle(state, array) {
 const EFFECTS = {
   damage: {
     resolve(state, playerIndex, params, target, source) {
-      if (target.kind === 'player') dealDamageToPlayer(state, target.player, params.amount, source);
-      else dealDamageToCreature(state, findCreature(state, target.uid), params.amount, source);
+      if (target.kind === 'player') { dealDamageToPlayer(state, target.player, params.amount, source); return; }
+      // amountIfAttacking：攻撃しているクリーチャーが対象なら、ダメージが増える
+      const attacking = params.amountIfAttacking != null && state.combat?.attackers.includes(target.uid);
+      dealDamageToCreature(state, findCreature(state, target.uid), attacking ? params.amountIfAttacking : params.amount, source);
     },
   },
   healAll: {
@@ -2847,6 +2861,8 @@ function renderSeat(pi, isFront) {
   mana.append(gauge);
 
   const piles = el('div', 'piles', `山札 ${p.deck.length}　手札 ${p.hand.length}　捨て札 ${p.graveyard.length}`);
+  const g = pi === viewer() && game.activePlayer !== pi && game.winner === null ? guardInfo(pi) : null;
+  if (g?.ready) mana.append(el('span', 'guard-badge', '構え'));
   seat.append(life, who, mana, piles);
   return seat;
 }
@@ -3009,6 +3025,10 @@ function renderHandCard(pi, cardId, handIndex) {
     onKey(node, toggle);
     return node;
   }
+  // 瞬発カードは、相手のターンに使うときのコスト（構え）を自分のターン中に小さく示す
+  if (hasKeyword(card, 'quick') && game.activePlayer === pi && game.config.quickDiscount > 0) {
+    node.append(el('div', 'c-guard', `相手番 ${Math.max(0, card.cost - game.config.quickDiscount)}`));
+  }
   const check = playability(game, pi, handIndex);
   if (isHumanTurn() && check.ok && ui.targeting === null) {
     node.classList.add('playable');
@@ -3114,6 +3134,16 @@ function button(label, onClick, cls = '') {
   return b;
 }
 
+/** 手札の瞬発カードのうち、相手のターンに一番安く使えるもの（構え）の情報 */
+function guardInfo(pi) {
+  const p = game.players[pi];
+  const quick = p.hand.map(getCard).filter((c) => hasKeyword(c, 'quick') && c.id !== 's_coin');
+  if (!quick.length) return null;
+  const cost = (c) => Math.max(0, c.cost - game.config.quickDiscount);
+  const cheapest = quick.reduce((a, b) => (cost(b) < cost(a) ? b : a));
+  return { name: cheapest.name, cost: cost(cheapest), ready: p.mana >= cost(cheapest) };
+}
+
 function renderCommand(me) {
   const box = el('div', 'command');
   const left = el('div');
@@ -3158,7 +3188,10 @@ function renderCommand(me) {
     sub.textContent = ready.length
       ? '光っている手札を使う／攻撃するクリーチャーを選ぶ'
       : '光っている手札を使ってから、ターンを終了';
-    if (game.players[aw.player].hand.some((id) => hasKeyword(getCard(id), 'quick'))) sub.textContent += '（瞬発カードはマナを残すと相手の攻撃時にも使える）';
+    const guard = guardInfo(aw.player);
+    if (guard) sub.textContent += guard.ready
+      ? `　◆${game.players[aw.player].mana}を残してターンを終えると、相手の攻撃に「${guard.name}」などで構えられる`
+      : `　瞬発は相手のターンならコスト−1（「${guard.name}」は◆${guard.cost}残せば構えられる）`;
     const all = button('全員で攻撃', () => { ready.forEach((c) => ui.attackers.add(c.uid)); render(); });
     all.disabled = ready.length === 0 || ui.attackers.size === ready.length;
     const atk = button(ui.attackers.size ? `攻撃する（${ui.attackers.size}体）` : '攻撃する', () => act({ type: 'attack', attackers: [...ui.attackers] }), 'btn-crimson');
@@ -3324,6 +3357,6 @@ $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logP
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
 showTitle();
 
-document.getElementById('build').textContent = "v0.3 build 8bb39b0";
+document.getElementById('build').textContent = "v0.3 build 40689e6";
 })();
 </script>

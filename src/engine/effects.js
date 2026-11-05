@@ -15,8 +15,10 @@ import { CARDS } from './cards.js';
 export const EFFECTS = {
   damage: {
     resolve(state, playerIndex, params, target, source) {
-      if (target.kind === 'player') dealDamageToPlayer(state, target.player, params.amount, source);
-      else dealDamageToCreature(state, findCreature(state, target.uid), params.amount, source);
+      if (target.kind === 'player') { dealDamageToPlayer(state, target.player, params.amount, source); return; }
+      // amountIfAttacking：攻撃しているクリーチャーが対象なら、ダメージが増える
+      const attacking = params.amountIfAttacking != null && state.combat?.attackers.includes(target.uid);
+      dealDamageToCreature(state, findCreature(state, target.uid), attacking ? params.amountIfAttacking : params.amount, source);
     },
   },
   healAll: {
