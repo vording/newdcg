@@ -1,7 +1,7 @@
 // ブラウザUI（ゲーム名は未定）。ゲームロジックは src/engine のみが持ち、ここは表示と入力の変換だけを行う。
 import {
-  applyAction, canAttack, canBlock, canBlockAttacker, createGame, DECKS, deckList, getCard, hasKeyword,
-  KEYWORDS, RARITIES, CARDS, effectiveCost, playability, sameTarget, targetsForHandCard,
+  applyAction, arrangeDeck, canAttack, canBlock, canBlockAttacker, createGame, DECKS, DEFAULT_CONFIG, deckableCards, deckList, getCard,
+  hasKeyword, KEYWORDS, listFromCounts, RARITIES, CARDS, effectiveCost, playability, sameTarget, targetsForHandCard, validateDeck,
 } from '../engine/index.js';
 import { chooseAction } from '../ai/simple-ai.js';
 import { ART } from './art-data.js';
@@ -50,20 +50,47 @@ function resetUi() {
 // ---------------------------------------------------------------------------
 
 function buildTitle() {
+  renderDeckChoices();
+  $('#setup').addEventListener('submit', (e) => { e.preventDefault(); startGame(); });
+}
+
+/** デッキの選択肢（構築済み・自作・おまかせ）を描き直す。selected を渡すとそれを選ぶ */
+function renderDeckChoices(selected = null) {
   const box = $('#deckChoices');
-  const choices = [...Object.entries(DECKS).map(([id, d]) => ({ id, name: d.name.replace(/（.*）/, ''), type: DECK_TYPE[id] ?? '', text: d.text })),
-    { id: 'random', name: 'おまかせ', type: 'ランダム', text: `${Object.keys(DECKS).length}つのデッキからランダムに選ぶ。` }];
-  choices.forEach((c, i) => {
-    const label = el('label', 'deck-choice');
+  const prev = selected ?? new FormData($('#setup')).get('deck');
+  box.textContent = '';
+  const mine = loadMyDecks();
+  const choices = [
+    ...Object.entries(DECKS).map(([id, d]) => ({ id, name: d.name.replace(/（.*）/, ''), type: DECK_TYPE[id] ?? '', text: d.text })),
+    ...mine.map((d) => ({ id: `u:${d.id}`, name: d.name, type: '自作', text: deckSummary(d.counts), mine: d })),
+    { id: 'random', name: 'おまかせ', type: 'ランダム', text: `${Object.keys(DECKS).length}つの構築済みデッキからランダムに選ぶ。` },
+  ];
+  const ids = choices.map((c) => c.id);
+  const checked = ids.includes(prev) ? prev : ids[0];
+  for (const c of choices) {
+    const label = el('label', `deck-choice${c.mine ? ' mine' : ''}`);
     const input = el('input');
-    input.type = 'radio'; input.name = 'deck'; input.value = c.id; input.id = `deck-${c.id}`;
-    if (i === 0) input.checked = true;
+    input.type = 'radio'; input.name = 'deck'; input.value = c.id; input.id = `deck-${c.id.replace(':', '-')}`;
+    input.checked = c.id === checked;
     const face = el('span', 'face');
     face.append(el('span', 'dtype', c.type), el('span', 'dname', c.name), el('span', 'dtext', c.text));
+    if (c.mine) {
+      const edit = el('button', 'btn btn-ghost deck-edit', '編集');
+      edit.type = 'button';
+      edit.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); showBuilder(c.mine); });
+      face.append(edit);
+    }
     label.append(input, face);
     box.append(label);
-  });
-  $('#setup').addEventListener('submit', (e) => { e.preventDefault(); startGame(); });
+  }
+}
+
+/** 枚数・クリーチャー数・平均コストの一言まとめ */
+function deckSummary(counts) {
+  const list = listFromCounts(counts).map(getCard);
+  const creatures = list.filter((c) => c.type === 'creature').length;
+  const avg = list.length ? (list.reduce((a, c) => a + c.cost, 0) / list.length).toFixed(1) : '0';
+  return `クリーチャー${creatures}枚・呪文${list.length - creatures}枚・平均コスト${avg}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -119,9 +146,26 @@ function showTitle() {
   renderStreakInfo();
 }
 
+/** 自分のデッキ：{ list, name } を返す */
 function pickDeck(value) {
   const ids = Object.keys(DECKS);
-  return value === 'random' ? ids[Math.floor(Math.random() * ids.length)] : value;
+  if (value?.startsWith('u:')) {
+    const d = loadMyDecks().find((x) => `u:${x.id}` === value);
+    if (d && validateDeck(listFromCounts(d.counts), DEFAULT_CONFIG).length === 0) return { list: listFromCounts(d.counts), name: d.name };
+    value = 'random';
+  }
+  const id = value === 'random' || !DECKS[value] ? ids[Math.floor(Math.random() * ids.length)] : value;
+  return { list: deckList(id), name: DECKS[id].name };
+}
+
+/** CPU（相手）のデッキ：構築済みデッキを元に、6割の確率で数枚入れ替えたアレンジ版にする */
+function pickCpuDeck() {
+  const ids = Object.keys(DECKS);
+  const id = ids[Math.floor(Math.random() * ids.length)];
+  const base = DECKS[id];
+  if (Math.random() < 0.4) return { list: deckList(id), name: base.name };
+  const swaps = 2 + Math.floor(Math.random() * 3); // 2〜4枚
+  return { list: listFromCounts(arrangeDeck(id, Math.random, swaps)), name: `${base.name.replace(/（.*）/, '')}・アレンジ（${swaps}枚入れ替え）` };
 }
 
 function startGame() {
@@ -129,10 +173,10 @@ function startGame() {
   mode = form.get('mode');
   level = form.get('level');
   const mine = pickDeck(form.get('deck'));
-  const theirs = pickDeck('random');
-  deckNames = [DECKS[mine].name, DECKS[theirs].name];
+  const theirs = pickCpuDeck();
+  deckNames = [mine.name, theirs.name];
   game = createGame({
-    decks: [deckList(mine), deckList(theirs)],
+    decks: [mine.list, theirs.list],
     seed: Date.now(),
     names: mode === 'cpu' ? ['あなた', 'CPU'] : ['プレイヤー1', 'プレイヤー2'],
   });
@@ -939,8 +983,155 @@ function showGallery() {
   ov.onclick = (e) => { if (e.target === ov) ov.hidden = true; };
 }
 
+// ---------------------------------------------------------------------------
+// デッキ構築（自作デッキはこのブラウザに保存）
+// ---------------------------------------------------------------------------
+
+const MY_DECKS_KEY = 'dcg-decks';
+function loadMyDecks() {
+  try { const v = JSON.parse(localStorage.getItem(MY_DECKS_KEY)); return Array.isArray(v) ? v : []; } catch { return []; }
+}
+function saveMyDecks(list) {
+  try { localStorage.setItem(MY_DECKS_KEY, JSON.stringify(list)); return true; } catch { return false; }
+}
+
+/** デッキ構築画面。deck を渡すとその自作デッキを編集する */
+function showBuilder(deck = null) {
+  const cfg = DEFAULT_CONFIG;
+  const draft = { id: deck?.id ?? `d${Date.now().toString(36)}`, name: deck?.name ?? '', counts: { ...(deck?.counts ?? {}) } };
+  let typeFilter = 'all';
+  let costFilter = 'all';
+  const ov = $('#overlay');
+  ov.onclick = null;
+
+  const total = () => Object.values(draft.counts).reduce((a, n) => a + n, 0);
+  const add = (id) => {
+    if ((draft.counts[id] ?? 0) >= cfg.maxCopiesPerCard || total() >= cfg.deckSize) return;
+    draft.counts[id] = (draft.counts[id] ?? 0) + 1; draw();
+  };
+  const remove = (id) => {
+    if (!draft.counts[id]) return;
+    draft.counts[id] -= 1; if (!draft.counts[id]) delete draft.counts[id]; draw();
+  };
+
+  function draw() {
+    const keepScroll = ov.querySelector('.builder-pool')?.scrollTop ?? 0;
+    ov.textContent = '';
+    const box = el('div', 'gallery builder');
+    // 見出し：名前・枚数・保存
+    const head = el('div', 'gallery-head builder-head');
+    head.append(el('h2', '', deck ? 'デッキを編集' : 'デッキを組む'));
+    const close = button('閉じる', () => { ov.hidden = true; renderDeckChoices(); });
+    head.append(close);
+    box.append(head);
+
+    const bar = el('div', 'builder-bar');
+    const nameIn = el('input', 'builder-name');
+    nameIn.type = 'text'; nameIn.maxLength = 16; nameIn.placeholder = 'デッキの名前'; nameIn.value = draft.name;
+    nameIn.addEventListener('input', () => { draft.name = nameIn.value; });
+    const n = total();
+    const count = el('span', `builder-count${n === cfg.deckSize ? ' full' : ''}`, `${n} / ${cfg.deckSize}枚`);
+    const errors = validateDeck(listFromCounts(draft.counts), cfg);
+    const save = button('保存', () => {
+      const list = loadMyDecks().filter((d) => d.id !== draft.id);
+      list.push({ id: draft.id, name: draft.name.trim() || '自作デッキ', counts: draft.counts });
+      if (!saveMyDecks(list)) { alert('このブラウザでは保存できませんでした'); return; }
+      ov.hidden = true;
+      renderDeckChoices(`u:${draft.id}`);
+    }, 'btn-gold');
+    save.disabled = errors.length > 0;
+    bar.append(nameIn, count, save);
+    if (deck) {
+      bar.append(button('削除', () => {
+        if (!confirm(`「${deck.name}」を削除しますか？`)) return;
+        saveMyDecks(loadMyDecks().filter((d) => d.id !== deck.id));
+        ov.hidden = true; renderDeckChoices();
+      }, 'btn-crimson'));
+    }
+    box.append(bar);
+
+    // 構築済みデッキから始める
+    const base = el('div', 'builder-base');
+    base.append(el('span', '', 'ひな形：'));
+    for (const [id, d] of Object.entries(DECKS)) {
+      base.append(button(d.name.replace(/（.*）/, ''), () => {
+        if (total() && !confirm('今のカードを、このデッキの内容に置き換えますか？')) return;
+        draft.counts = { ...d.counts }; if (!draft.name) draft.name = `${d.name.replace(/（.*）/, '')}改`; draw();
+      }, 'btn-ghost'));
+    }
+    base.append(button('空にする', () => { draft.counts = {}; draw(); }, 'btn-ghost'));
+    box.append(base);
+
+    // 今のデッキ（コスト順のリスト）とコスト分布
+    const list = el('div', 'builder-list');
+    const entries = Object.entries(draft.counts).map(([id, k]) => [getCard(id), k]).sort((a, b) => a[0].cost - b[0].cost || a[0].name.localeCompare(b[0].name));
+    if (!entries.length) list.append(el('p', 'hint', '下のカードを押すと1枚ずつデッキに入る（同名は3枚まで）。'));
+    for (const [c, k] of entries) {
+      const row = el('div', `builder-row r-${c.rarity}`);
+      row.append(el('span', `bcost${c.cost % 2 ? ' odd' : ' even'}`, String(c.cost)), el('span', 'bname', c.name), el('span', 'bnum', `×${k}`));
+      const minus = button('−', () => remove(c.id), 'btn-ghost bstep');
+      const plus = button('+', () => add(c.id), 'btn-ghost bstep');
+      plus.disabled = k >= cfg.maxCopiesPerCard || n >= cfg.deckSize;
+      row.append(minus, plus);
+      list.append(row);
+    }
+    const curve = el('div', 'builder-curve');
+    const buckets = [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 99]];
+    const all = listFromCounts(draft.counts).map(getCard);
+    const odd = all.filter((c) => c.cost % 2).length;
+    for (const [lo, hi] of buckets) {
+      const k = all.filter((c) => c.cost >= lo && c.cost <= hi).length;
+      const col = el('div', 'bcol');
+      const barEl = el('span', 'bbar'); barEl.style.height = `${Math.min(100, k * 8)}%`;
+      col.append(el('span', 'bk', String(k)), barEl, el('span', 'bl', hi === 99 ? `${lo}+` : `${lo}-${hi}`));
+      curve.append(col);
+    }
+    const side = el('div', 'builder-side');
+    side.append(el('div', 'builder-stats', `${deckSummary(draft.counts)}　奇数コスト${odd}枚・偶数${all.length - odd}枚`), curve);
+    if (errors.length && n) side.append(el('p', 'hint warn', errors[0]));
+    const top = el('div', 'builder-top');
+    top.append(list, side);
+    box.append(top);
+
+    // カードの一覧（絞り込み）
+    const filters = el('div', 'builder-filters');
+    for (const [v, label] of [['all', 'すべて'], ['creature', 'クリーチャー'], ['spell', '呪文']]) {
+      const b = button(label, () => { typeFilter = v; draw(); }, typeFilter === v ? 'btn-gold' : 'btn-ghost');
+      filters.append(b);
+    }
+    filters.append(el('span', 'sep', '｜'));
+    for (const [v, label] of [['all', '全コスト'], ['1-4', '1〜4'], ['5-8', '5〜8'], ['9-99', '9〜']]) {
+      filters.append(button(label, () => { costFilter = v; draw(); }, costFilter === v ? 'btn-gold' : 'btn-ghost'));
+    }
+    box.append(filters);
+    const pool = el('div', 'gallery-grid builder-pool');
+    const [lo, hi] = costFilter === 'all' ? [0, 99] : costFilter.split('-').map(Number);
+    for (const c of deckableCards().filter((x) => (typeFilter === 'all' || x.type === typeFilter) && x.cost >= lo && x.cost <= hi)
+      .sort((a, b) => a.cost - b.cost || a.name.localeCompare(b.name))) {
+      const cell = el('div', 'pool-cell');
+      const k = draft.counts[c.id] ?? 0;
+      const node = buildCard(c);
+      node.classList.add(k >= cfg.maxCopiesPerCard || n >= cfg.deckSize ? 'unplayable' : 'playable');
+      node.addEventListener('click', () => add(c.id));
+      cell.append(node);
+      const ctl = el('div', 'pool-ctl');
+      const minus = button('−', () => remove(c.id), 'btn-ghost bstep');
+      minus.disabled = k === 0;
+      ctl.append(minus, el('span', `pool-num${k ? ' on' : ''}`, `${k} / ${cfg.maxCopiesPerCard}`), button('+', () => add(c.id), 'btn-ghost bstep'));
+      cell.append(ctl);
+      pool.append(cell);
+    }
+    box.append(pool);
+    ov.append(box);
+    ov.hidden = false;
+    const p = ov.querySelector('.builder-pool'); if (p) p.scrollTop = keepScroll;
+  }
+  draw();
+}
+
 buildTitle();
 $('#galleryBtn').addEventListener('click', showGallery);
+$('#builderBtn').addEventListener('click', () => showBuilder());
 for (const b of document.querySelectorAll('.sound-toggle')) b.addEventListener('click', toggleSound);
 refreshSoundButtons();
 // 最初の操作で音を使えるようにし、ボタンには軽いクリック音を付ける

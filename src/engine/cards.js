@@ -220,6 +220,39 @@ export function deckList(deckId) {
   return Object.entries(d.counts).flatMap(([id, n]) => Array(n).fill(id));
 }
 
+/** デッキに入れられるカード（トークン・マナの雫を除く） */
+export function deckableCards() {
+  return Object.values(CARDS).filter((c) => !c.token && c.id !== 's_coin');
+}
+
+/** { cardId: 枚数 } からデッキ（カードIDの配列）を作る */
+export function listFromCounts(counts) {
+  return Object.entries(counts).flatMap(([id, n]) => Array(n).fill(id));
+}
+
+/**
+ * 構築済みデッキのアレンジ版を作る（CPUのデッキに変化を付ける）。
+ * 元のデッキから swaps 枚を抜き、それぞれ「同じ種類でコストが近い（±1）別のカード」を入れる。
+ * 同名3枚まで・30枚は保つ。rnd は 0〜1 の乱数関数。
+ */
+export function arrangeDeck(deckId, rnd, swaps = 4, maxCopies = 3) {
+  const counts = { ...DECKS[deckId].counts };
+  const pool = deckableCards();
+  for (let i = 0; i < swaps; i++) {
+    const owned = Object.entries(counts).filter(([, n]) => n > 0);
+    const [outId] = owned[Math.floor(rnd() * owned.length)];
+    const cost = CARDS[outId].cost;
+    const type = CARDS[outId].type; // クリーチャーはクリーチャー、呪文は呪文と入れ替えて、デッキの形を保つ
+    const cands = pool.filter((c) => c.id !== outId && c.type === type && Math.abs(c.cost - cost) <= 1 && (counts[c.id] ?? 0) < maxCopies);
+    if (!cands.length) continue;
+    const inCard = cands[Math.floor(rnd() * cands.length)];
+    counts[outId] -= 1;
+    if (counts[outId] === 0) delete counts[outId];
+    counts[inCard.id] = (counts[inCard.id] ?? 0) + 1;
+  }
+  return counts;
+}
+
 /** テスト用の標準デッキ */
 export function testDeck() {
   return deckList('balance');

@@ -624,3 +624,41 @@ body { letter-spacing: .02em; }
   margin-left: 8px; padding: 1px 8px; border-radius: 10px; font-size: 11px; letter-spacing: .2em;
   color: var(--night); background: var(--charge); font-weight: 700;
 }
+
+/* ---------- デッキ構築 ---------- */
+.deck-choice .deck-edit { position: absolute; top: 6px; right: 6px; padding: 2px 10px; font-size: 12px; }
+.deck-choice.mine .dtype { color: var(--charge); }
+.builder { display: grid; gap: 12px; }
+.builder-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.builder-name { flex: 1 1 180px; min-width: 0; padding: 8px 10px; font: inherit; color: var(--text); background: var(--night); border: 1px solid var(--line); border-radius: 6px; }
+.builder-count { font-family: var(--font-num); font-weight: 700; color: var(--muted); min-width: 5.5em; text-align: center; }
+.builder-count.full { color: var(--verdant); }
+.builder-base, .builder-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+.builder-base .btn, .builder-filters .btn { padding: 4px 10px; font-size: 12px; }
+.builder-filters .sep { opacity: .4; }
+.builder-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 260px); gap: 12px; align-items: start; }
+.builder-list { display: grid; gap: 2px; max-height: 260px; overflow: auto; padding-right: 4px; }
+.builder-row { display: grid; grid-template-columns: 2em 1fr auto auto auto; align-items: center; gap: 6px; padding: 2px 6px; border-left: 3px solid #6f8f7c; background: rgba(255,255,255,.03); font-size: 13px; }
+.builder-row.r-rare { border-left-color: #a9b4bd; }
+.builder-row.r-epic { border-left-color: #e3cf9c; }
+.builder-row.r-legendary { border-left-color: #c9a24f; }
+.builder-row .bcost { font-family: var(--font-num); font-weight: 700; text-align: center; color: var(--charge); }
+.builder-row .bnum { font-variant-numeric: tabular-nums; color: var(--muted); }
+.bstep { padding: 0 9px; min-width: 2em; font-size: 15px; line-height: 1.6; }
+.builder-side { display: grid; gap: 8px; }
+.builder-stats { font-size: 12px; color: var(--muted); }
+.builder-curve { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; height: 110px; align-items: end; }
+.builder-curve .bcol { display: grid; grid-template-rows: auto 1fr auto; justify-items: center; height: 100%; font-size: 11px; color: var(--muted); }
+.builder-curve .bbar { align-self: end; width: 70%; background: var(--charge); border-radius: 2px 2px 0 0; min-height: 1px; }
+.hint.warn { color: #e2a597; }
+.builder-pool .pool-cell { display: grid; justify-items: center; gap: 4px; }
+.pool-ctl { display: flex; align-items: center; gap: 6px; }
+.pool-num { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 3em; text-align: center; }
+.pool-num.on { color: var(--gold); font-weight: 700; }
+.builder-pool .card.unplayable { filter: saturate(.4) brightness(.6); }
+@media (max-width: 640px) {
+  .builder-top { grid-template-columns: 1fr; }
+  .builder-list { max-height: 200px; }
+  .builder-pool { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+  .builder-pool .card { --cw: 104px; }
+}
