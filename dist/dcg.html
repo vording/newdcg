@@ -1,7 +1,7 @@
 <title>カードバトル（タイトル未定）</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=UnifrakturMaguntia&family=Uncial+Antiqua&family=Metal+Mania&family=Shippori+Mincho+B1:wght@500;600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=UnifrakturMaguntia&family=Cinzel+Decorative:wght@700&family=Uncial+Antiqua&family=Metal+Mania&family=Shippori+Mincho+B1:wght@500;600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap');
 
 /* 夜の書斎と戦卓：炭色に近い紺の卓、くすんだ真鍮、象牙色の文字。
    見出しは明朝、数字と英字は碑文風のセリフ体。彩度と光沢を抑え、落ち着いた大人のトーンに統一する。
@@ -665,6 +665,16 @@ body { letter-spacing: .02em; }
   .builder-pool { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
   .builder-pool .card { --cw: 104px; }
 }
+/* 鏡の反転：装飾ローマン体、鏡のような銀と紫 */
+.card.cid-s_mirror .c-en {
+  font-family: 'Cinzel Decorative', var(--font-title); font-weight: 700; font-size: 1.12em; letter-spacing: .03em;
+  background-image: linear-gradient(180deg, #ffffff 0%, #d6d9f0 35%, #8f86c9 55%, #e9e6ff 75%, #6d63a8 100%);
+  -webkit-text-stroke: .02em #1c1535;
+  filter: drop-shadow(0 0 .22em rgba(180, 170, 255, .6)) drop-shadow(0 .06em .1em rgba(0, 0, 0, .95));
+}
+/* 専用の指定がないレジェンドも、名前が消えないように金のグラデーションを流す */
+.card.r-legendary:not(.cid-s_judgment):not(.cid-c_dragon):not(.cid-c_lionking):not(.cid-s_mirror) .c-en {
+  background-image: linear-gradient(180deg, #fff3cf, #d9b264); }
 
 </style>
 <!-- タイトル画面 -->
@@ -702,6 +712,7 @@ body { letter-spacing: .02em; }
       <section class="updates" aria-label="更新情報">
         <h2>更新情報</h2>
         <ul>
+          <li><time>11/11</time>新カード6種：盤面を入れ替える「鏡の反転」、手札を入れ替える「運命の交換」、召喚時に奪う・入れ替える・お互いに引くクリーチャー。新デッキ「幻惑（トリック型）」</li>
           <li><time>11/5</time>デッキを自由に組めるように（タイトルの「デッキを組む」）。CPUのデッキも毎回少しずつ変化</li>
           <li><time>11/5</time>影刃を使いやすく：迎撃の矢は相手のクリーチャーならいつでも2ダメージ（攻撃中なら3）。手札の瞬発カードに相手ターン中のコスト、マナを残すと構えられる案内を表示</li>
           <li><time>11/3</time>カード一覧に、デッキに入っていないカード（群れの長・霧隠れ・癒しの光など）も表示</li>
@@ -961,6 +972,33 @@ const CARD_LIST = [
   // トークン（効果で呼び出されるだけで、デッキには入れられない）
   { id: 't_pup', name: '狼の子', nameEn: 'Wolf Pup', rarity: 'common', type: 'creature', cost: 1, attack: 1, hp: 1, keywords: ['haste'], token: true },
   { id: 't_ash', name: '灰の雛', nameEn: 'Ash Hatchling', rarity: 'common', type: 'creature', cost: 3, attack: 2, hp: 2, keywords: ['flying'], token: true },
+  // v0.9：盤面・手札を入れ替える効果と、召喚時の効果
+  {
+    id: 's_mirror', name: '鏡の反転', nameEn: 'Mirror Reversal', rarity: 'legendary', type: 'spell', cost: 11,
+    effect: { type: 'swapBoards' },
+    text: '自分と相手のクリーチャーをすべて入れ替える。入れ替わって自分のものになったクリーチャーは、このターン攻撃できない。',
+  },
+  {
+    id: 's_fateswap', name: '運命の交換', nameEn: 'Fate Exchange', rarity: 'epic', type: 'spell', cost: 6,
+    effect: { type: 'swapHands' }, text: '自分と相手の手札をすべて入れ替える。',
+  },
+  {
+    id: 'c_puppeteer', name: '心を操る者', nameEn: 'Puppeteer', rarity: 'epic', type: 'creature', cost: 12, attack: 3, hp: 3,
+    effect: { type: 'takeControl', target: 'enemyCreature', maxAttack: 4 },
+    text: '召喚時：攻撃力4以下の相手のクリーチャー1体を奪う（このターンは攻撃できない）。',
+  },
+  {
+    id: 'c_jester', name: '入れ替えの道化', nameEn: 'Swap Jester', rarity: 'rare', type: 'creature', cost: 5, attack: 2, hp: 3,
+    effect: { type: 'swapStats', target: 'creature' }, text: '召喚時：クリーチャー1体の攻撃力と体力を入れ替える。',
+  },
+  {
+    id: 'c_pickpocket', name: '影の掏摸', nameEn: 'Pickpocket', rarity: 'rare', type: 'creature', cost: 3, attack: 1, hp: 2,
+    triggers: [{ on: 'summon', effect: { type: 'stealCard' } }], text: '召喚時：相手の手札からランダムに1枚奪う。',
+  },
+  {
+    id: 'c_bard', name: '混沌の語り部', nameEn: 'Chaos Bard', rarity: 'rare', type: 'creature', cost: 4, attack: 2, hp: 4,
+    triggers: [{ on: 'summon', effect: { type: 'drawBoth', amount: 2 } }], text: '召喚時：お互いにカードを2枚引く。',
+  },
   // 旧テストカード（デッキには入れていない。テスト用に残す）
   {
     id: 's_mend', name: '癒しの光', nameEn: 'Mending Light', rarity: 'common', type: 'spell', cost: 1, keywords: ['quick'],
@@ -1023,6 +1061,14 @@ const DECKS = Object.freeze({
     counts: {
       c_ambusher: 3, c_owl: 3, c_stalker: 3, c_pikeman: 2, c_messenger: 2, c_duelist: 2, c_dragon: 1,
       s_arrow: 2, s_riposte: 3, s_sidestep: 3, s_lance: 3, s_ward: 2, s_insight: 1,
+    },
+  },
+  trick: {
+    name: '幻惑（トリック型）',
+    text: '盤面や手札を入れ替え、相手のカードを奪って逆転する。',
+    counts: {
+      c_pickpocket: 3, c_jester: 3, c_bard: 2, c_puppeteer: 2, c_messenger: 2, c_salamander: 2, c_owl: 2,
+      c_warrior: 2, c_golem: 2, c_knight: 2, s_mirror: 1, s_fateswap: 2, s_lance: 3, s_recall: 2,
     },
   },
 });
@@ -1390,6 +1436,71 @@ const EFFECTS = {
       }
     },
   },
+  /** 自分と相手のクリーチャーをすべて入れ替える。もらったクリーチャーはこのターン攻撃できない */
+  swapBoards: {
+    resolve(state, playerIndex) {
+      const [a, b] = state.players;
+      [a.board, b.board] = [b.board, a.board];
+      for (const p of state.players) {
+        for (const c of p.board) {
+          c.owner = p.index;
+          if (p.index === playerIndex) c.cannotAttack = true;
+        }
+      }
+      log(state, 'boardsSwapped', { player: playerIndex });
+    },
+  },
+  /** 自分と相手の手札をすべて入れ替える */
+  swapHands: {
+    resolve(state, playerIndex) {
+      const [a, b] = state.players;
+      [a.hand, b.hand] = [b.hand, a.hand];
+      log(state, 'handsSwapped', { player: playerIndex, counts: [a.hand.length, b.hand.length] });
+    },
+  },
+  /** クリーチャー1体の攻撃力と体力を入れ替える（受けているダメージはそのまま） */
+  swapStats: {
+    resolve(state, playerIndex, params, target) {
+      const c = findCreature(state, target.uid);
+      [c.attack, c.hp] = [c.hp, c.attack];
+      [c.tempAttack, c.tempHp] = [c.tempHp, c.tempAttack];
+      log(state, 'statsSwapped', { target: c.uid, targetName: c.name, owner: c.owner, attack: c.attack, hp: c.hp });
+    },
+  },
+  /** 相手の手札からランダムに1枚奪う（自分の手札がいっぱいなら奪えない） */
+  stealCard: {
+    resolve(state, playerIndex) {
+      const me = state.players[playerIndex];
+      const opp = state.players[1 - playerIndex];
+      if (!opp.hand.length) { log(state, 'stealFailed', { player: playerIndex }); return; }
+      if (state.config.handLimit != null && me.hand.length >= state.config.handLimit) { log(state, 'stealFailed', { player: playerIndex }); return; }
+      const i = Math.floor(nextRandom(state) * opp.hand.length);
+      const [cardId] = opp.hand.splice(i, 1);
+      me.hand.push(cardId);
+      log(state, 'cardStolen', { player: playerIndex, cardId, name: CARDS[cardId]?.name });
+    },
+  },
+  /** 相手のクリーチャー1体を奪う（場がいっぱいなら奪えない）。奪ったクリーチャーはこのターン攻撃できない */
+  takeControl: {
+    resolve(state, playerIndex, params, target) {
+      const c = findCreature(state, target.uid);
+      const me = state.players[playerIndex];
+      if (me.board.length >= state.config.boardLimit) { log(state, 'stealFailed', { player: playerIndex }); return; }
+      const from = state.players[c.owner];
+      from.board = from.board.filter((x) => x.uid !== c.uid);
+      c.owner = playerIndex;
+      c.cannotAttack = true;
+      me.board.push(c);
+      log(state, 'controlTaken', { player: playerIndex, target: c.uid, targetName: c.name });
+    },
+  },
+  /** お互いにカードを引く */
+  drawBoth: {
+    resolve(state, playerIndex, params) {
+      drawCards(state, playerIndex, params.amount);
+      drawCards(state, 1 - playerIndex, params.amount);
+    },
+  },
 };
 
 /**
@@ -1416,7 +1527,7 @@ function legalTargets(state, playerIndex, effect) {
       ];
     case 'creature': return [...mine, ...theirs].map(asTarget);
     case 'friendlyCreature': return mine.map(asTarget);
-    case 'enemyCreature': return theirs.map(asTarget);
+    case 'enemyCreature': return theirs.filter((c) => effect.maxAttack == null || c.attack <= effect.maxAttack).map(asTarget);
     case 'attackingCreature':
       return theirs.filter((c) => state.combat?.attackers.includes(c.uid)).map(asTarget);
     default: throw new Error(`Unknown target kind: ${kind}`);
@@ -1559,6 +1670,7 @@ function startTurn(state, playerIndex) {
   for (const c of p.board) {
     c.exhausted = false;
     c.summoningSick = false;
+    c.cannotAttack = false;
   }
   runTriggers(state, playerIndex, 'turnStart');
   if (checkStateBased(state)) return;
@@ -1648,6 +1760,7 @@ function checkStateBased(state) {
 function canAttack(state, creature) {
   return creature.owner === state.activePlayer
     && !creature.exhausted
+    && !creature.cannotAttack
     && (!creature.summoningSick || hasKeyword(getCard(creature.cardId), 'haste'));
 }
 
@@ -2013,10 +2126,14 @@ function evaluate(state, me) {
   return side(state.players[me]) - side(state.players[1 - me]);
 }
 
-/** 先読み用の複製。ログを捨て、相手の手札は見えないので空にする。 */
+/**
+ * 先読み用の複製。ログを捨て、相手の手札は見えないので「中身の分からない平均的なカード」に置き換える
+ * （枚数は分かる。手札の入れ替え・奪う効果を正しく評価するため）。
+ */
+const UNKNOWN_CARD = 'c_warrior';
 function simClone(state, me) {
   const s = structuredClone({ ...state, log: [] });
-  s.players[1 - me].hand = [];
+  s.players[1 - me].hand = s.players[1 - me].hand.map(() => UNKNOWN_CARD);
   return s;
 }
 
@@ -2500,8 +2617,9 @@ const GLYPH = {
   c_bloodlord: '血', c_colossus: '像', c_lionking: '獣', s_snare: '網', s_ward: '護', s_lance: '雷',
   s_recall: '還', s_prayer: '祷', s_judgment: '断', t_pup: '仔', t_ash: '灰',
   c_ambusher: '伏', c_owl: '梟', c_stalker: '潜', s_riposte: '返', s_sidestep: '切', s_veil: '霧',
+  s_mirror: '鏡', s_fateswap: '運', c_puppeteer: '操', c_jester: '道', c_pickpocket: '掏', c_bard: '語',
 };
-const DECK_TYPE = { swift: '速攻型', fortress: '防御型', balance: '標準型', night: '遺志・吸命型', shadow: '瞬発型' };
+const DECK_TYPE = { swift: '速攻型', fortress: '防御型', balance: '標準型', night: '遺志・吸命型', shadow: '瞬発型', trick: 'トリック型' };
 
 let game = null;
 let mode = 'cpu';
@@ -2911,9 +3029,20 @@ function playEffects(root, before) {
       case 'destroyed': sfx('destroy', step(140)); break;
       case 'destroyEffect': case 'exhausted': case 'bounced': { const d = step(100); sfx('spell', d); if (motion) ring('spell', creaturePos(e.target), d); break; }
       case 'destroyAllEffect': { const d = step(200); sfx('destroy', d); if (motion) banner('断罪', d); break; }
+      case 'boardsSwapped': { const d = step(260); sfx('spell', d); if (motion) banner('盤面が入れ替わった！', d); break; }
+      case 'handsSwapped': { const d = step(260); sfx('spell', d); if (motion) banner('手札が入れ替わった！', d); break; }
+      case 'statsSwapped': { const d = step(120); sfx('spell', d); if (motion) { ring('spell', creaturePos(e.target), d); floatNumber(`${e.attack}/${e.hp}`, 'buff', creaturePos(e.target), d); } break; }
+      case 'cardStolen': { const d = step(160); sfx('draw', d); if (motion) banner(e.player === me ? `「${e.name}」を奪った` : `「${e.name}」を奪われた`, d); break; }
+      case 'controlTaken': { const d = step(200); sfx('spell', d); if (motion) { ring('spell', creaturePos(e.target), d); banner(`${e.targetName}を奪った`, d); } break; }
       case 'lastWill': { const d = step(160); if (motion) banner(`遺志　${e.name}`, d); break; }
       case 'gainMana': { const d = step(80); sfx('mana', d); break; }
-      case 'gameOver': {
+      case 'boardsSwapped': return `${nm(e.player)}：自分と相手のクリーチャーがすべて入れ替わった`;
+    case 'handsSwapped': return `${nm(e.player)}：自分と相手の手札が入れ替わった`;
+    case 'statsSwapped': return `${nm(e.owner)}の${e.targetName}の攻撃力と体力が入れ替わった（${e.attack}/${e.hp}）`;
+    case 'cardStolen': return e.player === viewer() || mode === 'hotseat' ? `${nm(e.player)}：相手の手札から「${e.name}」を奪った` : `${nm(e.player)}：あなたの手札から「${e.name}」を奪った`;
+    case 'controlTaken': return `${nm(e.player)}：${e.targetName}を奪った`;
+    case 'stealFailed': return `${nm(e.player)}：奪えなかった`;
+    case 'gameOver': {
         const d = step(300);
         if (e.winner === 'draw') sfx('lose', d);
         else sfx(mode === 'cpu' ? (e.winner === 0 ? 'win' : 'lose') : 'win', d);
@@ -3621,6 +3750,6 @@ $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logP
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
 showTitle();
 
-document.getElementById('build').textContent = "v0.3 build eea665c";
+document.getElementById('build').textContent = "v0.3 build 1cc629e";
 })();
 </script>

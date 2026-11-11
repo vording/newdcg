@@ -8,7 +8,7 @@
 // 対象の表現: { kind: 'player', player: 0|1 } または { kind: 'creature', uid }
 
 import {
-  dealDamageToCreature, dealDamageToPlayer, drawCards, findCreature, gainLife, healCreature, log, makeCreature,
+  dealDamageToCreature, dealDamageToPlayer, drawCards, findCreature, gainLife, healCreature, log, makeCreature, nextRandom,
 } from './state.js';
 import { CARDS } from './cards.js';
 
@@ -145,6 +145,71 @@ export const EFFECTS = {
       }
     },
   },
+  /** 自分と相手のクリーチャーをすべて入れ替える。もらったクリーチャーはこのターン攻撃できない */
+  swapBoards: {
+    resolve(state, playerIndex) {
+      const [a, b] = state.players;
+      [a.board, b.board] = [b.board, a.board];
+      for (const p of state.players) {
+        for (const c of p.board) {
+          c.owner = p.index;
+          if (p.index === playerIndex) c.cannotAttack = true;
+        }
+      }
+      log(state, 'boardsSwapped', { player: playerIndex });
+    },
+  },
+  /** 自分と相手の手札をすべて入れ替える */
+  swapHands: {
+    resolve(state, playerIndex) {
+      const [a, b] = state.players;
+      [a.hand, b.hand] = [b.hand, a.hand];
+      log(state, 'handsSwapped', { player: playerIndex, counts: [a.hand.length, b.hand.length] });
+    },
+  },
+  /** クリーチャー1体の攻撃力と体力を入れ替える（受けているダメージはそのまま） */
+  swapStats: {
+    resolve(state, playerIndex, params, target) {
+      const c = findCreature(state, target.uid);
+      [c.attack, c.hp] = [c.hp, c.attack];
+      [c.tempAttack, c.tempHp] = [c.tempHp, c.tempAttack];
+      log(state, 'statsSwapped', { target: c.uid, targetName: c.name, owner: c.owner, attack: c.attack, hp: c.hp });
+    },
+  },
+  /** 相手の手札からランダムに1枚奪う（自分の手札がいっぱいなら奪えない） */
+  stealCard: {
+    resolve(state, playerIndex) {
+      const me = state.players[playerIndex];
+      const opp = state.players[1 - playerIndex];
+      if (!opp.hand.length) { log(state, 'stealFailed', { player: playerIndex }); return; }
+      if (state.config.handLimit != null && me.hand.length >= state.config.handLimit) { log(state, 'stealFailed', { player: playerIndex }); return; }
+      const i = Math.floor(nextRandom(state) * opp.hand.length);
+      const [cardId] = opp.hand.splice(i, 1);
+      me.hand.push(cardId);
+      log(state, 'cardStolen', { player: playerIndex, cardId, name: CARDS[cardId]?.name });
+    },
+  },
+  /** 相手のクリーチャー1体を奪う（場がいっぱいなら奪えない）。奪ったクリーチャーはこのターン攻撃できない */
+  takeControl: {
+    resolve(state, playerIndex, params, target) {
+      const c = findCreature(state, target.uid);
+      const me = state.players[playerIndex];
+      if (me.board.length >= state.config.boardLimit) { log(state, 'stealFailed', { player: playerIndex }); return; }
+      const from = state.players[c.owner];
+      from.board = from.board.filter((x) => x.uid !== c.uid);
+      c.owner = playerIndex;
+      c.cannotAttack = true;
+      me.board.push(c);
+      log(state, 'controlTaken', { player: playerIndex, target: c.uid, targetName: c.name });
+    },
+  },
+  /** お互いにカードを引く */
+  drawBoth: {
+    resolve(state, playerIndex, params) {
+      drawCards(state, playerIndex, params.amount);
+      drawCards(state, 1 - playerIndex, params.amount);
+    },
+  },
 };
 
 /**
@@ -171,7 +236,7 @@ export function legalTargets(state, playerIndex, effect) {
       ];
     case 'creature': return [...mine, ...theirs].map(asTarget);
     case 'friendlyCreature': return mine.map(asTarget);
-    case 'enemyCreature': return theirs.map(asTarget);
+    case 'enemyCreature': return theirs.filter((c) => effect.maxAttack == null || c.attack <= effect.maxAttack).map(asTarget);
     case 'attackingCreature':
       return theirs.filter((c) => state.combat?.attackers.includes(c.uid)).map(asTarget);
     default: throw new Error(`Unknown target kind: ${kind}`);

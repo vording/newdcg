@@ -124,6 +124,7 @@ function startTurn(state, playerIndex) {
   for (const c of p.board) {
     c.exhausted = false;
     c.summoningSick = false;
+    c.cannotAttack = false;
   }
   runTriggers(state, playerIndex, 'turnStart');
   if (checkStateBased(state)) return;
@@ -213,6 +214,7 @@ export function checkStateBased(state) {
 export function canAttack(state, creature) {
   return creature.owner === state.activePlayer
     && !creature.exhausted
+    && !creature.cannotAttack
     && (!creature.summoningSick || hasKeyword(getCard(creature.cardId), 'haste'));
 }
 

@@ -64,10 +64,14 @@ export function evaluate(state, me) {
   return side(state.players[me]) - side(state.players[1 - me]);
 }
 
-/** 先読み用の複製。ログを捨て、相手の手札は見えないので空にする。 */
+/**
+ * 先読み用の複製。ログを捨て、相手の手札は見えないので「中身の分からない平均的なカード」に置き換える
+ * （枚数は分かる。手札の入れ替え・奪う効果を正しく評価するため）。
+ */
+const UNKNOWN_CARD = 'c_warrior';
 function simClone(state, me) {
   const s = structuredClone({ ...state, log: [] });
-  s.players[1 - me].hand = [];
+  s.players[1 - me].hand = s.players[1 - me].hand.map(() => UNKNOWN_CARD);
   return s;
 }
 

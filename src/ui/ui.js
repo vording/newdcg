@@ -26,8 +26,9 @@ const GLYPH = {
   c_bloodlord: '血', c_colossus: '像', c_lionking: '獣', s_snare: '網', s_ward: '護', s_lance: '雷',
   s_recall: '還', s_prayer: '祷', s_judgment: '断', t_pup: '仔', t_ash: '灰',
   c_ambusher: '伏', c_owl: '梟', c_stalker: '潜', s_riposte: '返', s_sidestep: '切', s_veil: '霧',
+  s_mirror: '鏡', s_fateswap: '運', c_puppeteer: '操', c_jester: '道', c_pickpocket: '掏', c_bard: '語',
 };
-const DECK_TYPE = { swift: '速攻型', fortress: '防御型', balance: '標準型', night: '遺志・吸命型', shadow: '瞬発型' };
+const DECK_TYPE = { swift: '速攻型', fortress: '防御型', balance: '標準型', night: '遺志・吸命型', shadow: '瞬発型', trick: 'トリック型' };
 
 let game = null;
 let mode = 'cpu';
@@ -437,9 +438,20 @@ function playEffects(root, before) {
       case 'destroyed': sfx('destroy', step(140)); break;
       case 'destroyEffect': case 'exhausted': case 'bounced': { const d = step(100); sfx('spell', d); if (motion) ring('spell', creaturePos(e.target), d); break; }
       case 'destroyAllEffect': { const d = step(200); sfx('destroy', d); if (motion) banner('断罪', d); break; }
+      case 'boardsSwapped': { const d = step(260); sfx('spell', d); if (motion) banner('盤面が入れ替わった！', d); break; }
+      case 'handsSwapped': { const d = step(260); sfx('spell', d); if (motion) banner('手札が入れ替わった！', d); break; }
+      case 'statsSwapped': { const d = step(120); sfx('spell', d); if (motion) { ring('spell', creaturePos(e.target), d); floatNumber(`${e.attack}/${e.hp}`, 'buff', creaturePos(e.target), d); } break; }
+      case 'cardStolen': { const d = step(160); sfx('draw', d); if (motion) banner(e.player === me ? `「${e.name}」を奪った` : `「${e.name}」を奪われた`, d); break; }
+      case 'controlTaken': { const d = step(200); sfx('spell', d); if (motion) { ring('spell', creaturePos(e.target), d); banner(`${e.targetName}を奪った`, d); } break; }
       case 'lastWill': { const d = step(160); if (motion) banner(`遺志　${e.name}`, d); break; }
       case 'gainMana': { const d = step(80); sfx('mana', d); break; }
-      case 'gameOver': {
+      case 'boardsSwapped': return `${nm(e.player)}：自分と相手のクリーチャーがすべて入れ替わった`;
+    case 'handsSwapped': return `${nm(e.player)}：自分と相手の手札が入れ替わった`;
+    case 'statsSwapped': return `${nm(e.owner)}の${e.targetName}の攻撃力と体力が入れ替わった（${e.attack}/${e.hp}）`;
+    case 'cardStolen': return e.player === viewer() || mode === 'hotseat' ? `${nm(e.player)}：相手の手札から「${e.name}」を奪った` : `${nm(e.player)}：あなたの手札から「${e.name}」を奪った`;
+    case 'controlTaken': return `${nm(e.player)}：${e.targetName}を奪った`;
+    case 'stealFailed': return `${nm(e.player)}：奪えなかった`;
+    case 'gameOver': {
         const d = step(300);
         if (e.winner === 'draw') sfx('lose', d);
         else sfx(mode === 'cpu' ? (e.winner === 0 ? 'win' : 'lose') : 'win', d);

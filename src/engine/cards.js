@@ -148,6 +148,33 @@ const CARD_LIST = [
   // トークン（効果で呼び出されるだけで、デッキには入れられない）
   { id: 't_pup', name: '狼の子', nameEn: 'Wolf Pup', rarity: 'common', type: 'creature', cost: 1, attack: 1, hp: 1, keywords: ['haste'], token: true },
   { id: 't_ash', name: '灰の雛', nameEn: 'Ash Hatchling', rarity: 'common', type: 'creature', cost: 3, attack: 2, hp: 2, keywords: ['flying'], token: true },
+  // v0.9：盤面・手札を入れ替える効果と、召喚時の効果
+  {
+    id: 's_mirror', name: '鏡の反転', nameEn: 'Mirror Reversal', rarity: 'legendary', type: 'spell', cost: 11,
+    effect: { type: 'swapBoards' },
+    text: '自分と相手のクリーチャーをすべて入れ替える。入れ替わって自分のものになったクリーチャーは、このターン攻撃できない。',
+  },
+  {
+    id: 's_fateswap', name: '運命の交換', nameEn: 'Fate Exchange', rarity: 'epic', type: 'spell', cost: 6,
+    effect: { type: 'swapHands' }, text: '自分と相手の手札をすべて入れ替える。',
+  },
+  {
+    id: 'c_puppeteer', name: '心を操る者', nameEn: 'Puppeteer', rarity: 'epic', type: 'creature', cost: 12, attack: 3, hp: 3,
+    effect: { type: 'takeControl', target: 'enemyCreature', maxAttack: 4 },
+    text: '召喚時：攻撃力4以下の相手のクリーチャー1体を奪う（このターンは攻撃できない）。',
+  },
+  {
+    id: 'c_jester', name: '入れ替えの道化', nameEn: 'Swap Jester', rarity: 'rare', type: 'creature', cost: 5, attack: 2, hp: 3,
+    effect: { type: 'swapStats', target: 'creature' }, text: '召喚時：クリーチャー1体の攻撃力と体力を入れ替える。',
+  },
+  {
+    id: 'c_pickpocket', name: '影の掏摸', nameEn: 'Pickpocket', rarity: 'rare', type: 'creature', cost: 3, attack: 1, hp: 2,
+    triggers: [{ on: 'summon', effect: { type: 'stealCard' } }], text: '召喚時：相手の手札からランダムに1枚奪う。',
+  },
+  {
+    id: 'c_bard', name: '混沌の語り部', nameEn: 'Chaos Bard', rarity: 'rare', type: 'creature', cost: 4, attack: 2, hp: 4,
+    triggers: [{ on: 'summon', effect: { type: 'drawBoth', amount: 2 } }], text: '召喚時：お互いにカードを2枚引く。',
+  },
   // 旧テストカード（デッキには入れていない。テスト用に残す）
   {
     id: 's_mend', name: '癒しの光', nameEn: 'Mending Light', rarity: 'common', type: 'spell', cost: 1, keywords: ['quick'],
@@ -210,6 +237,14 @@ export const DECKS = Object.freeze({
     counts: {
       c_ambusher: 3, c_owl: 3, c_stalker: 3, c_pikeman: 2, c_messenger: 2, c_duelist: 2, c_dragon: 1,
       s_arrow: 2, s_riposte: 3, s_sidestep: 3, s_lance: 3, s_ward: 2, s_insight: 1,
+    },
+  },
+  trick: {
+    name: '幻惑（トリック型）',
+    text: '盤面や手札を入れ替え、相手のカードを奪って逆転する。',
+    counts: {
+      c_pickpocket: 3, c_jester: 3, c_bard: 2, c_puppeteer: 2, c_messenger: 2, c_salamander: 2, c_owl: 2,
+      c_warrior: 2, c_golem: 2, c_knight: 2, s_mirror: 1, s_fateswap: 2, s_lance: 3, s_recall: 2,
     },
   },
 });
