@@ -249,7 +249,7 @@ export const DECKS = Object.freeze({
     text: '盤面や手札を入れ替え、相手のカードを奪って逆転する。',
     counts: {
       c_pickpocket: 3, c_jester: 3, c_bard: 2, c_puppeteer: 2, c_messenger: 2, c_salamander: 2, c_owl: 2,
-      c_warrior: 2, c_golem: 2, c_scavenger: 2, s_mirror: 1, s_fateswap: 2, s_lance: 3, s_recall: 2,
+      c_warrior: 2, c_scavenger: 2, s_mirror: 1, s_fateswap: 2, s_lance: 3, s_recall: 2, s_veil: 2,
     },
   },
 });
