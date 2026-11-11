@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyAction, canAttack } from '../src/engine/index.js';
+import { applyAction, canAttack, targetsForHandCard } from '../src/engine/index.js';
 import { newGame, ok, put, setHand } from './helpers.js';
 
 const play = (s, p, handIndex, target = null) => ok(applyAction(s, p, { type: 'playCard', handIndex, target }));
@@ -95,4 +95,27 @@ test('混沌の語り部：お互いに2枚引く', () => {
   play(s, 0, 0);
   assert.equal(s.players[0].hand.length, 2);
   assert.equal(s.players[1].hand.length, 2);
+});
+
+test('屑拾いの小鬼：自分の手札から選んだ1枚を捨てて1枚引く（自分自身は選べない）', () => {
+  const s = newGame();
+  setHand(s, 0, ['s_fateswap', 'c_scavenger', 's_fateswap', 'c_dragon']);
+  s.players[0].mana = 2;
+  const deckTop = s.players[0].deck[0];
+  const targets = targetsForHandCard(s, 0, 1);
+  assert.deepEqual(targets.map((t) => t.index), [0, 2, 3]); // 使っている小鬼（1番目）は選べない
+  play(s, 0, 1, { kind: 'hand', index: 2 }); // 2枚目の運命の交換を捨てる
+  assert.deepEqual(s.players[0].hand.slice(0, 2), ['s_fateswap', 'c_dragon']);
+  assert.equal(s.players[0].hand.length, 3);
+  assert.ok(s.players[0].graveyard.includes('s_fateswap'));
+  assert.ok(s.players[0].hand.includes(deckTop));
+  assert.equal(s.players[0].board[0].cardId, 'c_scavenger');
+});
+
+test('屑拾いの小鬼：手札が他にないときは対象なしで出せ、1枚引く', () => {
+  const s = newGame();
+  setHand(s, 0, ['c_scavenger']);
+  s.players[0].mana = 2;
+  play(s, 0, 0, null);
+  assert.equal(s.players[0].hand.length, 1);
 });

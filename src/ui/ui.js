@@ -26,7 +26,7 @@ const GLYPH = {
   c_bloodlord: '血', c_colossus: '像', c_lionking: '獣', s_snare: '網', s_ward: '護', s_lance: '雷',
   s_recall: '還', s_prayer: '祷', s_judgment: '断', t_pup: '仔', t_ash: '灰',
   c_ambusher: '伏', c_owl: '梟', c_stalker: '潜', s_riposte: '返', s_sidestep: '切', s_veil: '霧',
-  s_mirror: '鏡', s_fateswap: '運', c_puppeteer: '操', c_jester: '道', c_pickpocket: '掏', c_bard: '語',
+  s_mirror: '鏡', s_fateswap: '運', c_puppeteer: '操', c_jester: '道', c_pickpocket: '掏', c_bard: '語', c_scavenger: '屑',
 };
 const DECK_TYPE = { swift: '速攻型', fortress: '防御型', balance: '標準型', night: '遺志・吸命型', shadow: '瞬発型', trick: 'トリック型' };
 
@@ -843,6 +843,16 @@ function renderHandCard(pi, cardId, handIndex) {
     node.append(el('div', 'c-guard', `相手番 ${Math.max(0, card.cost - game.config.quickDiscount)}`));
   }
   const check = playability(game, pi, handIndex);
+  // 手札を対象にするカード（屑拾いの小鬼など）を使う途中：捨てる候補の手札を選べるようにする
+  const handTarget = { kind: 'hand', index: handIndex };
+  if (ui.targeting !== null && ui.targeting !== handIndex && pi === game.awaiting?.player && isTargetable(handTarget)) {
+    node.classList.add('targetable');
+    node.tabIndex = 0;
+    const pick = () => playAt(handTarget);
+    node.addEventListener('click', pick);
+    onKey(node, pick);
+    return node;
+  }
   if (isHumanTurn() && check.ok && ui.targeting === null) {
     node.classList.add('playable');
     node.tabIndex = 0;
@@ -973,8 +983,10 @@ function renderCommand(me) {
     msg.textContent = `${nm(aw.player)}が考えています`;
     msg.classList.add('thinking');
   } else if (ui.targeting !== null) {
-    msg.textContent = `${getCard(game.players[me].hand[ui.targeting]).name}：対象を選んでください`;
-    sub.textContent = '金色に光っているものが選べます。';
+    const tc = getCard(game.players[me].hand[ui.targeting]);
+    const handPick = tc.effect?.target === 'ownHandCard';
+    msg.textContent = handPick ? `${tc.name}：捨てる手札を選んでください` : `${tc.name}：対象を選んでください`;
+    sub.textContent = handPick ? '金色に光っている手札から1枚選ぶ（捨てたあと1枚引く）。' : '金色に光っているものが選べます。';
     actions.append(button('やめる', () => { ui.targeting = null; render(); }));
   } else if (aw.step === 'mulligan') {
     msg.textContent = '最初の手札です。引き直すカードを選んでください';
@@ -1098,6 +1110,7 @@ function describe(e) {
     case 'statsSwapped': return `${nm(e.owner)}の${e.targetName}の攻撃力と体力が入れ替わった（${e.attack}/${e.hp}）`;
     case 'cardStolen': return e.player === viewer() || mode === 'hotseat' ? `${nm(e.player)}：相手の手札から「${e.name}」を奪った` : `${nm(e.player)}：あなたの手札から「${e.name}」を奪った`;
     case 'controlTaken': return `${nm(e.player)}：${e.targetName}を奪った`;
+    case 'discard': return `${nm(e.player)}：手札の「${e.name}」を捨てた`;
     case 'stealFailed': return `${nm(e.player)}：奪えなかった`;
     case 'gameOver': return e.winner === 'draw' ? '引き分け' : `${nm(e.winner)}の勝利`;
     default: return null;

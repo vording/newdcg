@@ -272,7 +272,8 @@ export function playability(state, playerIndex, handIndex) {
 export function targetsForHandCard(state, playerIndex, handIndex) {
   const card = getCard(state.players[playerIndex].hand[handIndex]);
   if (!card.effect) return [null];
-  const targets = legalTargets(state, playerIndex, card.effect);
+  // 手札を対象にする効果では、使っているカード自身は選べない
+  const targets = legalTargets(state, playerIndex, card.effect).filter((t) => !(t?.kind === 'hand' && t.index === handIndex));
   if (card.type === 'creature' && targets.length === 0) return [null];
   return targets;
 }
@@ -327,12 +328,15 @@ function playCard(state, playerIndex, { handIndex, target = null }) {
 
   p.mana -= effectiveCost(state, playerIndex, card);
   p.hand.splice(handIndex, 1);
+  // 手札が1枚詰まるので、後ろにあったカードを指す対象をずらす
+  if (target?.kind === 'hand' && target.index > handIndex) target = { kind: 'hand', index: target.index - 1 };
 
   if (card.type === 'creature') {
     const creature = makeCreature(state, cardId, playerIndex);
     p.board.push(creature);
     log(state, 'summon', { player: playerIndex, uid: creature.uid, name: card.name, cardId });
-    if (card.effect && target) resolveEffect(state, playerIndex, card.effect, target, creature.uid);
+    // 対象のある召喚時効果は、対象を選べたときだけ働く（手札を捨てる効果は、捨てる物がなくても引く部分は働く）
+    if (card.effect && (target || card.effect.target === 'ownHandCard')) resolveEffect(state, playerIndex, card.effect, target, creature.uid);
     for (const t of card.triggers ?? []) {
       if (t.on === 'summon') resolveEffect(state, playerIndex, t.effect, null, creature.uid);
     }

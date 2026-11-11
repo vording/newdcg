@@ -203,6 +203,18 @@ export const EFFECTS = {
       log(state, 'controlTaken', { player: playerIndex, target: c.uid, targetName: c.name });
     },
   },
+  /** 自分の手札から選んだ1枚を捨てる。draw があれば引く */
+  discardFromHand: {
+    resolve(state, playerIndex, params, target) {
+      const p = state.players[playerIndex];
+      if (target?.kind === 'hand' && p.hand[target.index] !== undefined) {
+        const [cardId] = p.hand.splice(target.index, 1);
+        p.graveyard.push(cardId);
+        log(state, 'discard', { player: playerIndex, cardId, name: CARDS[cardId]?.name });
+      }
+      if (params.draw) drawCards(state, playerIndex, params.draw);
+    },
+  },
   /** お互いにカードを引く */
   drawBoth: {
     resolve(state, playerIndex, params) {
@@ -221,6 +233,7 @@ export const EFFECTS = {
  *   'friendlyCreature' : 自分のクリーチャー
  *   'enemyCreature'    : 相手のクリーチャー
  *   'attackingCreature': 攻撃している相手のクリーチャー（戦闘中のみ）
+ *   'ownHandCard'      : 自分の手札のカード（{ kind: 'hand', index }）
  */
 export function legalTargets(state, playerIndex, effect) {
   const kind = effect.target;
@@ -237,6 +250,8 @@ export function legalTargets(state, playerIndex, effect) {
     case 'creature': return [...mine, ...theirs].map(asTarget);
     case 'friendlyCreature': return mine.map(asTarget);
     case 'enemyCreature': return theirs.filter((c) => effect.maxAttack == null || c.attack <= effect.maxAttack).map(asTarget);
+    // 自分の手札のカード（使っているカード自身は targetsForHandCard で除く）
+    case 'ownHandCard': return state.players[playerIndex].hand.map((_, index) => ({ kind: 'hand', index }));
     case 'attackingCreature':
       return theirs.filter((c) => state.combat?.attackers.includes(c.uid)).map(asTarget);
     default: throw new Error(`Unknown target kind: ${kind}`);
@@ -246,7 +261,9 @@ export function legalTargets(state, playerIndex, effect) {
 export function sameTarget(a, b) {
   if (a === null || b === null || a === undefined || b === undefined) return a == b;
   if (a.kind !== b.kind) return false;
-  return a.kind === 'player' ? a.player === b.player : a.uid === b.uid;
+  if (a.kind === 'player') return a.player === b.player;
+  if (a.kind === 'hand') return a.index === b.index;
+  return a.uid === b.uid;
 }
 
 export function resolveEffect(state, playerIndex, effect, target, source) {

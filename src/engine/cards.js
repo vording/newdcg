@@ -175,6 +175,11 @@ const CARD_LIST = [
     id: 'c_bard', name: '混沌の語り部', nameEn: 'Chaos Bard', rarity: 'rare', type: 'creature', cost: 4, attack: 2, hp: 4,
     triggers: [{ on: 'summon', effect: { type: 'drawBoth', amount: 2 } }], text: '召喚時：お互いにカードを2枚引く。',
   },
+  {
+    id: 'c_scavenger', name: '屑拾いの小鬼', nameEn: 'Scrap Goblin', rarity: 'common', type: 'creature', cost: 2, attack: 1, hp: 2,
+    effect: { type: 'discardFromHand', target: 'ownHandCard', draw: 1 },
+    text: '召喚時：自分の手札を1枚選んで捨て、カードを1枚引く（手札がなければ引くだけ）。',
+  },
   // 旧テストカード（デッキには入れていない。テスト用に残す）
   {
     id: 's_mend', name: '癒しの光', nameEn: 'Mending Light', rarity: 'common', type: 'spell', cost: 1, keywords: ['quick'],
@@ -244,7 +249,7 @@ export const DECKS = Object.freeze({
     text: '盤面や手札を入れ替え、相手のカードを奪って逆転する。',
     counts: {
       c_pickpocket: 3, c_jester: 3, c_bard: 2, c_puppeteer: 2, c_messenger: 2, c_salamander: 2, c_owl: 2,
-      c_warrior: 2, c_golem: 2, c_knight: 2, s_mirror: 1, s_fateswap: 2, s_lance: 3, s_recall: 2,
+      c_warrior: 2, c_golem: 2, c_scavenger: 2, s_mirror: 1, s_fateswap: 2, s_lance: 3, s_recall: 2,
     },
   },
 });
