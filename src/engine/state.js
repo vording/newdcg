@@ -60,7 +60,7 @@ function sourceCreatureKeyword(state, source, kw) {
 function applyLifesteal(state, source, amount) {
   if (!sourceCreatureKeyword(state, source, 'lifesteal')) return;
   const c = findCreature(state, source);
-  gainLife(state, c.owner, amount, c.name);
+  gainLife(state, c.owner, amount, c.name, c.uid);
 }
 
 export function dealDamageToCreature(state, creature, amount, source) {
@@ -88,13 +88,13 @@ export function dealDamageToPlayer(state, playerIndex, amount, source) {
 }
 
 /** ライフ回復。config.lifeCap が null なら上限なし */
-export function gainLife(state, playerIndex, amount, sourceName = null) {
+export function gainLife(state, playerIndex, amount, sourceName = null, sourceUid = null) {
   const p = state.players[playerIndex];
   const cap = state.config.lifeCap;
   const healed = cap == null ? amount : Math.min(amount, Math.max(0, cap - p.life));
   if (healed > 0) {
     p.life += healed;
-    log(state, 'lifeGain', { player: playerIndex, amount: healed, sourceName });
+    log(state, 'lifeGain', { player: playerIndex, amount: healed, sourceName, sourceUid });
   }
 }
 

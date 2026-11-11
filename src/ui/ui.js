@@ -363,6 +363,120 @@ function pulse(node, cls, delay) {
   setTimeout(() => { node.classList.remove(cls); void node.offsetWidth; node.classList.add(cls); }, delay);
 }
 
+/** 粒子をまき散らす。spread：飛ぶ距離、rise：上向きに流す量、shape：'dot' | 'shard' | 'spark' | 'up' */
+function particles(pos, { count = 12, colors = ['#ffd7a0'], spread = 70, rise = 0, gravity = 0, size = 6, duration = 700, delay = 0, shape = 'dot' } = {}) {
+  if (!pos) return;
+  const layer = fxLayer();
+  for (let i = 0; i < count; i++) {
+    const n = el('div', `fx-p ${shape}`, shape === 'up' ? '▲' : undefined);
+    const ang = Math.random() * Math.PI * 2;
+    const dist = spread * (0.45 + Math.random() * 0.55);
+    const dx = Math.cos(ang) * dist;
+    const dy = Math.sin(ang) * dist - rise * (0.6 + Math.random() * 0.4);
+    const sz = size * (0.6 + Math.random() * 0.8);
+    Object.assign(n.style, { left: `${pos.x}px`, top: `${pos.y}px`, width: `${sz}px`, height: `${shape === 'shard' ? sz * 1.6 : sz}px`,
+      background: shape === 'up' ? 'none' : colors[i % colors.length], color: colors[i % colors.length], fontSize: `${sz * 1.6}px` });
+    layer.append(n);
+    const rot = `${(Math.random() - 0.5) * 540}deg`;
+    n.animate([
+      { translate: '-50% -50%', opacity: 1, rotate: '0deg', scale: '1' },
+      { translate: `calc(-50% + ${dx}px) calc(-50% + ${dy + gravity * 0.3}px)`, opacity: 1, rotate: rot, offset: 0.6 },
+      { translate: `calc(-50% + ${dx * 1.15}px) calc(-50% + ${dy + gravity}px)`, opacity: 0, rotate: rot, scale: '.4' },
+    ], { duration: duration * (0.8 + Math.random() * 0.4), delay, easing: 'cubic-bezier(.15,.7,.3,1)', fill: 'backwards' })
+      .finished.then(() => n.remove(), () => n.remove());
+  }
+}
+/** 画面を揺らす */
+function shake(power, delay) {
+  const t = $('#table');
+  if (!t) return;
+  const p = power;
+  t.animate([{ translate: '0 0' }, { translate: `${-p}px ${p / 2}px` }, { translate: `${p}px ${-p / 2}px` }, { translate: `${-p / 2}px 0` }, { translate: '0 0' }],
+    { duration: 360, delay, easing: 'ease-out' });
+}
+/** 画面全体を一瞬光らせる（暗くするときは dark） */
+function flash(color, delay, duration = 500) {
+  spawnFx('fx-flash', undefined, { x: 0, y: 0 }, [{ opacity: 0 }, { opacity: 1, offset: 0.15 }, { opacity: 0 }], { duration, delay, easing: 'ease-out' });
+  const last = fxLayer().lastElementChild;
+  if (last) { last.style.background = color; last.style.transform = 'none'; last.style.left = '0'; last.style.top = '0'; }
+}
+/** 光の柱（召喚の着地） */
+function pillar(pos, color, delay) {
+  if (!pos) return;
+  const n = el('div', 'fx-pillar');
+  Object.assign(n.style, { left: `${pos.x}px`, top: `${pos.y}px`, background: `linear-gradient(0deg, transparent, ${color} 45%, transparent)` });
+  fxLayer().append(n);
+  n.animate([{ opacity: 0, scale: '.3 1' }, { opacity: 1, scale: '1 1', offset: 0.3 }, { opacity: 0, scale: '1.4 1.1' }], { duration: 650, delay, easing: 'ease-out', fill: 'backwards' })
+    .finished.then(() => n.remove(), () => n.remove());
+}
+/** 使われたカードを画面中央に大きく見せる */
+function showcase(cardId, label, delay) {
+  const card = getCard(cardId);
+  if (!card) return;
+  const wrap = el('div', 'fx-showcase');
+  const node = buildCardStatic(card);
+  wrap.append(node);
+  if (label) wrap.append(el('div', 'fx-showcase-label', label));
+  fxLayer().append(wrap);
+  wrap.animate([
+    { opacity: 0, scale: '.6', translate: '-50% -40%' },
+    { opacity: 1, scale: '1.05', translate: '-50% -50%', offset: 0.18 },
+    { opacity: 1, scale: '1', translate: '-50% -50%', offset: 0.8 },
+    { opacity: 0, scale: '.9', translate: '-50% -56%' },
+  ], { duration: 1500, delay, easing: 'ease-out', fill: 'backwards' }).finished.then(() => wrap.remove(), () => wrap.remove());
+}
+/** ターン開始の帯 */
+function turnSweep(text, mine, delay) {
+  const n = el('div', `fx-sweep${mine ? ' mine' : ''}`, text);
+  fxLayer().append(n);
+  n.animate([
+    { opacity: 0, translate: '-60% -50%' }, { opacity: 1, translate: '-50% -50%', offset: 0.2 },
+    { opacity: 1, translate: '-48% -50%', offset: 0.75 }, { opacity: 0, translate: '-38% -50%' },
+  ], { duration: 1100, delay, easing: 'ease-out', fill: 'backwards' }).finished.then(() => n.remove(), () => n.remove());
+}
+/** 光の粒を from から to へ飛ばす（吸命など） */
+function orbs(from, to, color, delay, count = 5) {
+  if (!from || !to) return;
+  for (let i = 0; i < count; i++) {
+    const n = el('div', 'fx-p dot');
+    Object.assign(n.style, { left: `${from.x}px`, top: `${from.y}px`, width: '8px', height: '8px', background: color, boxShadow: `0 0 10px ${color}` });
+    fxLayer().append(n);
+    const mx = (from.x + to.x) / 2 + (Math.random() - 0.5) * 120 - from.x;
+    const my = (from.y + to.y) / 2 + (Math.random() - 0.5) * 80 - from.y;
+    n.animate([
+      { translate: '-50% -50%', opacity: 0 },
+      { translate: `calc(-50% + ${mx}px) calc(-50% + ${my}px)`, opacity: 1, offset: 0.45 },
+      { translate: `calc(-50% + ${to.x - from.x}px) calc(-50% + ${to.y - from.y}px)`, opacity: 0.2 },
+    ], { duration: 700, delay: delay + i * 60, easing: 'ease-in', fill: 'backwards' }).finished.then(() => n.remove(), () => n.remove());
+  }
+}
+/** 勝利の紙吹雪 */
+function confetti(delay) {
+  const w = innerWidth;
+  const colors = ['#e8cf8c', '#b8975a', '#ebe2cc', '#7c9a73', '#8aa6a8', '#a5483a'];
+  for (let i = 0; i < 70; i++) {
+    const n = el('div', 'fx-p shard');
+    const x = Math.random() * w;
+    Object.assign(n.style, { left: `${x}px`, top: '-20px', width: '7px', height: '12px', background: colors[i % colors.length] });
+    fxLayer().append(n);
+    n.animate([
+      { translate: '0 0', rotate: '0deg', opacity: 1 },
+      { translate: `${(Math.random() - 0.5) * 160}px ${innerHeight * (0.7 + Math.random() * 0.4)}px`, rotate: `${(Math.random() - 0.5) * 1080}deg`, opacity: 0.9 },
+    ], { duration: 2200 + Math.random() * 1400, delay: delay + Math.random() * 600, easing: 'cubic-bezier(.3,.6,.5,1)', fill: 'backwards' })
+      .finished.then(() => n.remove(), () => n.remove());
+  }
+}
+/** 加護の光の膜 */
+function bubble(pos, delay) {
+  spawnFx('fx-bubble', undefined, pos, [{ opacity: 0, scale: '.5' }, { opacity: 1, scale: '1.05', offset: 0.35 }, { opacity: .9, scale: '1', offset: 0.7 }, { opacity: 0, scale: '1.15' }], { duration: 900, delay, easing: 'ease-out' });
+}
+const RARITY_FX = {
+  common: { color: 'rgba(200, 210, 200, .55)', parts: ['#cfd6cf', '#8aa6a8'], count: 8 },
+  rare: { color: 'rgba(170, 200, 230, .65)', parts: ['#dfe9f5', '#8fb2d8'], count: 12 },
+  epic: { color: 'rgba(240, 210, 140, .75)', parts: ['#ffe9b0', '#d9b264', '#fff'], count: 18 },
+  legendary: { color: 'rgba(255, 190, 110, .9)', parts: ['#fff3cf', '#ffb85a', '#ff6b3c', '#fff'], count: 30 },
+};
+
 function playEffects(root, before) {
   const entries = game.log.slice(fxSeen);
   fxSeen = game.log.length;
@@ -379,10 +493,33 @@ function playEffects(root, before) {
 
   for (const e of entries) {
     switch (e.type) {
-      case 'turnStart': { const d = step(0); sfx('turn', d); break; }
+      case 'turnStart': { const d = step(0); sfx('turn', d); if (motion && game.winner === null) turnSweep(e.player === me || mode === 'hotseat' ? `${nm(e.player)}のターン` : 'CPUのターン', e.player === me, d); break; }
       case 'draw': if (e.player === me) sfx('draw', step(0)); break;
-      case 'summon': { const d = step(120); sfx('summon', d); if (motion) ring('spell', creaturePos(e.uid), d + 200); break; }
-      case 'castSpell': { const d = step(160); sfx(e.response ? 'quick' : 'spell', d); if (motion && e.response) banner(`瞬発　${e.name}`, d); break; }
+      case 'summon': {
+        const d = step(120); sfx('summon', d);
+        const card = getCard(e.cardId ?? creatureByUid(e.uid)?.cardId);
+        const fx = RARITY_FX[card?.rarity] ?? RARITY_FX.common;
+        if (motion) {
+          const pos = creaturePos(e.uid);
+          pillar(pos, fx.color, d + 220);
+          particles(pos, { count: fx.count, colors: fx.parts, spread: 60, rise: 30, size: 5, delay: d + 260, shape: 'spark' });
+          if (card?.rarity === 'legendary') { flash('radial-gradient(circle, rgba(255, 220, 150, .55), transparent 70%)', d + 200, 700); shake(6, d + 260); banner(card.name, d + 300); }
+          else if (e.player !== me && !e.token && card && (card.rarity === 'epic')) showcase(card.id, `${nm(e.player)}が召喚`, d);
+        }
+        break;
+      }
+      case 'castSpell': {
+        const card = e.cardId ? getCard(e.cardId) : null;
+        const theirs = e.player !== me && mode === 'cpu';
+        const d = step(theirs ? 700 : 160); sfx(e.response ? 'quick' : 'spell', d);
+        if (motion) {
+          if (theirs && card) showcase(card.id, e.response ? '瞬発！' : 'CPUが使用', d);
+          else if (e.response) banner(`瞬発　${e.name}`, d);
+          if (card?.rarity === 'legendary') { flash('radial-gradient(circle, rgba(220, 200, 255, .5), transparent 70%)', d + 150, 700); shake(5, d + 200); }
+          if (e.response) particles(lifePos(e.player), { count: 10, colors: ['#cfe3e6', '#8aa6a8'], spread: 50, delay: d, shape: 'spark' });
+        }
+        break;
+      }
       case 'attack': {
         const d = step(200); sfx('attack', d);
         if (motion) {
@@ -397,7 +534,11 @@ function playEffects(root, before) {
       case 'blocks': {
         if (!e.blocks.length) break;
         const d = step(180); sfx('block', d);
-        if (motion) for (const b of e.blocks) slash(creaturePos(b.blocker), creaturePos(b.attacker), d);
+        if (motion) for (const b of e.blocks) {
+          const p1 = creaturePos(b.blocker); const p2 = creaturePos(b.attacker);
+          slash(p1, p2, d);
+          if (p1 && p2) particles({ x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 }, { count: 10, colors: ['#fff', '#ffd27a'], spread: 45, delay: d + 150, shape: 'spark', size: 4 });
+        }
         break;
       }
       case 'damage': {
@@ -405,8 +546,10 @@ function playEffects(root, before) {
         const pos = creaturePos(e.target);
         if (motion) {
           slash(sourcePos(e.source), pos, Math.max(0, d - 80));
-          floatNumber(`-${e.amount}`, 'dmg', pos, d);
+          floatNumber(`-${e.amount}`, 'dmg', pos, d, e.amount >= 5);
           ring('', pos, d);
+          particles(pos, { count: 6 + Math.min(e.amount, 8) * 2, colors: ['#ffb07a', '#ff6b3c', '#fff1d6'], spread: 40 + e.amount * 6, gravity: 30, delay: d, shape: 'spark', size: 5 });
+          if (e.amount >= 5) shake(Math.min(10, e.amount), d);
           const n = creatureNode(e.target);
           if (n) setTimeout(() => n.animate([{ translate: '0 0' }, { translate: '-5px 0' }, { translate: '5px 0' }, { translate: '-3px 0' }, { translate: '0 0' }], { duration: 300 }), d);
         }
@@ -415,46 +558,61 @@ function playEffects(root, before) {
       case 'playerDamage': {
         const d = step(140); sfx('playerHit', d);
         const pos = lifePos(e.player);
-        if (motion) { slash(sourcePos(e.source), pos, Math.max(0, d - 80)); floatNumber(`-${e.amount}`, 'dmg', pos, d, true); ring('', pos, d); }
+        if (motion) {
+          slash(sourcePos(e.source), pos, Math.max(0, d - 80)); floatNumber(`-${e.amount}`, 'dmg', pos, d, true); ring('', pos, d);
+          particles(pos, { count: 10 + e.amount * 2, colors: ['#ff8a6e', '#a5483a', '#ffd7a0'], spread: 55 + e.amount * 5, gravity: 40, delay: d, shape: 'spark' });
+          shake(Math.min(12, 3 + e.amount), d);
+          if (e.player === me && mode === 'cpu') flash('radial-gradient(circle, transparent 40%, rgba(165, 40, 30, .45))', d, 450);
+        }
         pulse(lifeNode(e.player), 'hit', d);
         break;
       }
       case 'lifeGain': {
         const d = step(120); sfx('heal', d);
-        if (motion) { floatNumber(`+${e.amount}`, 'heal', lifePos(e.player), d, true); ring('heal', lifePos(e.player), d); }
+        if (motion) {
+          if (e.sourceUid != null) orbs(creaturePos(e.sourceUid), lifePos(e.player), '#ff5a6a', Math.max(0, d - 300));
+          floatNumber(`+${e.amount}`, 'heal', lifePos(e.player), d, true); ring('heal', lifePos(e.player), d);
+          particles(lifePos(e.player), { count: 12, colors: ['#9fe0a0', '#e6ffd9'], spread: 30, rise: 60, delay: d, size: 5 });
+        }
         pulse(lifeNode(e.player), 'healed', d);
         break;
       }
-      case 'heal': { const d = step(100); sfx('heal', d); if (motion) floatNumber(`+${e.amount}`, 'heal', creaturePos(e.target), d); break; }
-      case 'buff': { const d = step(80); sfx('buff', d); if (motion) floatNumber(`+${e.attack}/+${e.hp}`, 'buff', creaturePos(e.target), d); break; }
+      case 'heal': { const d = step(100); sfx('heal', d); if (motion) { floatNumber(`+${e.amount}`, 'heal', creaturePos(e.target), d); particles(creaturePos(e.target), { count: 10, colors: ['#9fe0a0', '#e6ffd9'], spread: 30, rise: 60, delay: d, size: 5 }); } break; }
+      case 'buff': { const d = step(80); sfx('buff', d); if (motion) { floatNumber(`+${e.attack}/+${e.hp}`, 'buff', creaturePos(e.target), d); particles(creaturePos(e.target), { count: 8, colors: ['#ffd56a', '#fff1b8'], spread: 30, rise: 70, delay: d, size: 7, shape: 'up' }); } break; }
       case 'buffAll': {
         const d = step(120); sfx('buff', d);
-        if (motion) for (const c of game.players[e.player].board) floatNumber(`+${e.attack}/+${e.hp}`, 'buff', creaturePos(c.uid), d);
+        if (motion) for (const c of game.players[e.player].board) { floatNumber(`+${e.attack}/+${e.hp}`, 'buff', creaturePos(c.uid), d); particles(creaturePos(c.uid), { count: 6, colors: ['#ffd56a', '#fff1b8'], spread: 26, rise: 70, delay: d, size: 7, shape: 'up' }); }
         break;
       }
-      case 'shieldBroken': { const d = step(120); sfx('shield', d); if (motion) { ring('shield', creaturePos(e.target), d); floatNumber('防いだ', 'buff', creaturePos(e.target), d); } break; }
-      case 'shieldGranted': { const d = step(100); sfx('shield', d); if (motion) ring('shield', creaturePos(e.target), d); break; }
-      case 'deathtouch': { const d = step(100); if (motion) floatNumber('必殺', 'dmg', creaturePos(e.target), d); break; }
-      case 'destroyed': sfx('destroy', step(140)); break;
+      case 'shieldBroken': { const d = step(120); sfx('shield', d); if (motion) { ring('shield', creaturePos(e.target), d); floatNumber('防いだ', 'buff', creaturePos(e.target), d); particles(creaturePos(e.target), { count: 16, colors: ['#fff4c9', '#e8cf8c', '#ffffff'], spread: 70, gravity: 40, delay: d, size: 7, shape: 'shard' }); } break; }
+      case 'shieldGranted': { const d = step(100); sfx('shield', d); if (motion) { ring('shield', creaturePos(e.target), d); bubble(creaturePos(e.target), d); } break; }
+      case 'deathtouch': { const d = step(100); if (motion) { floatNumber('☠ 必殺', 'dmg', creaturePos(e.target), d, true); particles(creaturePos(e.target), { count: 14, colors: ['#b18cff', '#3d1a5a', '#e5d4ff'], spread: 50, delay: d, size: 6 }); } break; }
+      case 'destroyed': {
+        const d = step(140); sfx('destroy', d);
+        if (motion) {
+          const pos = creaturePos(e.uid);
+          particles(pos, { count: 18, colors: ['#9a8e76', '#5a5040', '#d8cdb5', '#3a3225'], spread: 75, gravity: 90, delay: d, size: 8, shape: 'shard', duration: 900 });
+          particles(pos, { count: 8, colors: ['#ffb07a'], spread: 40, delay: d, size: 4, shape: 'spark' });
+        }
+        break;
+      }
       case 'destroyEffect': case 'exhausted': case 'bounced': { const d = step(100); sfx('spell', d); if (motion) ring('spell', creaturePos(e.target), d); break; }
-      case 'destroyAllEffect': { const d = step(200); sfx('destroy', d); if (motion) banner('断罪', d); break; }
-      case 'boardsSwapped': { const d = step(260); sfx('spell', d); if (motion) banner('盤面が入れ替わった！', d); break; }
-      case 'handsSwapped': { const d = step(260); sfx('spell', d); if (motion) banner('手札が入れ替わった！', d); break; }
+      case 'destroyAllEffect': { const d = step(200); sfx('destroy', d); if (motion) { banner('断罪', d); flash('radial-gradient(circle, rgba(255, 245, 210, .8), rgba(255, 220, 150, .2) 60%, transparent)', d, 900); shake(12, d + 120); } break; }
+      case 'boardsSwapped': { const d = step(260); sfx('spell', d); if (motion) { banner('盤面が入れ替わった！', d); flash('linear-gradient(180deg, rgba(170, 150, 255, .35), transparent 40%, transparent 60%, rgba(170, 150, 255, .35))', d, 900); shake(6, d); } break; }
+      case 'handsSwapped': { const d = step(260); sfx('spell', d); if (motion) { banner('手札が入れ替わった！', d); orbs(lifePos(0), lifePos(1), '#c7b8ff', d, 6); orbs(lifePos(1), lifePos(0), '#c7b8ff', d, 6); } break; }
       case 'statsSwapped': { const d = step(120); sfx('spell', d); if (motion) { ring('spell', creaturePos(e.target), d); floatNumber(`${e.attack}/${e.hp}`, 'buff', creaturePos(e.target), d); } break; }
       case 'cardStolen': { const d = step(160); sfx('draw', d); if (motion) banner(e.player === me ? `「${e.name}」を奪った` : `「${e.name}」を奪われた`, d); break; }
-      case 'controlTaken': { const d = step(200); sfx('spell', d); if (motion) { ring('spell', creaturePos(e.target), d); banner(`${e.targetName}を奪った`, d); } break; }
-      case 'lastWill': { const d = step(160); if (motion) banner(`遺志　${e.name}`, d); break; }
+      case 'controlTaken': { const d = step(200); sfx('spell', d); if (motion) { ring('spell', creaturePos(e.target), d); banner(`${e.targetName}を奪った`, d); particles(creaturePos(e.target), { count: 14, colors: ['#c7b8ff', '#7564c4'], spread: 50, delay: d, size: 5, shape: 'spark' }); } break; }
+      case 'lastWill': { const d = step(160); if (motion) { banner(`遺志　${e.name}`, d); particles(creaturePos(e.uid), { count: 14, colors: ['#e8d9ff', '#9a7fd1'], spread: 40, rise: 80, delay: d, size: 5 }); } break; }
       case 'gainMana': { const d = step(80); sfx('mana', d); break; }
-      case 'boardsSwapped': return `${nm(e.player)}：自分と相手のクリーチャーがすべて入れ替わった`;
-    case 'handsSwapped': return `${nm(e.player)}：自分と相手の手札が入れ替わった`;
-    case 'statsSwapped': return `${nm(e.owner)}の${e.targetName}の攻撃力と体力が入れ替わった（${e.attack}/${e.hp}）`;
-    case 'cardStolen': return e.player === viewer() || mode === 'hotseat' ? `${nm(e.player)}：相手の手札から「${e.name}」を奪った` : `${nm(e.player)}：あなたの手札から「${e.name}」を奪った`;
-    case 'controlTaken': return `${nm(e.player)}：${e.targetName}を奪った`;
-    case 'stealFailed': return `${nm(e.player)}：奪えなかった`;
-    case 'gameOver': {
+      case 'gameOver': {
         const d = step(300);
         if (e.winner === 'draw') sfx('lose', d);
         else sfx(mode === 'cpu' ? (e.winner === 0 ? 'win' : 'lose') : 'win', d);
+        if (motion) {
+          if (mode !== 'cpu' || e.winner === 0) { confetti(d); flash('radial-gradient(circle, rgba(255, 230, 160, .5), transparent 70%)', d, 900); }
+          else flash('radial-gradient(circle, transparent 20%, rgba(0, 0, 0, .7))', d, 1600);
+        }
         break;
       }
       default: break;
@@ -935,6 +1093,12 @@ function describe(e) {
     case 'combatCancelled': return '攻撃クリーチャーがいなくなり、戦闘は終了';
     case 'burn': return `${nm(e.player)}は手札がいっぱいで、引いたカードが捨て札へ`;
     case 'deckOut': return `${nm(e.player)}は山札切れでカードを引けない`;
+    case 'boardsSwapped': return `${nm(e.player)}：自分と相手のクリーチャーがすべて入れ替わった`;
+    case 'handsSwapped': return `${nm(e.player)}：自分と相手の手札が入れ替わった`;
+    case 'statsSwapped': return `${nm(e.owner)}の${e.targetName}の攻撃力と体力が入れ替わった（${e.attack}/${e.hp}）`;
+    case 'cardStolen': return e.player === viewer() || mode === 'hotseat' ? `${nm(e.player)}：相手の手札から「${e.name}」を奪った` : `${nm(e.player)}：あなたの手札から「${e.name}」を奪った`;
+    case 'controlTaken': return `${nm(e.player)}：${e.targetName}を奪った`;
+    case 'stealFailed': return `${nm(e.player)}：奪えなかった`;
     case 'gameOver': return e.winner === 'draw' ? '引き分け' : `${nm(e.winner)}の勝利`;
     default: return null;
   }

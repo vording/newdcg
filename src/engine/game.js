@@ -331,13 +331,13 @@ function playCard(state, playerIndex, { handIndex, target = null }) {
   if (card.type === 'creature') {
     const creature = makeCreature(state, cardId, playerIndex);
     p.board.push(creature);
-    log(state, 'summon', { player: playerIndex, uid: creature.uid, name: card.name });
+    log(state, 'summon', { player: playerIndex, uid: creature.uid, name: card.name, cardId });
     if (card.effect && target) resolveEffect(state, playerIndex, card.effect, target, creature.uid);
     for (const t of card.triggers ?? []) {
       if (t.on === 'summon') resolveEffect(state, playerIndex, t.effect, null, creature.uid);
     }
   } else {
-    log(state, 'castSpell', { player: playerIndex, name: card.name, target, response: state.awaiting.step === 'response' });
+    log(state, 'castSpell', { player: playerIndex, name: card.name, cardId, target, response: state.awaiting.step === 'response' });
     resolveEffect(state, playerIndex, card.effect, target, cardId);
     p.graveyard.push(cardId);
   }
