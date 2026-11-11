@@ -676,6 +676,39 @@ body { letter-spacing: .02em; }
 .card.r-legendary:not(.cid-s_judgment):not(.cid-c_dragon):not(.cid-c_lionking):not(.cid-s_mirror) .c-en {
   background-image: linear-gradient(180deg, #fff3cf, #d9b264); }
 
+/* ---------- レジェンドのロゴをより派手に：光の筋が流れる＋二重の発光・縁取り・一回り大きく ---------- */
+.card.r-legendary .c-en {
+  --shine: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, .95) 48%, rgba(255, 255, 255, .2) 54%, transparent 62%);
+  background-size: 260% 100%, 100% 100%; background-repeat: no-repeat;
+  animation: logoShine 3.6s ease-in-out infinite;
+}
+@keyframes logoShine { 0% { background-position: 160% 0, 0 0; } 55%, 100% { background-position: -60% 0, 0 0; } }
+.card.cid-s_judgment .c-en {
+  font-size: 1.68em;
+  background-image: var(--shine), linear-gradient(180deg, #ffffff 0%, #fff0b8 35%, #e3b54e 62%, #fff6d0 100%);
+  -webkit-text-stroke: .025em #5a3e08;
+  filter: drop-shadow(0 0 .08em #fff6c8) drop-shadow(0 0 .35em rgba(255, 214, 110, .95)) drop-shadow(0 0 .8em rgba(255, 190, 60, .55)) drop-shadow(0 .06em .1em rgba(0, 0, 0, .9));
+}
+.card.cid-c_dragon .c-en {
+  font-size: 1.5em;
+  background-image: var(--shine), linear-gradient(180deg, #fff3a8 0%, #ffb23c 32%, #ff5a1f 62%, #a51a0c 100%);
+  -webkit-text-stroke: .035em #2a0905;
+  filter: drop-shadow(0 0 .06em #ffcf7a) drop-shadow(0 0 .3em rgba(255, 120, 30, .95)) drop-shadow(0 0 .75em rgba(255, 60, 10, .6)) drop-shadow(0 .07em .1em rgba(0, 0, 0, .95));
+}
+.card.cid-c_lionking .c-en {
+  font-size: 1.95em;
+  background-image: var(--shine), linear-gradient(180deg, #ffffff 0%, #f0dcb4 38%, #c4874a 68%, #6b3b1d 100%);
+  -webkit-text-stroke: .04em #140b05;
+  filter: drop-shadow(0 .09em 0 #0b0603) drop-shadow(0 0 .3em rgba(255, 150, 70, .55)) drop-shadow(0 0 .6em rgba(0, 0, 0, .95));
+}
+.card.cid-s_mirror .c-en {
+  font-size: 1.24em;
+  background-image: var(--shine), linear-gradient(180deg, #ffffff 0%, #e2e4ff 30%, #9a8ce0 55%, #f3f0ff 75%, #7564c4 100%);
+  -webkit-text-stroke: .025em #1c1535;
+  filter: drop-shadow(0 0 .06em #ffffff) drop-shadow(0 0 .32em rgba(170, 150, 255, .95)) drop-shadow(0 0 .75em rgba(120, 90, 255, .55)) drop-shadow(0 .06em .1em rgba(0, 0, 0, .95));
+}
+@media (prefers-reduced-motion: reduce) { .card.r-legendary .c-en { animation: none; background-position: 200% 0, 0 0; } }
+
 </style>
 <!-- タイトル画面 -->
   <section id="title" class="screen title-screen">
@@ -712,6 +745,7 @@ body { letter-spacing: .02em; }
       <section class="updates" aria-label="更新情報">
         <h2>更新情報</h2>
         <ul>
+          <li><time>11/11</time>レジェンドのカード名を派手に（光の筋が流れる・発光を強化）</li>
           <li><time>11/11</time>新カード6種：盤面を入れ替える「鏡の反転」、手札を入れ替える「運命の交換」、召喚時に奪う・入れ替える・お互いに引くクリーチャー。新デッキ「幻惑（トリック型）」。新カードのイラストも追加</li>
           <li><time>11/5</time>デッキを自由に組めるように（タイトルの「デッキを組む」）。CPUのデッキも毎回少しずつ変化</li>
           <li><time>11/5</time>影刃を使いやすく：迎撃の矢は相手のクリーチャーならいつでも2ダメージ（攻撃中なら3）。手札の瞬発カードに相手ターン中のコスト、マナを残すと構えられる案内を表示</li>
@@ -3756,6 +3790,6 @@ $('#logBtn').addEventListener('click', () => { $('#logPanel').hidden = !$('#logP
 $('#logClose').addEventListener('click', () => { $('#logPanel').hidden = true; });
 showTitle();
 
-document.getElementById('build').textContent = "v0.3 build 98b09df";
+document.getElementById('build').textContent = "v0.3 build e5c2976";
 })();
 </script>
