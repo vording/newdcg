@@ -214,7 +214,7 @@ export const DECKS = Object.freeze({
     name: '城塞（防御型）',
     text: '加護と除去で耐え、古竜とベヒモスで決める。',
     counts: {
-      c_ambusher: 1, c_shield: 2, c_sister: 3, c_viper: 2, c_pikeman: 3, c_knight: 2, c_warden: 3, c_dragon: 2, c_lionking: 1,
+      c_ambusher: 1, c_shield: 2, c_sister: 3, c_viper: 2, c_pikeman: 3, c_knight: 2, c_warden: 2, c_dragon: 1, c_lionking: 1, c_warrior: 2,
       s_arrow: 1, s_ward: 2, s_lance: 2, s_wave: 2, s_judgment: 1, s_insight: 2, s_sidestep: 1,
     },
   },
